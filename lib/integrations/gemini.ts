@@ -9,6 +9,11 @@ type ExecuteResult = {
   modelUsed: string;
 };
 
+type PdfPart = {
+  mimeType: "application/pdf";
+  dataBase64: string;
+};
+
 export function getModel() {
   return env.geminiModel || DEFAULT_GEMINI_MODEL;
 }
@@ -168,6 +173,93 @@ export async function execute(
               parts: [{ text: systemPrompt }],
             },
             contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature,
+              maxOutputTokens: maxTokens,
+              responseMimeType: "application/json",
+            },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(
+          `Model ${normalizedModel} failed: ${formatGeminiApiError(response.status, text)}`,
+        );
+      }
+
+      const json = await response.json();
+      const content = extractContent(json);
+
+      if (!content) {
+        throw new Error(`Model ${normalizedModel} returned empty content`);
+      }
+
+      return {
+        content,
+        modelUsed: normalizedModel,
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  throw new Error(
+    `All ${modelsToTry.length} model(s) failed. Last error: ${lastError?.message ?? "unknown"}`,
+  );
+}
+
+export async function executeWithPdf(
+  prompt: string,
+  systemPrompt: string,
+  modelOverride: string | undefined,
+  temperature: number,
+  maxTokens: number,
+  pdf: PdfPart,
+  fallbacks: string[] = [],
+): Promise<ExecuteResult> {
+  const { apiKey, baseUrl } = getApiConfig();
+  const modelsToTry = [modelOverride || getModel(), ...fallbacks].filter(Boolean);
+
+  if (modelsToTry.length === 0) {
+    throw new Error(
+      "No models configured. Set GEMINI_MODEL or provide a model override.",
+    );
+  }
+
+  let lastError: Error | null = null;
+
+  for (const model of modelsToTry) {
+    const normalizedModel = normalizeModelName(model);
+
+    try {
+      const response = await fetch(
+        `${baseUrl}/models/${normalizedModel}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body: JSON.stringify({
+            systemInstruction: {
+              parts: [{ text: systemPrompt }],
+            },
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType: pdf.mimeType,
+                      data: pdf.dataBase64,
+                    },
+                  },
+                  { text: prompt },
+                ],
+              },
+            ],
             generationConfig: {
               temperature,
               maxOutputTokens: maxTokens,

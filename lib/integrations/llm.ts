@@ -1,5 +1,9 @@
 import * as openAiProvider from "@/lib/integrations/openai";
 import * as geminiProvider from "@/lib/integrations/gemini";
+import {
+  extractDocumentText,
+  formatDocumentContextForPrompt,
+} from "@/lib/document-extract";
 
 export type LlmProviderName = "openai" | "gemini";
 
@@ -12,6 +16,15 @@ type ProviderModule = {
     modelOverride: string | undefined,
     temperature: number,
     maxTokens: number,
+    fallbacks?: string[],
+  ) => Promise<{ content: string; modelUsed: string }>;
+  executeWithPdf?: (
+    prompt: string,
+    systemPrompt: string,
+    modelOverride: string | undefined,
+    temperature: number,
+    maxTokens: number,
+    pdf: { mimeType: "application/pdf"; dataBase64: string },
     fallbacks?: string[],
   ) => Promise<{ content: string; modelUsed: string }>;
 };
@@ -67,6 +80,11 @@ type LlOptions = {
   temperature?: number;
   maxTokens?: number;
   parseJson?: boolean;
+  document?: {
+    mimeType: string;
+    filename: string;
+    buffer: Buffer;
+  };
 };
 
 type LlResult = {
@@ -79,22 +97,71 @@ export async function ll(
   prompt: string,
   options: LlOptions = {},
 ): Promise<LlResult> {
-  const provider = options.providerOverride
-    ? getProviderByName(options.providerOverride)
-    : getProvider();
+  const providerName = options.providerOverride ?? getLlmProvider();
+  const provider = getProviderByName(providerName);
   const systemPrompt = options.systemPrompt ?? "You are a helpful AI assistant.";
   const temperature = options.temperature ?? 0.2;
   const maxTokens = options.maxTokens ?? 4000;
+  const trimmedPrompt = prompt.trim();
+  const document = options.document;
+
+  const shouldUseNativePdf =
+    document?.mimeType === "application/pdf" && Boolean(provider.executeWithPdf);
 
   try {
-    const { content, modelUsed } = await provider.execute(
-      prompt.trim(),
-      systemPrompt,
-      options.modelOverride,
-      temperature,
-      maxTokens,
-      options.modelFallbacks,
-    );
+    const { content, modelUsed } = shouldUseNativePdf
+      ? await (() => {
+          if (!document) {
+            throw new Error("Document was not provided.");
+          }
+
+          if (!provider.executeWithPdf) {
+            throw new Error(
+              `Provider ${providerName} does not support native PDF input.`,
+            );
+          }
+
+          return provider.executeWithPdf(
+            trimmedPrompt,
+            systemPrompt,
+            options.modelOverride,
+            temperature,
+            maxTokens,
+            {
+              mimeType: "application/pdf",
+              dataBase64: document.buffer.toString("base64"),
+            },
+            options.modelFallbacks,
+          );
+        })()
+      : document
+        ? await (() => {
+            const extracted = extractDocumentText(document.buffer, document.filename);
+
+            return extracted.then((doc) =>
+              provider.execute(
+                [
+                  trimmedPrompt,
+                  "",
+                  "Candidate background document:",
+                  formatDocumentContextForPrompt(doc),
+                ].join("\n"),
+                systemPrompt,
+                options.modelOverride,
+                temperature,
+                maxTokens,
+                options.modelFallbacks,
+              ),
+            );
+          })()
+      : await provider.execute(
+          trimmedPrompt,
+          systemPrompt,
+          options.modelOverride,
+          temperature,
+          maxTokens,
+          options.modelFallbacks,
+        );
 
     if (!options.parseJson) {
       return {

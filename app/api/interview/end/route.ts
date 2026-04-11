@@ -3,7 +3,8 @@ import { ObjectId } from "mongodb";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 import { ll } from "@/lib/integrations/llm";
-import { extractDocumentText, formatDocumentContextForPrompt } from "@/lib/document-extract";
+
+const MAX_DOCUMENT_FILE_SIZE = 10 * 1024 * 1024;
 
 type NormalizedGradingResult = {
   overall_score: number;
@@ -229,8 +230,8 @@ export async function POST(req: NextRequest) {
     interviewId: undefined,
     transcript: undefined,
   };
-  let documentContext: string | null = null;
   let documentError: string | null = null;
+  let uploadedDocument: { buffer: Buffer; mimeType: string; filename: string } | null = null;
 
   // Parse request: support both JSON and FormData
   const contentType = req.headers.get("content-type") || "";
@@ -250,10 +251,20 @@ export async function POST(req: NextRequest) {
 
       // Extract document if present
       if (documentFile && documentFile.size > 0) {
+        if (documentFile.size > MAX_DOCUMENT_FILE_SIZE) {
+          return NextResponse.json(
+            { error: "Document exceeds 10MB limit" },
+            { status: 400 },
+          );
+        }
+
         try {
           const buffer = Buffer.from(await documentFile.arrayBuffer());
-          const extracted = await extractDocumentText(buffer, documentFile.name);
-          documentContext = formatDocumentContextForPrompt(extracted);
+          uploadedDocument = {
+            buffer,
+            filename: documentFile.name,
+            mimeType: documentFile.type || "application/octet-stream",
+          };
         } catch (error) {
           documentError =
             error instanceof Error ? error.message : "Document extraction failed";
@@ -328,13 +339,6 @@ export async function POST(req: NextRequest) {
       "",
     ];
 
-    // Inject document context if available
-    if (documentContext) {
-      promptParts.push("Candidate background document:");
-      promptParts.push(documentContext);
-      promptParts.push("");
-    }
-
     promptParts.push("Transcript:");
     promptParts.push(transcriptText);
 
@@ -346,6 +350,13 @@ export async function POST(req: NextRequest) {
         parseJson: true,
         temperature: 0.2,
         maxTokens: 3000,
+        document: uploadedDocument
+          ? {
+              mimeType: uploadedDocument.mimeType,
+              filename: uploadedDocument.filename,
+              buffer: uploadedDocument.buffer,
+            }
+          : undefined,
       });
 
       gradingResult = normalizeGradingResult(llmResponse.json);
@@ -376,7 +387,7 @@ export async function POST(req: NextRequest) {
     id: interviewId,
     graded: Boolean(gradingResult),
     gradingError,
-    documentProcessed: Boolean(documentContext),
+    documentProcessed: Boolean(uploadedDocument),
     documentError,
   });
 }
