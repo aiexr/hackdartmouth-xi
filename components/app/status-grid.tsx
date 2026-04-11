@@ -33,7 +33,7 @@ export function StatusGrid() {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
-        <Card key={item.title} className="bg-white/80 backdrop-blur">
+        <Card key={item.title}>
           <CardContent className="space-y-3 p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
