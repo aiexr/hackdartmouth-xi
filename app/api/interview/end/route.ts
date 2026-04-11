@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 import { ll } from "@/lib/integrations/llm";
+import { extractDocumentText, formatDocumentContextForPrompt } from "@/lib/document-extract";
 
 type NormalizedGradingResult = {
   overall_score: number;
@@ -221,10 +222,57 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }
 
-  const body = (await req.json()) as {
+  let body: {
     interviewId?: string;
     transcript?: unknown;
+  } = {
+    interviewId: undefined,
+    transcript: undefined,
   };
+  let documentContext: string | null = null;
+  let documentError: string | null = null;
+
+  // Parse request: support both JSON and FormData
+  const contentType = req.headers.get("content-type") || "";
+  if (contentType.includes("multipart/form-data")) {
+    try {
+      const formData = await req.formData();
+      const interviewIdField = formData.get("interviewId");
+      const transcriptField = formData.get("transcript");
+      const documentFile = formData.get("document") as File | null;
+
+      body.interviewId =
+        typeof interviewIdField === "string" ? interviewIdField : undefined;
+      body.transcript =
+        typeof transcriptField === "string"
+          ? JSON.parse(transcriptField)
+          : undefined;
+
+      // Extract document if present
+      if (documentFile && documentFile.size > 0) {
+        try {
+          const buffer = Buffer.from(await documentFile.arrayBuffer());
+          const extracted = await extractDocumentText(buffer, documentFile.name);
+          documentContext = formatDocumentContextForPrompt(extracted);
+        } catch (error) {
+          documentError =
+            error instanceof Error ? error.message : "Document extraction failed";
+        }
+      }
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error: "Invalid form data",
+          details: error instanceof Error ? error.message : String(error),
+        },
+        { status: 400 },
+      );
+    }
+  } else {
+    // Parse as JSON (backward compatibility)
+    body = (await req.json()) as typeof body;
+  }
+
   const { interviewId, transcript } = body;
 
   if (!interviewId) {
@@ -256,7 +304,7 @@ export async function POST(req: NextRequest) {
     const systemPrompt =
       "You are a senior interview coach. Grade interview performance with strict, constructive, and fair feedback. Return only valid JSON.";
 
-    const userPrompt = [
+    const promptParts = [
       "Evaluate this mock interview and return a JSON object with this exact schema:",
       "{",
       '  "overall_score": number (1-100),',
@@ -278,9 +326,19 @@ export async function POST(req: NextRequest) {
       `- Difficulty: ${String(interview.difficulty ?? "medium")}`,
       `- Scenario ID: ${String(interview.scenarioId ?? "unknown")}`,
       "",
-      "Transcript:",
-      transcriptText,
-    ].join("\n");
+    ];
+
+    // Inject document context if available
+    if (documentContext) {
+      promptParts.push("Candidate background document:");
+      promptParts.push(documentContext);
+      promptParts.push("");
+    }
+
+    promptParts.push("Transcript:");
+    promptParts.push(transcriptText);
+
+    const userPrompt = promptParts.join("\n");
 
     try {
       const llmResponse = await ll(userPrompt, {
@@ -318,5 +376,7 @@ export async function POST(req: NextRequest) {
     id: interviewId,
     graded: Boolean(gradingResult),
     gradingError,
+    documentProcessed: Boolean(documentContext),
+    documentError,
   });
 }

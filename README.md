@@ -76,6 +76,17 @@ The implementation preserves the spirit of the original design while adapting co
 - LiveAvatar session token + secret setup routes
 - ElevenLabs call-mode agent wiring
 - Cloudflare Workers deployment via `@opennextjs/cloudflare`
+- `pdf-text-extract` + `mammoth` for server-side document extraction (PDF, DOCX)
+
+## Document Upload Feature
+
+Users can optionally upload a resume or document (PDF, DOCX) during practice sessions. The document is extracted to plain text and included in the interview grading context so the LLM can reference the candidate's background and experience when evaluating performance.
+
+- File size limit: 10 MB
+- Supported formats: PDF, DOCX (Word)
+- Upload is optional; interviews without documents are graded normally
+- If extraction fails, the interview proceeds without the document context
+- Extraction is handled server-side using `pdf-text-extract` (PDF) and `mammoth` (DOCX)
 
 ## Cloudflare / OpenNext setup
 
@@ -225,7 +236,8 @@ The production app excludes `design/` from TypeScript build checks so it stays i
 Copy `.dev.vars.example` to `.dev.vars` and fill in values for:
 
 - `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL`
+- `NEXTAUTH_URL` (set to your local URL for dev; for Cloudflare prod, set `AUTH_TRUST_HOST=1` and do not hardcode this to a different domain)
+- `AUTH_TRUST_HOST` (`1` in prod so NextAuth builds callback URLs from the request host)
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `LLM_PROVIDER` (`openai` or `gemini`)

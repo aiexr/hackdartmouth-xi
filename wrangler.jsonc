@@ -1,15 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  // In Workers Builds, this must match the connected Worker name so the
-  // self-service binding resolves during deploy.
   "name": "hackdartmouth-xi",
   "compatibility_date": "2026-04-11",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "keep_vars": true,
-  // Public runtime defaults only. Keep secrets in Cloudflare env secrets.
   "vars": {
-    "NEXTAUTH_URL": "https://hackdartmouth-xi.alex-6e4.workers.dev"
+    "NEXTAUTH_URL": "https://hackdartmouth-xi.alex-6e4.workers.dev",
+    "NEXTJS_ENV": "production"
   },
   "assets": {
     "directory": ".open-next/assets",
