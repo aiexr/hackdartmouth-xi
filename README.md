@@ -85,7 +85,7 @@ Package scripts:
 - `npm run deploy` runs the OpenNext Cloudflare deploy flow
 - `npm run cf-typegen` generates Cloudflare env types
 - `.github/workflows/cloudflare-deploy.yml` runs Cloudflare deploys from GitHub Actions and writes the resulting URL back to the commit as a GitHub deployment
-
+ 
 Important compatibility notes:
 
 - no `next export`
