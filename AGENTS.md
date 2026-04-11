@@ -341,7 +341,7 @@ Creator mode
 
 AI Interview Prepper — Full Plan
 Context
-AI-powered interview prep for HackDartmouth XI. Face-to-face mock interviews with a realistic avatar, covering behavioral, technical, and system design. Post-interview grading + feedback, leetcode-style.
+AI-powered interview prep for HackDartmouth XI. Face-to-face mock interviews with a realistic avatar, covering behavioral, technical, and system design. Post-interview grading + feedback, LeetSpeak-style.
 Sponsors: LiveAvatar (HeyGen), ElevenLabs, Gemini
 
 Core Pipeline
@@ -384,7 +384,7 @@ Zero-config Next.js deploys, free tier
 Application Flow
 1. Landing / Dashboard
 Sign in via NextAuth.js (Google/GitHub OAuth)
-Dashboard shows past interviews with leetcode-style scores + progress chart
+Dashboard shows past interviews with LeetSpeak-style scores + progress chart
 "Start Interview" button
 2. Interview Setupvercel
 Pick type: Behavioral / Technical / System Design / Custom (paste job description)

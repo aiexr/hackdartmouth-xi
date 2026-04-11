@@ -27,7 +27,7 @@ export function RootLayout() {
             <Dumbbell className="w-5 h-5 text-primary-foreground" />
           </div>
           <span className="text-[1.125rem] tracking-tight" style={{ fontWeight: 600 }}>
-            InterviewGym
+            LeetSpeak
           </span>
         </div>
 

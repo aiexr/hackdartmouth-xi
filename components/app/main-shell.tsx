@@ -35,7 +35,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
               Interview Practice
             </div>
             <div className="text-lg font-semibold tracking-tight">
-              LeetCode for Interviews
+              LeetSpeak
             </div>
           </div>
         </Link>
