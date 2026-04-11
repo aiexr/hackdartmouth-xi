@@ -32,8 +32,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await req.json();
-  const { mode = "video", tone = "neutral" } = body;
+  const rawBody: unknown = await req.json();
+  const body =
+    rawBody && typeof rawBody === "object"
+      ? (rawBody as Record<string, unknown>)
+      : {};
+  const mode = body.mode === "call" ? "call" : "video";
+  const tone = typeof body.tone === "string" ? body.tone : "neutral";
 
   if (mode === "video") {
     // FULL mode — LiveAvatar handles avatar + voice + STT + LLM + TTS
@@ -65,8 +70,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const data = await res.json();
-    return NextResponse.json({ ...data, interviewMode: "video", avatarName: avatar.name });
+    const rawData: unknown = await res.json();
+    const data =
+      rawData && typeof rawData === "object"
+        ? (rawData as Record<string, unknown>)
+        : {};
+    return NextResponse.json({
+      ...data,
+      interviewMode: "video",
+      avatarName: avatar.name,
+    });
   }
 
   // CALL mode — return ElevenLabs agent config for direct connection

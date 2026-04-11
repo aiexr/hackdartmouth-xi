@@ -19,14 +19,48 @@ declare global {
   var __mongoClientPromise__: Promise<MongoClient> | undefined;
 }
 
+const MONGO_CONNECT_TIMEOUT_MS = 5000;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(timeoutMessage));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 export function getMongoClient() {
   if (!env.mongodbUri || !isValidMongoUri(env.mongodbUri)) {
     return null;
   }
 
   if (!global.__mongoClientPromise__) {
-    const client = new MongoClient(env.mongodbUri);
-    global.__mongoClientPromise__ = client.connect();
+    const client = new MongoClient(env.mongodbUri, {
+      connectTimeoutMS: MONGO_CONNECT_TIMEOUT_MS,
+      serverSelectionTimeoutMS: MONGO_CONNECT_TIMEOUT_MS,
+      socketTimeoutMS: MONGO_CONNECT_TIMEOUT_MS,
+      maxPoolSize: 5,
+      minPoolSize: 0,
+    });
+    global.__mongoClientPromise__ = withTimeout(
+      client.connect(),
+      MONGO_CONNECT_TIMEOUT_MS,
+      "MongoDB connection timed out.",
+    );
   }
 
   return global.__mongoClientPromise__;
@@ -38,8 +72,13 @@ export async function getMongoDb() {
     return null;
   }
 
-  const client = await clientPromise;
-  return client.db(env.mongodbDbName);
+  try {
+    const client = await clientPromise;
+    return client.db(env.mongodbDbName);
+  } catch (error) {
+    global.__mongoClientPromise__ = undefined;
+    throw error;
+  }
 }
 
 export async function getOptionalMongoDb() {

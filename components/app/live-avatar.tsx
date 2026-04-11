@@ -27,6 +27,12 @@ type LiveAvatarProps = {
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 export function LiveAvatar({
   tone = "neutral",
   onTranscriptUpdate,
@@ -179,16 +185,19 @@ export function LiveAvatar({
       });
 
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error || "Failed to create session");
+        const data = asRecord(await res.json());
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Failed to create session",
+        );
       }
 
-      const data = (await res.json()) as Record<string, any>;
+      const data = asRecord(await res.json());
+      const nestedData = asRecord(data.data);
       const token =
-        data.data?.session_token ||
-        data.session_token ||
-        data.token ||
-        data.access_token;
+        (typeof nestedData.session_token === "string" ? nestedData.session_token : null) ||
+        (typeof data.session_token === "string" ? data.session_token : null) ||
+        (typeof data.token === "string" ? data.token : null) ||
+        (typeof data.access_token === "string" ? data.access_token : null);
 
       if (!token) {
         throw new Error("No session token received");

@@ -13,6 +13,12 @@ export type TranscriptEntry = {
   partial?: boolean;
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 const TONE_PROMPTS: Record<string, string> = {
   friendly:
     "Adopt a warm, encouraging interview style. Be patient, give the candidate time to think, acknowledge good points with brief positive feedback, and gently push for specifics. Start with a friendly greeting.",
@@ -138,11 +144,17 @@ export function VoiceCall({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to get agent config");
+        const data = asRecord(await res.json());
+        throw new Error(
+          typeof data.error === "string" ? data.error : "Failed to get agent config",
+        );
       }
 
-      const { agentId } = await res.json();
+      const data = asRecord(await res.json());
+      const agentId = typeof data.agentId === "string" ? data.agentId : "";
+      if (!agentId) {
+        throw new Error("Missing ElevenLabs agent id");
+      }
 
       const conversation = await VoiceConversation.startSession({
         agentId,

@@ -125,6 +125,28 @@ function toDayKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(timeoutMessage));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 function getCurrentStreak(interviews: InterviewRecord[]) {
   const activeDays = new Set(
     interviews
@@ -304,7 +326,7 @@ export async function getUserInterviewMetrics(
 
   let db = null;
   try {
-    db = await getMongoDb();
+    db = await withTimeout(getMongoDb(), 4500, "MongoDB connection timed out.");
   } catch {
     db = null;
   }
@@ -359,11 +381,21 @@ export async function getUserInterviewMetrics(
     };
   }
 
-  const rawInterviews = (await db
-    .collection("interviews")
-    .find({ userId: userEmail })
-    .sort({ createdAt: -1 })
-    .toArray()) as InterviewRecord[];
+  let databaseReady = true;
+  let rawInterviews: InterviewRecord[] = [];
+  try {
+    const interviewsCursor = db
+      .collection("interviews")
+      .find({ userId: userEmail }, { maxTimeMS: 4000 })
+      .sort({ createdAt: -1 });
+    rawInterviews = await withTimeout(
+      interviewsCursor.toArray() as Promise<InterviewRecord[]>,
+      4500,
+      "Interview metrics query timed out.",
+    );
+  } catch {
+    databaseReady = false;
+  }
 
   const completedSessions = rawInterviews.filter((interview) => interview.status === "completed");
   const gradedSessions = completedSessions.filter(
@@ -414,7 +446,7 @@ export async function getUserInterviewMetrics(
 
   return {
     hasSession: true,
-    databaseReady: true,
+    databaseReady,
     totalSessions: rawInterviews.length,
     completedSessions: completedSessions.length,
     gradedSessions: gradedSessions.length,

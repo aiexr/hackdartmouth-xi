@@ -43,6 +43,12 @@ type PersistedPracticeState = {
 
 const PRACTICE_STATE_TTL_MS = 24 * 60 * 60 * 1000;
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 export function PracticeSession({ scenario }: { scenario: Scenario }) {
   const router = useRouter();
   const storageKey = `practice-state:${scenario.id}`;
@@ -146,7 +152,14 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
             scenarioId: scenario.id,
           }),
         });
-        const { id } = await startRes.json();
+        const startPayload = asRecord(await startRes.json());
+        const id =
+          typeof startPayload.id === "string" && startPayload.id.trim()
+            ? startPayload.id
+            : null;
+        if (!id) {
+          throw new Error("Missing interview id");
+        }
 
         // If a document is selected, use FormData; otherwise use JSON
         if (selectedDocument) {

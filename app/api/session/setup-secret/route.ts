@@ -36,6 +36,10 @@ export async function POST() {
     );
   }
 
-  const data = await res.json();
+  const rawData: unknown = await res.json();
+  const data =
+    rawData && typeof rawData === "object"
+      ? (rawData as Record<string, unknown>)
+      : {};
   return NextResponse.json(data);
 }

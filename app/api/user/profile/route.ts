@@ -35,7 +35,11 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const body = await request.json();
+    const rawBody: unknown = await request.json();
+    const body =
+      rawBody && typeof rawBody === "object"
+        ? (rawBody as Record<string, unknown>)
+        : {};
     const { name, bio, resumeUrl, focusTrack, preferences } = body;
 
     const updates: Record<string, unknown> = {};

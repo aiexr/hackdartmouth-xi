@@ -10,6 +10,70 @@ import { Badge } from "@/components/ui/badge";
 import { roleTracks } from "@/data/scenarios";
 import type { User } from "@/lib/models/User";
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function toUser(value: Record<string, unknown>): User {
+  return {
+    email: typeof value.email === "string" ? value.email : "",
+    name: typeof value.name === "string" ? value.name : "",
+    image: typeof value.image === "string" ? value.image : "",
+    provider: typeof value.provider === "string" ? value.provider : "unknown",
+    focusTrack:
+      typeof value.focusTrack === "string" || value.focusTrack === null
+        ? value.focusTrack
+        : null,
+    bio: typeof value.bio === "string" || value.bio === null ? value.bio : null,
+    resumeUrl:
+      typeof value.resumeUrl === "string" || value.resumeUrl === null
+        ? value.resumeUrl
+        : null,
+    preferences: {
+      voiceId:
+        typeof asRecord(value.preferences).voiceId === "string" ||
+        asRecord(value.preferences).voiceId === null
+          ? (asRecord(value.preferences).voiceId as string | null)
+          : null,
+      feedbackStyle:
+        asRecord(value.preferences).feedbackStyle === "detailed" ||
+        asRecord(value.preferences).feedbackStyle === "concise" ||
+        asRecord(value.preferences).feedbackStyle === "structured"
+          ? (asRecord(value.preferences).feedbackStyle as
+              | "detailed"
+              | "concise"
+              | "structured")
+          : "structured",
+      practiceReminders:
+        typeof asRecord(value.preferences).practiceReminders === "boolean"
+          ? (asRecord(value.preferences).practiceReminders as boolean)
+          : true,
+      weeklyGoal:
+        typeof asRecord(value.preferences).weeklyGoal === "number"
+          ? (asRecord(value.preferences).weeklyGoal as number)
+          : 3,
+    },
+    createdAt:
+      value.createdAt instanceof Date
+        ? value.createdAt
+        : new Date(
+            typeof value.createdAt === "string" || typeof value.createdAt === "number"
+              ? value.createdAt
+              : Date.now(),
+          ),
+    updatedAt:
+      value.updatedAt instanceof Date
+        ? value.updatedAt
+        : new Date(
+            typeof value.updatedAt === "string" || typeof value.updatedAt === "number"
+              ? value.updatedAt
+              : Date.now(),
+          ),
+  };
+}
+
 export function ProfileEditor() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,13 +94,14 @@ export function ProfileEditor() {
         const res = await fetch("/api/user/profile");
         if (!res.ok) throw new Error("Failed to fetch profile");
 
-        const data = await res.json();
-        setUser(data);
+        const data = asRecord(await res.json());
+        const parsedUser = toUser(data);
+        setUser(parsedUser);
         setFormData({
-          name: data.name || "",
-          bio: data.bio || "",
-          resumeUrl: data.resumeUrl || "",
-          focusTrack: data.focusTrack || "",
+          name: parsedUser.name || "",
+          bio: parsedUser.bio || "",
+          resumeUrl: parsedUser.resumeUrl || "",
+          focusTrack: parsedUser.focusTrack || "",
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -72,8 +137,8 @@ export function ProfileEditor() {
 
       if (!res.ok) throw new Error("Failed to update profile");
 
-      const updatedUser = await res.json();
-      setUser(updatedUser);
+      const data = asRecord(await res.json());
+      setUser(toUser(data));
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {

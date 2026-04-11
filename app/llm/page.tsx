@@ -22,6 +22,29 @@ type DocumentTestResponse = {
   extracted_length: number;
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function toLlmTestResponse(value: Record<string, unknown>): LlmTestResponse {
+  return {
+    content: typeof value.content === "string" ? value.content : "",
+    modelUsed: typeof value.modelUsed === "string" ? value.modelUsed : "unknown",
+    provider: typeof value.provider === "string" ? value.provider : "unknown",
+  };
+}
+
+function toDocumentTestResponse(value: Record<string, unknown>): DocumentTestResponse {
+  return {
+    text: typeof value.text === "string" ? value.text : "",
+    filename: typeof value.filename === "string" ? value.filename : "unknown",
+    extracted_length:
+      typeof value.extracted_length === "number" ? value.extracted_length : 0,
+  };
+}
+
 export default function LlmTestPage() {
   const [prompt, setPrompt] = useState(
     "Give me one behavioral interview question and a strong STAR-style sample answer.",
@@ -59,7 +82,7 @@ export default function LlmTestPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = asRecord(await res.json());
 
       if (!res.ok) {
         setResult(null);
@@ -67,7 +90,7 @@ export default function LlmTestPage() {
         return;
       }
 
-      setResult(data as LlmTestResponse);
+      setResult(toLlmTestResponse(data));
     } catch {
       setResult(null);
       setError("Request failed. Check network/API configuration and try again.");
@@ -93,14 +116,14 @@ export default function LlmTestPage() {
         body: formData,
       });
 
-      const data = await res.json();
+      const data = asRecord(await res.json());
 
       if (!res.ok) {
         setDocumentError(typeof data?.error === "string" ? data.error : "Extraction failed.");
         return;
       }
 
-      setDocumentResult(data as DocumentTestResponse);
+      setDocumentResult(toDocumentTestResponse(data));
     } catch {
       setDocumentError("Request failed. Check network and try again.");
     } finally {
