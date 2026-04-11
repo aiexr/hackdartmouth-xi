@@ -2,7 +2,7 @@ import { env } from "@/lib/env";
 
 export const DEFAULT_OPENAI_MODEL = "google_genai.gemini-2.5-flash";
 
-const DEFAULT_OPENAI_BASE_URL = "https://chat.dartmouth.edu/v1";
+const DARTMOUTH_OPENAI_BASE_URL = "https://chat.dartmouth.edu/api";
 
 const NON_CHAT_MODEL_KEYWORDS = [
   "openai_responses.",
@@ -38,8 +38,7 @@ function getApiConfig() {
     throw new Error("OPENAI_API_KEY environment variable is not set");
   }
 
-  const baseUrl =
-    process.env.API_BASE_URL || process.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL;
+  const baseUrl = DARTMOUTH_OPENAI_BASE_URL;
 
   return {
     apiKey,

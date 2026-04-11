@@ -15,7 +15,7 @@ if (fs.existsSync(envPath)) {
 }
 
 const apiKey = process.env.OPENAI_API_KEY;
-const baseUrl = process.env.API_BASE_URL || process.env.OPENAI_BASE_URL || "https://chat.dartmouth.edu/v1";
+const baseUrl = "https://chat.dartmouth.edu/api";
 
 if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
 
