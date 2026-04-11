@@ -18,12 +18,14 @@ export type TranscriptEntry = {
 };
 
 type LiveAvatarProps = {
+  tone?: string;
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
 };
 
 export function LiveAvatar({
+  tone = "neutral",
   onTranscriptUpdate,
   onSessionEnd,
   onStateChange,
@@ -100,7 +102,7 @@ export function LiveAvatar({
       const res = await fetch("/api/session/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "video" }),
+        body: JSON.stringify({ mode: "video", tone }),
       });
 
       if (!res.ok) {

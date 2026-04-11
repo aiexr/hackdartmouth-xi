@@ -9,10 +9,15 @@ export async function GET() {
   }
 
   try {
-    const user = await UserModel.getUserByEmail(session.user.email);
+    let user = await UserModel.getUserByEmail(session.user.email);
 
     if (!user) {
-      return Response.json({ error: "User not found" }, { status: 404 });
+      user = await UserModel.findOrCreateUser(
+        session.user.email,
+        session.user.name ?? "",
+        session.user.image ?? "",
+        "google",
+      );
     }
 
     return Response.json(user);

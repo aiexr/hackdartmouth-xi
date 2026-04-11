@@ -228,12 +228,14 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
 
           {interviewMode === "video" ? (
             <LiveAvatar
+              tone={interviewTone}
               onTranscriptUpdate={setTranscript}
               onSessionEnd={handleSessionEnd}
               onStateChange={setSessionState}
             />
           ) : (
             <VoiceCall
+              tone={interviewTone}
               onTranscriptUpdate={setTranscript}
               onSessionEnd={handleSessionEnd}
               onStateChange={setSessionState}

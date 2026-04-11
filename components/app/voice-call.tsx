@@ -12,13 +12,24 @@ export type TranscriptEntry = {
   partial?: boolean;
 };
 
+const TONE_PROMPTS: Record<string, string> = {
+  friendly:
+    "Adopt a warm, encouraging interview style. Be patient, give the candidate time to think, acknowledge good points with brief positive feedback, and gently push for specifics. Start with a friendly greeting.",
+  neutral:
+    "Conduct the interview in a standard professional manner. Be fair, ask one question at a time, and probe for specifics when answers are vague.",
+  tough:
+    "Adopt a demanding, no-nonsense interview style. Be direct and skeptical. Challenge vague answers immediately. Push back on every response. Never praise. Test composure with unexpected follow-ups. Start with a hard question right away.",
+};
+
 type VoiceCallProps = {
+  tone?: string;
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
 };
 
 export function VoiceCall({
+  tone = "neutral",
   onTranscriptUpdate,
   onSessionEnd,
   onStateChange,
@@ -108,12 +119,16 @@ export function VoiceCall({
       });
 
       conversationRef.current = conversation;
+
+      // Inject tone modifier into the agent's context
+      const tonePrompt = TONE_PROMPTS[tone] ?? TONE_PROMPTS.neutral;
+      conversation.sendContextualUpdate(tonePrompt);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start call";
       setError(message);
       updateStatus("idle");
     }
-  }, [updateStatus, updateTranscript, onSessionEnd]);
+  }, [updateStatus, updateTranscript, onSessionEnd, tone]);
 
   const endCall = useCallback(async () => {
     if (conversationRef.current) {

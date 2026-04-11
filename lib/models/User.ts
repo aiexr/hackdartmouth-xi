@@ -84,7 +84,7 @@ export class UserModel {
       { returnDocument: "after" }
     );
 
-    return (result as any)?.value ?? null;
+    return result ?? null;
   }
 
   static async ensureIndexes(): Promise<void> {
