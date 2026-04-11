@@ -237,6 +237,14 @@ The agent may:
 
 Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo. That means when a task has been completed say that by putting (Completed) next to it. 
 
+## LLM call policy
+
+When making any LLM call in this repo, route it through `lib/integrations/llm.ts`.
+
+Do not call provider modules directly from app routes/components unless you are actively changing the integration layer itself.
+
+`lib/integrations/llm.ts` is where provider selection, model override/fallback behavior, shared defaults, and optional JSON parsing are handled.
+
 ---
 
 ## Preferred implementation style
