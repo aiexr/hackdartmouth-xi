@@ -1,0 +1,215 @@
+name: Cloudflare Deploy
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: cloudflare-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+      FORCE_COLOR: "0"
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PRODUCTION_URL: ${{ vars.CLOUDFLARE_PRODUCTION_URL }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      WORKFLOW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Validate Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLOUDFLARE_API_TOKEN}" ]]; then
+            echo "Missing GitHub secret: CLOUDFLARE_API_TOKEN" >&2
+            exit 1
+          fi
+
+          if [[ -z "${CLOUDFLARE_ACCOUNT_ID}" ]]; then
+            echo "Missing GitHub secret: CLOUDFLARE_ACCOUNT_ID" >&2
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --progress=false
+
+      - name: Decide deployment mode
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          branch_name="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          branch_slug="$(printf '%s' "$branch_name" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//; s/-+/-/g')"
+
+          if [[ -z "${branch_slug}" ]]; then
+            branch_slug="branch"
+          fi
+
+          if [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
+            echo "mode=production" >> "$GITHUB_OUTPUT"
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "description=Deploy to Cloudflare Workers production" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=preview" >> "$GITHUB_OUTPUT"
+            echo "environment=cloudflare-preview-${branch_slug}" >> "$GITHUB_OUTPUT"
+            echo "description=Upload Cloudflare preview version" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub deployment
+        id: deployment
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_ENVIRONMENT: ${{ steps.meta.outputs.environment }}
+          DEPLOYMENT_DESCRIPTION: ${{ steps.meta.outputs.description }}
+          DEPLOYMENT_MODE: ${{ steps.meta.outputs.mode }}
+        with:
+          script: |
+            const isProduction = process.env.DEPLOYMENT_MODE === "production";
+            const response = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              auto_merge: false,
+              required_contexts: [],
+              environment: process.env.DEPLOYMENT_ENVIRONMENT,
+              description: process.env.DEPLOYMENT_DESCRIPTION,
+              transient_environment: !isProduction,
+              production_environment: isProduction,
+              payload: JSON.stringify({
+                workflow_run_url: process.env.WORKFLOW_RUN_URL,
+                sha: context.sha,
+                ref: context.ref,
+              }),
+            });
+
+            core.setOutput("deployment_id", String(response.data.id));
+
+      - name: Mark deployment in progress
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+          DEPLOYMENT_ENVIRONMENT: ${{ steps.meta.outputs.environment }}
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: Number(process.env.DEPLOYMENT_ID),
+              state: "in_progress",
+              log_url: process.env.WORKFLOW_RUN_URL,
+              description: `Started ${process.env.DEPLOYMENT_ENVIRONMENT}`,
+            });
+
+      - name: Build app for Cloudflare
+        run: npx @opennextjs/cloudflare build
+
+      - name: Upload preview version
+        id: preview
+        if: steps.meta.outputs.mode == 'preview'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          log_file="${RUNNER_TEMP}/cloudflare-preview.log"
+          npx @opennextjs/cloudflare upload |& tee "${log_file}"
+
+          preview_url="$(grep -oE 'Version Preview URL: https://[^[:space:]]+' "${log_file}" | tail -n 1 | sed 's/^Version Preview URL: //')"
+
+          if [[ -z "${preview_url}" ]]; then
+            echo "Cloudflare upload succeeded, but no preview URL was found in the CLI output." >&2
+            exit 1
+          fi
+
+          echo "url=${preview_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy production worker
+        id: production
+        if: steps.meta.outputs.mode == 'production'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npx @opennextjs/cloudflare deploy |& tee "${RUNNER_TEMP}/cloudflare-production.log"
+
+          if [[ -n "${CLOUDFLARE_PRODUCTION_URL}" ]]; then
+            echo "url=${CLOUDFLARE_PRODUCTION_URL}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve deployment URL
+        id: deployment_url
+        if: success()
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.url }}
+          PRODUCTION_URL: ${{ steps.production.outputs.url }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${PRODUCTION_URL}" ]]; then
+            echo "url=${PRODUCTION_URL}" >> "$GITHUB_OUTPUT"
+          elif [[ -n "${PREVIEW_URL}" ]]; then
+            echo "url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mark deployment successful
+        if: success()
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+          DEPLOYMENT_ENVIRONMENT: ${{ steps.meta.outputs.environment }}
+          DEPLOYMENT_URL: ${{ steps.deployment_url.outputs.url }}
+        with:
+          script: |
+            const params = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: Number(process.env.DEPLOYMENT_ID),
+              state: "success",
+              log_url: process.env.WORKFLOW_RUN_URL,
+              description: `Finished ${process.env.DEPLOYMENT_ENVIRONMENT}`,
+              auto_inactive: false,
+            };
+
+            if (process.env.DEPLOYMENT_URL) {
+              params.environment_url = process.env.DEPLOYMENT_URL;
+            }
+
+            await github.rest.repos.createDeploymentStatus(params);
+
+      - name: Mark deployment failed
+        if: failure() && steps.deployment.outputs.deployment_id != ''
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+          DEPLOYMENT_ENVIRONMENT: ${{ steps.meta.outputs.environment }}
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: Number(process.env.DEPLOYMENT_ID),
+              state: "failure",
+              log_url: process.env.WORKFLOW_RUN_URL,
+              description: `Failed ${process.env.DEPLOYMENT_ENVIRONMENT}`,
+              auto_inactive: false,
+            });
