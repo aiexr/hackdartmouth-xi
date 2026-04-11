@@ -49,7 +49,13 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-export function PracticeSession({ scenario }: { scenario: Scenario }) {
+export function PracticeSession({
+  scenario,
+  displayTitle,
+}: {
+  scenario: Scenario;
+  displayTitle?: string;
+}) {
   const router = useRouter();
   const storageKey = `practice-state:${scenario.id}`;
   const [panel, setPanel] = useState<PracticePanel>("rubric");
@@ -194,6 +200,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
   const stepCount = scenario.followUps.length + 1;
   const progress = ((step + 1) / stepCount) * 100;
   const currentPrompt = step === 0 ? scenario.prompt : scenario.followUps[step - 1];
+  const sessionTitle = displayTitle ?? scenario.title;
 
   const formattedTime = useMemo(() => {
     const minutes = Math.floor(seconds / 60);
@@ -229,7 +236,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
             <p className="text-sm font-medium text-muted-foreground">
               {scenario.interviewer} · {scenario.interviewerRole}
             </p>
-            <h1 className="mt-1 text-2xl md:text-3xl">{scenario.title}</h1>
+            <h1 className="mt-1 text-2xl md:text-3xl">{sessionTitle}</h1>
             {sessionState === "idle" && (
               <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-muted-foreground">
                 {currentPrompt}
