@@ -6,6 +6,10 @@
   "name": "hackdartmouth-xi",
   "compatibility_date": "2026-04-11",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Public runtime defaults only. Keep secrets in Cloudflare env secrets.
+  "vars": {
+    "NEXTAUTH_URL": "https://hackdartmouth-xi.alex-6e4.workers.dev"
+  },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
