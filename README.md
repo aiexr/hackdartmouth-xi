@@ -4,7 +4,7 @@ https://hackdartmouth-xi.alex-6e4.workers.dev
 
 # LeetSpeak
 
-`LeetSpeak` is a clean MVP foundation for a role-specific mock interview practice app built with Next.js, TypeScript, Tailwind CSS, shadcn/ui patterns, and Cloudflare Workers via OpenNext.
+LeetSpeak is a role-specific mock interview practice app built with Next.js, TypeScript, Tailwind CSS, shadcn/ui patterns, and Cloudflare Workers via OpenNext.
 
 The repo keeps the existing `design/` folder intact and uses it as the source of truth for:
 
@@ -17,25 +17,33 @@ The repo keeps the existing `design/` folder intact and uses it as the source of
 
 This implementation does not treat `design/` as production code. Instead, it translates the important design ideas into a real Next app-router project that can build and deploy through Cloudflare Workers.
 
-## What we built
+## Current app surfaces
 
-I created the first working app foundation with the following product surfaces:
+The current app includes the following user-facing routes:
 
 - dashboard at `/`
+- practice index redirect at `/practice`
 - mock interview practice session at `/practice/[scenarioId]`
 - feedback review at `/review/[scenarioId]`
 - profile at `/profile`
 - AI coach at `/coach`
 - settings at `/settings`
+- LLM sandbox at `/llm`
 - sign-in shell at `/auth/sign-in`
-- health endpoint at `/api/health`
 
-The current MVP is intentionally structure-first:
+The app now goes beyond structure-only UI:
 
-- buttons do not yet execute full product logic
-- interview content is mocked and typed
-- practice, transcript, feedback, and progress all render as working UI
-- backend integrations are scaffolded and env-wired, but not fully connected
+- practice sessions can create and complete interview attempts through API routes
+- transcripts can be appended during active interviews
+- review pages can load persisted attempts and grading results
+- dashboard and profile metrics can read interview history from MongoDB when configured
+- LLM integration can be tested from the internal sandbox route
+
+Current constraints:
+
+- some UI copy and scenario content still comes from typed fixtures
+- auth and data features are integration-dependent (graceful fallback when env is missing)
+- LiveAvatar and ElevenLabs flow is scaffolded and partially wired, not production-hardened
 
 ## How the design folder was used
 
@@ -49,7 +57,7 @@ The main mappings were:
 - `design/src/app/components/profile-page.tsx`, `coach-page.tsx`, and `settings-page.tsx` informed the supporting product surfaces.
 - `design/src/styles/theme.css` informed the token palette: warm background, indigo primary, soft secondary surfaces, calm borders, and rounded card language.
 
-I preserved the spirit of the original design while adapting the content to the actual product framing:
+The implementation preserves the spirit of the original design while adapting content to the current product framing:
 
 - role tracks are now explicit
 - scenarios are framed as repeatable interview loops
@@ -62,10 +70,11 @@ I preserved the spirit of the original design while adapting the content to the 
 - TypeScript
 - Tailwind CSS v4
 - shadcn/ui-style components in `components/ui/`
-- NextAuth.js with Google OAuth and MongoDB adapter
-- Gemini request scaffold
-- ElevenLabs request scaffold
-- MongoDB Atlas connection scaffold
+- NextAuth.js with Google OAuth (JWT sessions)
+- MongoDB Atlas for interview persistence and metrics
+- LLM provider abstraction with OpenAI-compatible endpoint and Gemini support
+- LiveAvatar session token + secret setup routes
+- ElevenLabs call-mode agent wiring
 - Cloudflare Workers deployment via `@opennextjs/cloudflare`
 
 ## Cloudflare / OpenNext setup
@@ -106,21 +115,41 @@ Important compatibility notes:
 - `app/globals.css`
   Global Tailwind + theme token layer derived from the design output.
 - `app/page.tsx`
-  Main dashboard with hero, suggested loops, role tracks, improvement themes, and integration readiness.
+  Main dashboard with goals, role track metrics, and recent improvement themes.
+- `app/practice/page.tsx`
+  Redirect route to the default scenario.
 - `app/profile/page.tsx`
   User summary, mastery view, and achievements.
 - `app/coach/page.tsx`
   AI coach surface.
 - `app/settings/page.tsx`
   Product settings page.
+- `app/llm/page.tsx`
+  Internal LLM sandbox page.
 - `app/auth/sign-in/page.tsx`
   NextAuth-oriented sign-in shell.
 - `app/practice/[scenarioId]/page.tsx`
   Dynamic interview practice route.
 - `app/review/[scenarioId]/page.tsx`
-  Dynamic review route for structured feedback.
+  Dynamic review route with persisted-attempt fallback behavior.
 - `app/api/health/route.ts`
   Small health/status endpoint exposing integration readiness.
+- `app/api/interview/start/route.ts`
+  Creates a new in-progress interview document for the signed-in user.
+- `app/api/interview/[id]/transcript/route.ts`
+  Appends transcript turns to an in-progress interview.
+- `app/api/interview/end/route.ts`
+  Completes an interview and attempts LLM grading.
+- `app/api/interview/[id]/route.ts`
+  Returns a single interview by id for the signed-in user.
+- `app/api/interviews/route.ts`
+  Returns all interviews for the signed-in user.
+- `app/api/llm/test/route.ts`
+  Executes an LLM test prompt with optional provider override.
+- `app/api/session/create/route.ts`
+  Creates LiveAvatar video-mode session tokens or returns call-mode agent config.
+- `app/api/session/setup-secret/route.ts`
+  One-time helper for storing ElevenLabs API key in LiveAvatar secrets.
 
 ### Shared app components
 
@@ -158,11 +187,17 @@ These are lightweight shadcn/ui-style primitives used by the MVP:
 - `lib/env.ts`
   Server-side env loading and readiness flags.
 - `lib/auth.ts`
-  NextAuth configuration with Google provider and MongoDB adapter wiring.
-- `lib/gemini.ts`
-  Gemini request helper scaffold for scoring / feedback.
+  NextAuth configuration with optional Google provider wiring.
+- `lib/integrations/llm.ts`
+  LLM provider router used by grading and sandbox routes.
+- `lib/integrations/openai.ts`
+  OpenAI-compatible provider client (Dartmouth endpoint by default).
+- `lib/integrations/gemini.ts`
+  Gemini provider client.
+- `lib/interview-metrics.ts`
+  Mongo-backed dashboard/profile metric aggregation with safe fallbacks.
 - `lib/elevenlabs.ts`
-  ElevenLabs speech helper scaffold for interviewer voice playback.
+  ElevenLabs helper scaffold.
 - `lib/mongodb.ts`
   MongoDB Atlas connection helper.
 
@@ -191,11 +226,23 @@ Copy `.dev.vars.example` to `.dev.vars` and fill in values for:
 - `NEXTAUTH_URL`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
+- `LLM_PROVIDER` (`openai` or `gemini`)
 - `GEMINI_API_KEY`
+- `GEMINI_MODEL`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL`
 - `ELEVENLABS_API_KEY`
 - `ELEVENLABS_VOICE_ID`
+- `NEXT_PUBLIC_ELEVENLABS_AGENT_ID`
 - `MONGODB_URI`
 - `MONGODB_DB_NAME`
+- `HEYGEN_API_KEY`
+
+Optional LiveAvatar tuning vars used by `/api/session/create`:
+
+- `HEYGEN_AVATAR_ID`
+- `HEYGEN_CONTEXT_ID`
+- `HEYGEN_LLM_CONFIG_ID`
 
 ## Local development
 
@@ -229,6 +276,12 @@ Build for Cloudflare Workers with OpenNext:
 npx opennextjs-cloudflare build
 ```
 
+List available Dartmouth-hosted models for the OpenAI-compatible path:
+
+```bash
+npm run list-dartmouth-models
+```
+
 Preview in the Workers runtime:
 
 ```bash
@@ -241,28 +294,21 @@ Deploy:
 npm run deploy
 ```
 
-## Verification completed
+## Verification checklist
 
-I verified the current repo by running:
+Use this quick checklist after configuration changes:
 
-- `npm install`
 - `npm run build`
 - `npm run cf-typegen`
-- `npx opennextjs-cloudflare build`
+- `npm run preview`
+- `curl http://localhost:3000/api/health`
 
-Results:
+## Suggested next steps
 
-- the Next.js production build passes
-- Cloudflare env types generate successfully
-- the OpenNext Cloudflare build successfully generates `.open-next/worker.js`
-
-## Next implementation steps
-
-The UI foundation is ready. The next real product work should be:
+Key product-hardening work:
 
 1. finish the NextAuth sign-in flow and session-aware app gating
-2. persist users, attempts, transcripts, and scores in MongoDB Atlas
-3. wire microphone capture and transcript storage
-4. call Gemini for interviewer turns, scoring, and structured feedback
-5. call ElevenLabs for interviewer voice playback
-6. replace mocked dashboard/profile data with user-specific data fetching
+2. fully wire live transcript streaming and incremental step progression
+3. harden interview-end grading reliability and retry behavior
+4. deepen ElevenLabs voice playback integration inside interview loops
+5. replace remaining fixture-driven content with dynamic DB-backed data
