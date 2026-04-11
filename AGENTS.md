@@ -1,5 +1,6 @@
 # AGENTS.md
 
+## Pushing
 When pushing to main, just do 
 `git pull`
 
@@ -8,6 +9,9 @@ When pushing to main, just do
 and commit your changes to main; rebase if needed
 just dont slow down work. 
 
+## Designing
+
+If you are designing UI/UX refer to design.md
 
 
 ## Purpose
