@@ -88,7 +88,8 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
         </p>
       </div>
 
-      <div className="overflow-visible rounded-lg border border-border px-3 py-2">
+      <div className="overflow-x-auto rounded-lg border border-border px-3 py-2">
+        <div className="min-w-max">
           {/* Month labels */}
           <div className="flex" style={{ paddingLeft: 26 }}>
             {months.map((m, i) => {
@@ -178,6 +179,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
             ))}
             <span>More</span>
           </div>
+        </div>
       </div>
     </div>
   );

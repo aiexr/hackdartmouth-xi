@@ -91,10 +91,12 @@ ln -s AGENTS.md CLAUDE.md
 Users can optionally upload a resume or document (PDF, DOCX) during practice sessions. The document is extracted to plain text and included in the interview grading context so the LLM can reference the candidate's background and experience when evaluating performance.
 
 - File size limit: 10 MB
+- One uploaded file per interview submission
 - Supported formats: PDF, DOCX (Word)
 - Upload is optional; interviews without documents are graded normally
 - If extraction fails, the interview proceeds without the document context
-- Extraction is handled server-side using `pdf-text-extract` (PDF) and `mammoth` (DOCX)
+- For Gemini provider with PDF uploads, grading uses native Gemini PDF understanding
+- For DOCX uploads (or non-Gemini providers), extraction is handled server-side using `pdf-text-extract` (PDF) and `mammoth` (DOCX)
 
 ## Cloudflare / OpenNext setup
 

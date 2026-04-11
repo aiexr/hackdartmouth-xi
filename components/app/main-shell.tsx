@@ -68,26 +68,45 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-end border-b border-border px-6 py-3">
-          <button
-            onClick={() =>
-              session?.user ? signOut() : signIn("google")
-            }
-            className="cursor-pointer rounded-full transition-opacity hover:opacity-80"
-            title={session?.user ? "Sign out" : "Sign in with Google"}
-          >
-            {session?.user?.image ? (
-              <img
-                src={session.user.image}
-                alt=""
-                referrerPolicy="no-referrer"
-                className="size-9 rounded-full ring-2 ring-border"
-              />
-            ) : (
+          {session?.user ? (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => signOut()}
+                className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                title="Sign out"
+              >
+                Sign out
+              </button>
+              <Link
+                href="/profile"
+                className="cursor-pointer rounded-full transition-opacity hover:opacity-80"
+                title="Profile"
+              >
+                {session.user.image ? (
+                  <img
+                    src={session.user.image}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                    className="size-9 rounded-full ring-2 ring-border"
+                  />
+                ) : (
+                  <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-primary/20">
+                    <User className="size-4" />
+                  </div>
+                )}
+              </Link>
+            </div>
+          ) : (
+            <button
+              onClick={() => signIn("google")}
+              className="cursor-pointer rounded-full transition-opacity hover:opacity-80"
+              title="Sign in with Google"
+            >
               <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-primary/20">
                 <User className="size-4" />
               </div>
-            )}
-          </button>
+            </button>
+          )}
         </header>
 
         <main className="flex-1 pb-20 md:pb-0">{children}</main>

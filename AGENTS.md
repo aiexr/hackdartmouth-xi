@@ -7,7 +7,9 @@ When pushing to main, just do
 `git add .`
 
 and commit your changes to main; rebase if needed
-just dont slow down work. 
+just dont slow down work.
+
+**Before pushing:** if the change you just made completes a task listed in `roadmap.md`, delete that line from the active priority list in the same commit. Do not tag it `(Completed)` and leave it — remove the entry. This applies every time you finish a roadmap task, not just when the human reminds you.
 
 ## Designing
 
@@ -235,7 +237,16 @@ The agent may:
 
 ## Roadmap maintenance
 
-Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo. That means when a task has been completed say that by putting (Completed) next to it. 
+Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo.
+
+**When you finish a roadmap task, DELETE that line from `roadmap.md` in the same commit that implements it.** This is mandatory, not optional.
+
+- Do NOT tag items `(Completed)` and leave them in High / Medium / Low Priority. Delete the line outright.
+- Do NOT defer the removal to a follow-up commit. The removal IS part of the task.
+- If you notice stale `(Completed)` items while working on the roadmap, delete them in the same change — they are bugs, not history.
+- Before pushing, re-read `roadmap.md` and confirm your finished item is gone and no `(Completed)` tags remain.
+
+A task is not done until the roadmap entry for it has been deleted.
 
 ## Agent doc maintenance
 

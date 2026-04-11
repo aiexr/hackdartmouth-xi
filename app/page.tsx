@@ -143,7 +143,7 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <section className="grid grid-cols-[3fr_1fr] items-stretch gap-4">
+        <section className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(220px,1fr)]">
           <div className="min-w-0">
             <ActivityCalendar
               activityDays={metrics.activityDays}
