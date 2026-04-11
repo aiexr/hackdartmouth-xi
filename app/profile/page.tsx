@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Award, Briefcase, Edit3, User } from "lucide-react";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
+import { UserModel } from "@/lib/models";
 import { MainShell } from "@/components/app/main-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,14 +13,22 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage() {
   const session = await getOptionalServerSession();
   const metrics = await getUserInterviewMetrics(session?.user?.email);
-  const profileName = session?.user?.name ?? "Guest user";
+  const dbUser = session?.user?.email ? await UserModel.getUserByEmail(session.user.email) : null;
+  
+  const profileName = (dbUser?.name || session?.user?.name) ?? "Guest user";
+  const profileBio = dbUser?.bio || null;
+  const profileFocusTrack = dbUser?.focusTrack || null;
+  
   const subtitle = !metrics.hasSession
     ? "Sign in to save interviews and unlock profile progress."
     : !metrics.databaseReady
       ? "MongoDB is not configured yet, so profile stats are waiting on persistence."
-      : metrics.topTrackName
-        ? `${metrics.topTrackName} focus · ${metrics.completedSessions} completed practice loops`
-        : "No completed interview loops yet";
+      : profileFocusTrack && metrics.completedSessions
+        ? `${profileFocusTrack} focus · ${metrics.completedSessions} completed practice loops`
+        : metrics.topTrackName && metrics.completedSessions
+          ? `${metrics.topTrackName} focus · ${metrics.completedSessions} completed practice loops`
+          : "No completed interview loops yet";
+  
   const profileActionHref = session?.user ? "/settings" : "/auth/sign-in";
   const profileActionLabel = session?.user ? "Edit profile" : "Sign in";
 
@@ -55,6 +64,15 @@ export default async function ProfilePage() {
             </Button>
           </CardContent>
         </Card>
+
+        {profileBio && (
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="mb-3">About</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">{profileBio}</p>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-4 md:grid-cols-4">
           {metrics.profileStats.map((item) => (

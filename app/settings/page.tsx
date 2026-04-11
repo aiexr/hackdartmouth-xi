@@ -1,6 +1,7 @@
 import { Settings } from "lucide-react";
 import { MainShell } from "@/components/app/main-shell";
 import { SettingsPanel } from "@/components/app/settings-panel";
+import { ProfileEditor } from "@/components/app/profile-editor";
 
 export default function SettingsPage() {
   return (
@@ -16,7 +17,17 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <SettingsPanel />
+        <div className="space-y-8">
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Profile Information</h2>
+            <ProfileEditor />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Practice Preferences</h2>
+            <SettingsPanel />
+          </div>
+        </div>
       </div>
     </MainShell>
   );
