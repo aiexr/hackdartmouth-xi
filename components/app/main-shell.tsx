@@ -7,6 +7,7 @@ import {
   Bot,
   BookOpenCheck,
   Home,
+  MessageSquare,
   Settings,
   Sparkles,
   User,
@@ -15,6 +16,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/practice", label: "Practice", icon: MessageSquare },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/coach", label: "Coach", icon: Sparkles },
   { href: "/llm", label: "LLM", icon: Bot },

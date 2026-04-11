@@ -17,6 +17,7 @@ Agents must update this file when they complete work here or materially change s
 3. Integrate ElevenLabs voice playback into interview sessions so interviewer prompts can be spoken instead of only rendered as text.
 4. Add robust loading, empty, and error states across practice, review, auth, and settings flows so partially configured integrations fail gracefully.
 5. Add automated verification for the critical paths: auth bootstrap, API health, scenario routing, and Cloudflare deployment workflow behavior.
+6. User context upload (resume, LinkedIn, job description) for personalized interview grading on the Profile page, with scenario rubric injection into the grading prompt. (Completed)
 
 ## Low Priority
 

@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 import { ll } from "@/lib/integrations/llm";
+import { getScenarioById } from "@/data/scenarios";
 
 type NormalizedGradingResult = {
   overall_score: number;
@@ -253,8 +254,64 @@ export async function POST(req: NextRequest) {
   let gradingError: string | null = null;
 
   if (transcriptText) {
+    const scenario = interview.scenarioId
+      ? getScenarioById(String(interview.scenarioId))
+      : null;
+
+    const userProfile = await db
+      .collection("user_profiles")
+      .findOne({ userId: session.user.email });
+
+    const hasUserContext =
+      userProfile?.resumeText || userProfile?.linkedinText || userProfile?.jobDescriptionText;
+
     const systemPrompt =
       "You are a senior interview coach. Grade interview performance with strict, constructive, and fair feedback. Return only valid JSON.";
+
+    const contextLines: string[] = [];
+
+    if (scenario?.rubric?.length) {
+      contextLines.push(
+        "Scenario rubric (use these as the grading dimensions):",
+        ...scenario.rubric.map((d: string) => `- ${d}`),
+      );
+    }
+    if (scenario?.focus?.length) {
+      contextLines.push(
+        "",
+        "Focus areas for this scenario:",
+        ...scenario.focus.map((f: string) => `- ${f}`),
+      );
+    }
+
+    if (userProfile?.resumeText) {
+      contextLines.push(
+        "",
+        "Candidate resume:",
+        String(userProfile.resumeText).slice(0, 3000),
+      );
+    }
+    if (userProfile?.linkedinText) {
+      contextLines.push(
+        "",
+        "Candidate LinkedIn profile:",
+        String(userProfile.linkedinText).slice(0, 2000),
+      );
+    }
+    if (userProfile?.jobDescriptionText) {
+      contextLines.push(
+        "",
+        "Target job description:",
+        String(userProfile.jobDescriptionText).slice(0, 2000),
+      );
+    }
+
+    if (hasUserContext) {
+      contextLines.push(
+        "",
+        "When grading, evaluate how well the candidate's answers leverage their actual background for this specific role. Note gaps between their experience and the job requirements. Reference their specific skills or projects where relevant.",
+      );
+    }
 
     const userPrompt = [
       "Evaluate this mock interview and return a JSON object with this exact schema:",
@@ -273,10 +330,11 @@ export async function POST(req: NextRequest) {
       "- Be specific and evidence-based from the transcript.",
       "- Keep strengths and improvements concise and actionable.",
       "",
+      ...(contextLines.length ? [...contextLines, ""] : []),
       "Interview metadata:",
       `- Type: ${String(interview.type ?? "behavioral")}`,
       `- Difficulty: ${String(interview.difficulty ?? "medium")}`,
-      `- Scenario ID: ${String(interview.scenarioId ?? "unknown")}`,
+      `- Scenario: ${scenario?.title ?? String(interview.scenarioId ?? "unknown")}`,
       "",
       "Transcript:",
       transcriptText,
@@ -287,7 +345,7 @@ export async function POST(req: NextRequest) {
         systemPrompt,
         parseJson: true,
         temperature: 0.2,
-        maxTokens: 3000,
+        maxTokens: hasUserContext ? 4000 : 3000,
       });
 
       gradingResult = normalizeGradingResult(llmResponse.json);

@@ -59,6 +59,11 @@ type MasteryMetric = {
   label: string;
 };
 
+export type ActivityDay = {
+  date: string; // YYYY-MM-DD
+  count: number;
+};
+
 export type UserInterviewMetrics = {
   hasSession: boolean;
   databaseReady: boolean;
@@ -71,8 +76,10 @@ export type UserInterviewMetrics = {
   weeklyTarget: number;
   remainingLoops: number;
   streakDays: number;
+  longestStreak: number;
   activeTrackCount: number;
   topTrackName: string | null;
+  activityDays: ActivityDay[];
   goals: GoalMetric[];
   tracks: TrackMetric[];
   improvements: ImprovementMetric[];
@@ -142,6 +149,62 @@ function getCurrentStreak(interviews: InterviewRecord[]) {
   return streak;
 }
 
+function getLongestStreak(interviews: InterviewRecord[]) {
+  const activeDays = [
+    ...new Set(
+      interviews
+        .map((interview) => toDate(interview.completedAt ?? interview.createdAt))
+        .filter((date): date is Date => Boolean(date))
+        .map(toDayKey),
+    ),
+  ].sort();
+
+  if (!activeDays.length) return 0;
+
+  let longest = 1;
+  let current = 1;
+
+  for (let i = 1; i < activeDays.length; i++) {
+    const prev = new Date(activeDays[i - 1]);
+    const curr = new Date(activeDays[i]);
+    const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (diff === 1) {
+      current += 1;
+      longest = Math.max(longest, current);
+    } else {
+      current = 1;
+    }
+  }
+
+  return longest;
+}
+
+function getActivityDays(interviews: InterviewRecord[]): ActivityDay[] {
+  const counts = new Map<string, number>();
+
+  for (const interview of interviews) {
+    const date = toDate(interview.completedAt ?? interview.createdAt);
+    if (!date) continue;
+    const key = toDayKey(date);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  // Build a full grid of the last 365 days
+  const days: ActivityDay[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = 364; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const key = toDayKey(d);
+    days.push({ date: key, count: counts.get(key) ?? 0 });
+  }
+
+  return days;
+}
+
 function getTrackId(interview: InterviewRecord) {
   if (!interview.scenarioId) {
     return null;
@@ -202,8 +265,10 @@ export async function getUserInterviewMetrics(
       weeklyTarget: 4,
       remainingLoops: 4,
       streakDays: 0,
+      longestStreak: 0,
       activeTrackCount: 0,
       topTrackName: null,
+      activityDays: getActivityDays([]),
       goals: [
         { label: "Complete 4 practice loops this week", current: 0, total: 4 },
         { label: "Practice all role tracks", current: 0, total: roleTracks.length },
@@ -229,10 +294,10 @@ export async function getUserInterviewMetrics(
         label: "No scored sessions yet",
       })),
       achievements: [
-        { icon: "🔥", title: "No streak yet", description: "Complete a practice loop to start building momentum." },
-        { icon: "🎯", title: "First score pending", description: "Finish one graded interview to unlock score tracking." },
-        { icon: "📈", title: "Progress starts here", description: "Dashboard goals will fill in as interview history lands in MongoDB." },
-        { icon: "🧠", title: "Explore every track", description: "Practice across each role track to unlock broader feedback patterns." },
+        { icon: "flame", title: "No streak yet", description: "Complete a practice loop to start building momentum." },
+        { icon: "target", title: "First score pending", description: "Finish one graded interview to unlock score tracking." },
+        { icon: "trending-up", title: "Progress starts here", description: "Dashboard goals will fill in as interview history lands in MongoDB." },
+        { icon: "brain", title: "Explore every track", description: "Practice across each role track to unlock broader feedback patterns." },
       ],
     };
   }
@@ -257,8 +322,10 @@ export async function getUserInterviewMetrics(
       weeklyTarget: 4,
       remainingLoops: 4,
       streakDays: 0,
+      longestStreak: 0,
       activeTrackCount: 0,
       topTrackName: null,
+      activityDays: getActivityDays([]),
       goals: [
         { label: "Complete 4 practice loops this week", current: 0, total: 4 },
         { label: "Practice all role tracks", current: 0, total: roleTracks.length },
@@ -284,10 +351,10 @@ export async function getUserInterviewMetrics(
         label: "No scored sessions yet",
       })),
       achievements: [
-        { icon: "🔥", title: "No streak yet", description: "Complete a practice loop to start building momentum." },
-        { icon: "🎯", title: "First score pending", description: "Finish one graded interview to unlock score tracking." },
-        { icon: "📈", title: "Progress starts here", description: "Dashboard goals will fill in as interview history lands in MongoDB." },
-        { icon: "🧠", title: "Explore every track", description: "Practice across each role track to unlock broader feedback patterns." },
+        { icon: "flame", title: "No streak yet", description: "Complete a practice loop to start building momentum." },
+        { icon: "target", title: "First score pending", description: "Finish one graded interview to unlock score tracking." },
+        { icon: "trending-up", title: "Progress starts here", description: "Dashboard goals will fill in as interview history lands in MongoDB." },
+        { icon: "brain", title: "Explore every track", description: "Practice across each role track to unlock broader feedback patterns." },
       ],
     };
   }
@@ -342,6 +409,8 @@ export async function getUserInterviewMetrics(
     .sort((left, right) => right.sessions - left.sessions)[0];
   const activeTrackCount = trackSummaries.filter((track) => track.sessions > 0).length;
   const streakDays = getCurrentStreak(completedSessions);
+  const longestStreak = getLongestStreak(completedSessions);
+  const activityDays = getActivityDays(completedSessions);
 
   return {
     hasSession: true,
@@ -355,8 +424,10 @@ export async function getUserInterviewMetrics(
     weeklyTarget,
     remainingLoops: Math.max(weeklyTarget - weeklyCompleted, 0),
     streakDays,
+    longestStreak,
     activeTrackCount,
     topTrackName: topTrack?.sessions ? topTrack.name : null,
+    activityDays,
     goals: [
       { label: "Complete 4 practice loops this week", current: weeklyCompleted, total: weeklyTarget },
       { label: "Practice all role tracks", current: activeTrackCount, total: roleTracks.length },
@@ -391,14 +462,14 @@ export async function getUserInterviewMetrics(
     })),
     achievements: [
       {
-        icon: "🔥",
+        icon: "flame",
         title: streakDays ? `${streakDays}-day streak` : "No streak yet",
         description: streakDays
           ? "Completed interview sessions on consecutive days."
           : "Complete a practice loop today to start a streak.",
       },
       {
-        icon: "🎯",
+        icon: "target",
         title:
           bestScore === null ? "First score pending" : `${bestScore} best attempt`,
         description:
@@ -407,7 +478,7 @@ export async function getUserInterviewMetrics(
             : "Top scored mock interview recorded in MongoDB.",
       },
       {
-        icon: "📈",
+        icon: "trending-up",
         title:
           averageScore === null ? "Score trend pending" : `${averageScore} average score`,
         description:
@@ -416,7 +487,7 @@ export async function getUserInterviewMetrics(
             : `${gradedSessions.length} graded interview${gradedSessions.length === 1 ? "" : "s"} contributing to the running average.`,
       },
       {
-        icon: "🧠",
+        icon: "brain",
         title:
           activeTrackCount === 0
             ? "Track explorer"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { MessageCircleMore, Send, Sparkles, Target, FileText, Linkedin } from "lucide-react";
 import { coachMessages } from "@/data/scenarios";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,27 +13,35 @@ const quickActions = [
     title: "Analyze my LinkedIn",
     description: "Compare your positioning to the target loop.",
     icon: Linkedin,
+    href: "/profile",
   },
   {
     title: "Resume review",
     description: "Find weak framing before the interview happens.",
     icon: FileText,
+    href: "/profile",
   },
   {
     title: "Set a plan",
     description: "Build a one-week role-specific practice sequence.",
     icon: Target,
+    href: null,
   },
 ];
 
 export function CoachConversation() {
+  const router = useRouter();
   const [message, setMessage] = useState("");
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
         {quickActions.map((item) => (
-          <Card key={item.title} className="bg-white/80">
+          <Card
+            key={item.title}
+            className={`bg-white/80 ${item.href ? "cursor-pointer transition hover:ring-2 hover:ring-primary/20" : ""}`}
+            onClick={item.href ? () => router.push(item.href) : undefined}
+          >
             <CardContent className="p-5">
               <div className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
                 <item.icon className="size-5" />

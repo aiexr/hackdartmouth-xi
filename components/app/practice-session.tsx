@@ -9,6 +9,9 @@ import {
   Lightbulb,
   MessageSquareText,
   Phone,
+  Smile,
+  Minus,
+  Flame,
   Video,
   X,
 } from "lucide-react";
@@ -19,6 +22,13 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 type InterviewMode = "video" | "call";
+type InterviewTone = "friendly" | "neutral" | "tough";
+
+const toneOptions = [
+  { id: "friendly" as const, label: "Friendly", icon: Smile, description: "Warm and encouraging" },
+  { id: "neutral" as const, label: "Neutral", icon: Minus, description: "Standard professional" },
+  { id: "tough" as const, label: "Tough", icon: Flame, description: "Pushes back hard" },
+];
 
 type PracticePanel = "rubric" | "hints" | "transcript";
 
@@ -28,6 +38,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
   const [seconds, setSeconds] = useState(0);
   const [step, setStep] = useState(0);
   const [interviewMode, setInterviewMode] = useState<InterviewMode>("video");
+  const [interviewTone, setInterviewTone] = useState<InterviewTone>("neutral");
   const [sessionState, setSessionState] = useState<"idle" | "connecting" | "connected" | "ended">("idle");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
 
@@ -63,7 +74,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
           }),
         });
 
-        router.push(`/review/${scenario.id}`);
+        router.push(`/review/${scenario.id}?interviewId=${id}`);
       } catch {
         router.push(`/review/${scenario.id}`);
       }
@@ -83,8 +94,8 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-border bg-white/75 px-5 py-4 backdrop-blur md:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+      <header className="border-b border-border bg-white/75 backdrop-blur">
+        <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="text-muted-foreground transition hover:text-foreground">
             <X className="size-5" />
           </Link>
@@ -117,33 +128,55 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
             )}
           </div>
 
-          {/* Mode selector -- only shown before session starts */}
+          {/* Mode + tone selectors -- only shown before session starts */}
           {sessionState === "idle" && (
-            <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
-              <button
-                onClick={() => setInterviewMode("video")}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
-                  interviewMode === "video"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Video className="size-4" />
-                Video
-              </button>
-              <button
-                onClick={() => setInterviewMode("call")}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
-                  interviewMode === "call"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Phone className="size-4" />
-                Voice
-              </button>
+            <div className="flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
+                <button
+                  onClick={() => setInterviewMode("video")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                    interviewMode === "video"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Video className="size-4" />
+                  Video
+                </button>
+                <button
+                  onClick={() => setInterviewMode("call")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                    interviewMode === "call"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Phone className="size-4" />
+                  Voice
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Tone:</span>
+                {toneOptions.map((tone) => (
+                  <button
+                    key={tone.id}
+                    onClick={() => setInterviewTone(tone.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
+                      interviewTone === tone.id
+                        ? "bg-secondary text-secondary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                    title={tone.description}
+                  >
+                    <tone.icon className="size-3.5" />
+                    {tone.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
