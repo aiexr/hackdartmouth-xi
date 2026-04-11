@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import {
   BookOpenCheck,
   Flame,
   Home,
+  LogIn,
+  LogOut,
   Settings,
   Sparkles,
   User,
@@ -21,6 +24,7 @@ const navigation = [
 
 export function MainShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <div className="flex min-h-screen bg-transparent">
@@ -61,6 +65,42 @@ export function MainShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        {session?.user ? (
+          <div className="mb-4 flex items-center gap-3 rounded-2xl bg-muted/60 px-4 py-3">
+            {session.user.image ? (
+              <img
+                src={session.user.image}
+                alt=""
+                className="size-9 rounded-full"
+              />
+            ) : (
+              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <User className="size-4" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">
+                {session.user.name}
+              </p>
+              <button
+                onClick={() => signOut()}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <LogOut className="size-3" />
+                Sign out
+              </button>
+            </div>
+          </div>
+        ) : (
+          <Link
+            href="/auth/sign-in"
+            className="mb-4 flex items-center gap-2 rounded-2xl bg-primary/5 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10"
+          >
+            <LogIn className="size-4" />
+            Sign in
+          </Link>
+        )}
 
         <div className="rounded-[1.75rem] border border-amber-200/70 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-[0_24px_50px_-40px_rgba(251,146,60,0.7)]">
           <div className="flex items-center gap-2 text-orange-700">

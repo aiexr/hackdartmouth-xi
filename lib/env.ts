@@ -3,13 +3,10 @@ import "server-only";
 const env = {
   appName:
     process.env.NEXT_PUBLIC_APP_NAME?.trim() || "LeetCode for Interviews",
-  firebase: {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  nextAuth: {
+    secret: process.env.NEXTAUTH_SECRET,
+    googleClientId: process.env.GOOGLE_CLIENT_ID,
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   },
   geminiApiKey: process.env.GEMINI_API_KEY,
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
@@ -19,11 +16,10 @@ const env = {
 };
 
 export const envFlags = {
-  firebaseReady: Boolean(
-    env.firebase.apiKey &&
-      env.firebase.authDomain &&
-      env.firebase.projectId &&
-      env.firebase.appId,
+  authReady: Boolean(
+    env.nextAuth.secret &&
+      env.nextAuth.googleClientId &&
+      env.nextAuth.googleClientSecret,
   ),
   geminiReady: Boolean(env.geminiApiKey),
   elevenLabsReady: Boolean(env.elevenLabsApiKey && env.elevenLabsVoiceId),

@@ -4,9 +4,9 @@ import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/c
 
 const items = [
   {
-    title: "Firebase Auth",
-    description: "Client auth shell and config wiring.",
-    ready: envFlags.firebaseReady,
+    title: "NextAuth",
+    description: "Google OAuth with MongoDB session storage.",
+    ready: envFlags.authReady,
     icon: ShieldCheck,
   },
   {
