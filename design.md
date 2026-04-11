@@ -412,6 +412,7 @@ import { motion } from "motion/react";
 - Default to semantic HTML headings
 
 ### ❌ Don't
+- Don't use emojis anywhere in the UI
 - Don't use heavy shadows (`shadow-lg`, `shadow-2xl`) on standard cards
 - Don't mix border radius (stick to `rounded-2xl` or `rounded-xl`)
 - Don't use Tailwind font-size classes for headings (e.g., `text-2xl` on `<h1>`)
