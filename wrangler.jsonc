@@ -9,7 +9,8 @@
   "keep_vars": true,
   // Public runtime defaults only. Keep secrets in Cloudflare env secrets.
   "vars": {
-    "NEXTAUTH_URL": "https://hackdartmouth-xi.alex-6e4.workers.dev",
+    // Ensure NextAuth derives callback URLs from the incoming request host.
+    "AUTH_TRUST_HOST": "1",
     "NEXTJS_ENV": "development",
     "GEMINI_MODEL": "gemini-2.5-flash",
     "LLM_PROVIDER": "openai",

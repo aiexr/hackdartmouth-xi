@@ -8,7 +8,7 @@ Agents must update this file when they complete work here or materially change s
 2. Persist in-progress practice state deeply enough to survive a browser refresh and resume the active loop, not just completed transcript/review history.
 3. Replace the mocked practice-session controls with actual audio capture, live transcript updates, and step progression tied to recorded interview responses. (Completed)
 4. Wire Gemini scoring into the practice-to-review flow so `/review/[scenarioId]` is generated from a real transcript and rubric evaluation instead of static fixture data. (Completed)
-5. Harden the deployment path by simplifying the GitHub Actions and Cloudflare setup, removing duplicate deploy surfaces, making the final deployment URL behavior explicit and reliable, and keeping auth/session rendering resilient when integrations are unavailable.
+5. Harden the deployment path by simplifying the GitHub Actions and Cloudflare setup, removing duplicate deploy surfaces, making the final deployment URL behavior explicit and reliable, and keeping auth/session rendering resilient when integrations are unavailable. (Completed)
 
 ## Medium Priority
 

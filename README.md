@@ -236,7 +236,8 @@ The production app excludes `design/` from TypeScript build checks so it stays i
 Copy `.dev.vars.example` to `.dev.vars` and fill in values for:
 
 - `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL`
+- `NEXTAUTH_URL` (set to your local URL for dev; for Cloudflare prod, set `AUTH_TRUST_HOST=1` and do not hardcode this to a different domain)
+- `AUTH_TRUST_HOST` (`1` in prod so NextAuth builds callback URLs from the request host)
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `LLM_PROVIDER` (`openai` or `gemini`)
