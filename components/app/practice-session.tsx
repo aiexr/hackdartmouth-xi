@@ -200,7 +200,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col lg:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <section className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-10 text-center md:px-10">
           <div className="max-w-2xl">
             <p className="text-sm font-medium text-muted-foreground">
@@ -331,7 +331,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
           )}
         </section>
 
-        <aside className="border-t border-border bg-white/85 backdrop-blur lg:w-[24rem] lg:border-l lg:border-t-0">
+        <aside className="flex min-h-0 flex-col border-t border-border bg-white/85 backdrop-blur lg:w-[24rem] lg:border-l lg:border-t-0">
           <div className="grid grid-cols-3 border-b border-border">
             {[
               { id: "rubric", label: "Rubric", icon: MessageSquareText },
@@ -354,9 +354,9 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
             ))}
           </div>
 
-          <div className="space-y-4 p-5">
+          <div className="min-h-0 flex-1 overflow-y-auto p-5">
             {panel === "rubric" ? (
-              <>
+              <div className="space-y-4">
                 <p className="text-sm leading-6 text-muted-foreground">
                   This interview loop scores against the same visible rubric every time.
                 </p>
@@ -371,11 +371,11 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                     </span>
                   </div>
                 ))}
-              </>
+              </div>
             ) : null}
 
             {panel === "hints" ? (
-              <>
+              <div className="space-y-4">
                 <p className="text-sm leading-6 text-muted-foreground">
                   Keep these visible during practice to anchor the answer.
                 </p>
@@ -387,7 +387,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                     <p className="text-sm leading-6">{hint}</p>
                   </div>
                 ))}
-              </>
+              </div>
             ) : null}
 
             {panel === "transcript" ? (
