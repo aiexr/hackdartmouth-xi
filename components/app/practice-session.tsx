@@ -74,8 +74,12 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
           if (Array.isArray(saved.transcript)) {
             const revived = saved.transcript
               .filter((entry) => entry && !entry.partial)
-              .map((entry) => ({
+              .map((entry, index) => ({
                 ...entry,
+                id:
+                  typeof entry.id === "string" && entry.id.length > 0
+                    ? entry.id
+                    : `rehydrated-${scenario.id}-${index}`,
                 timestamp: new Date(entry.timestamp),
               }));
             setTranscript(revived);
@@ -405,7 +409,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                     Transcript will appear here once the interview starts.
                   </p>
                 )}
-                {transcript.map((entry, index) => {
+                {transcript.map((entry) => {
                   const isUser = entry.role === "user";
                   const start = sessionStartRef.current;
                   let relTime = "";
@@ -417,7 +421,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                   }
 
                   return (
-                    <div key={index} className="space-y-1">
+                    <div key={entry.id} className="space-y-1">
                       <div className={cn("flex items-center gap-2 text-[10px] text-muted-foreground", isUser && "justify-end")}>
                         <span>{isUser ? "You" : "Interviewer"}</span>
                         {relTime && <span>{relTime}</span>}

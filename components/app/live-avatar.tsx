@@ -11,11 +11,14 @@ import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Loader2 } from "lucide-r
 import { cn } from "@/lib/utils";
 
 export type TranscriptEntry = {
+  id: string;
   role: "user" | "interviewer";
   content: string;
   timestamp: Date;
   partial?: boolean;
 };
+
+type TranscriptRole = TranscriptEntry["role"];
 
 type LiveAvatarProps = {
   tone?: string;
@@ -35,6 +38,10 @@ export function LiveAvatar({
   const userStreamRef = useRef<MediaStream | null>(null);
   const sessionRef = useRef<LiveAvatarSession | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
+    user: null,
+    interviewer: null,
+  });
 
   const [status, setStatus] = useState<"idle" | "connecting" | "connected" | "ended">("idle");
   const [isMuted, setIsMuted] = useState(false);
@@ -53,29 +60,94 @@ export function LiveAvatar({
 
   const updateTranscript = useCallback(
     (role: "user" | "interviewer", rawContent: string, partial: boolean) => {
-      const content = rawContent.replace(/\(.*?\)/g, "").replace(/\s{2,}/g, " ").trim();
-      if (!content) return;
+      const trimmed = rawContent.replace(/\(.*?\)/g, "").replace(/\s{2,}/g, " ").trim();
+      if (!trimmed) return;
       const entries = [...transcriptRef.current];
-      const last = entries[entries.length - 1];
+      const activePartialId = activePartialIdRef.current[role];
+      const activePartialIndex = activePartialId
+        ? entries.findIndex((entry) => entry.id === activePartialId)
+        : -1;
+
+      const createEntry = (entryPartial: boolean): TranscriptEntry => ({
+        id: crypto.randomUUID(),
+        role,
+        content: trimmed,
+        timestamp: new Date(),
+        partial: entryPartial ? true : undefined,
+      });
+
+      const dedupeWithPrevious = (index: number) => {
+        if (index <= 0) return;
+        const current = entries[index];
+        const previous = entries[index - 1];
+        if (
+          previous &&
+          current &&
+          !previous.partial &&
+          !current.partial &&
+          previous.role === current.role &&
+          previous.content === current.content
+        ) {
+          entries.splice(index, 1);
+        }
+      };
 
       if (partial) {
-        // Update existing partial entry for same role, or create new one
-        if (last && last.role === role && last.partial) {
-          entries[entries.length - 1] = { ...last, content: content.trim() };
+        if (activePartialIndex >= 0) {
+          entries[activePartialIndex] = {
+            ...entries[activePartialIndex],
+            content: trimmed,
+            timestamp: new Date(),
+          };
         } else {
-          entries.push({ role, content: content.trim(), timestamp: new Date(), partial: true });
+          const entry = createEntry(true);
+          entries.push(entry);
+          activePartialIdRef.current[role] = entry.id;
         }
       } else {
-        // Final transcription: replace the partial entry with the final one
-        if (last && last.role === role && last.partial) {
-          entries[entries.length - 1] = { role, content: content.trim(), timestamp: new Date() };
+        if (activePartialIndex >= 0) {
+          entries[activePartialIndex] = {
+            ...entries[activePartialIndex],
+            content: trimmed,
+            timestamp: new Date(),
+            partial: undefined,
+          };
+          dedupeWithPrevious(activePartialIndex);
         } else {
-          entries.push({ role, content: content.trim(), timestamp: new Date() });
+          const entry = createEntry(false);
+          entries.push(entry);
+          dedupeWithPrevious(entries.length - 1);
         }
+        activePartialIdRef.current[role] = null;
       }
 
       transcriptRef.current = entries;
       onTranscriptUpdate?.(entries);
+    },
+    [onTranscriptUpdate],
+  );
+
+  const flushPartial = useCallback(
+    (role: TranscriptRole) => {
+      const partialId = activePartialIdRef.current[role];
+      if (!partialId) return;
+
+      const entries = [...transcriptRef.current];
+      const index = entries.findIndex((entry) => entry.id === partialId);
+
+      if (index >= 0) {
+        const entry = entries[index];
+        entries[index] = {
+          ...entry,
+          content: entry.content.trim(),
+          partial: undefined,
+          timestamp: new Date(),
+        };
+        transcriptRef.current = entries;
+        onTranscriptUpdate?.(entries);
+      }
+
+      activePartialIdRef.current[role] = null;
     },
     [onTranscriptUpdate],
   );
@@ -143,9 +215,15 @@ export function LiveAvatar({
       });
 
       session.on(AgentEventsEnum.AVATAR_SPEAK_STARTED, () => setAvatarSpeaking(true));
-      session.on(AgentEventsEnum.AVATAR_SPEAK_ENDED, () => setAvatarSpeaking(false));
+      session.on(AgentEventsEnum.AVATAR_SPEAK_ENDED, () => {
+        setAvatarSpeaking(false);
+        flushPartial("interviewer");
+      });
       session.on(AgentEventsEnum.USER_SPEAK_STARTED, () => setUserSpeaking(true));
-      session.on(AgentEventsEnum.USER_SPEAK_ENDED, () => setUserSpeaking(false));
+      session.on(AgentEventsEnum.USER_SPEAK_ENDED, () => {
+        setUserSpeaking(false);
+        flushPartial("user");
+      });
 
       session.on(AgentEventsEnum.USER_TRANSCRIPTION_CHUNK, (event: { text: string }) => {
         updateTranscript("user", event.text, true);
@@ -174,7 +252,7 @@ export function LiveAvatar({
       setError(message);
       updateStatus("idle");
     }
-  }, [updateStatus, updateTranscript, onSessionEnd, startUserCamera]);
+  }, [flushPartial, updateStatus, updateTranscript, onSessionEnd, startUserCamera]);
 
   const stopSession = useCallback(async () => {
     if (userStreamRef.current) {
@@ -189,9 +267,11 @@ export function LiveAvatar({
       }
       sessionRef.current = null;
     }
+    flushPartial("user");
+    flushPartial("interviewer");
     updateStatus("ended");
     onSessionEnd?.(transcriptRef.current);
-  }, [updateStatus, onSessionEnd]);
+  }, [flushPartial, updateStatus, onSessionEnd]);
 
   const toggleMute = useCallback(async () => {
     const session = sessionRef.current;

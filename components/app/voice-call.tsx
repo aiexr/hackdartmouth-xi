@@ -6,6 +6,7 @@ import { Mic, MicOff, Phone, PhoneOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type TranscriptEntry = {
+  id: string;
   role: "user" | "interviewer";
   content: string;
   timestamp: Date;
@@ -20,6 +21,8 @@ const TONE_PROMPTS: Record<string, string> = {
   tough:
     "Adopt a demanding, no-nonsense interview style. Be direct and skeptical. Challenge vague answers immediately. Push back on every response. Never praise. Test composure with unexpected follow-ups. Start with a hard question right away.",
 };
+
+type TranscriptRole = TranscriptEntry["role"];
 
 type VoiceCallProps = {
   tone?: string;
@@ -36,6 +39,10 @@ export function VoiceCall({
 }: VoiceCallProps) {
   const conversationRef = useRef<VoiceConversation | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
+    user: null,
+    interviewer: null,
+  });
 
   const [status, setStatus] = useState<"idle" | "connecting" | "connected" | "ended">("idle");
   const [isMuted, setIsMuted] = useState(false);
@@ -52,23 +59,65 @@ export function VoiceCall({
 
   const updateTranscript = useCallback(
     (role: "user" | "interviewer", rawContent: string, partial: boolean) => {
-      const content = rawContent.replace(/\(.*?\)/g, "").replace(/\s{2,}/g, " ").trim();
-      if (!content) return;
+      const trimmed = rawContent.replace(/\(.*?\)/g, "").replace(/\s{2,}/g, " ").trim();
+      if (!trimmed) return;
       const entries = [...transcriptRef.current];
-      const last = entries[entries.length - 1];
+      const activePartialId = activePartialIdRef.current[role];
+      const activePartialIndex = activePartialId
+        ? entries.findIndex((entry) => entry.id === activePartialId)
+        : -1;
+
+      const createEntry = (entryPartial: boolean): TranscriptEntry => ({
+        id: crypto.randomUUID(),
+        role,
+        content: trimmed,
+        timestamp: new Date(),
+        partial: entryPartial ? true : undefined,
+      });
+
+      const dedupeWithPrevious = (index: number) => {
+        if (index <= 0) return;
+        const current = entries[index];
+        const previous = entries[index - 1];
+        if (
+          previous &&
+          current &&
+          !previous.partial &&
+          !current.partial &&
+          previous.role === current.role &&
+          previous.content === current.content
+        ) {
+          entries.splice(index, 1);
+        }
+      };
 
       if (partial) {
-        if (last && last.role === role && last.partial) {
-          entries[entries.length - 1] = { ...last, content: content.trim() };
+        if (activePartialIndex >= 0) {
+          entries[activePartialIndex] = {
+            ...entries[activePartialIndex],
+            content: trimmed,
+            timestamp: new Date(),
+          };
         } else {
-          entries.push({ role, content: content.trim(), timestamp: new Date(), partial: true });
+          const entry = createEntry(true);
+          entries.push(entry);
+          activePartialIdRef.current[role] = entry.id;
         }
       } else {
-        if (last && last.role === role && last.partial) {
-          entries[entries.length - 1] = { role, content: content.trim(), timestamp: new Date() };
+        if (activePartialIndex >= 0) {
+          entries[activePartialIndex] = {
+            ...entries[activePartialIndex],
+            content: trimmed,
+            timestamp: new Date(),
+            partial: undefined,
+          };
+          dedupeWithPrevious(activePartialIndex);
         } else {
-          entries.push({ role, content: content.trim(), timestamp: new Date() });
+          const entry = createEntry(false);
+          entries.push(entry);
+          dedupeWithPrevious(entries.length - 1);
         }
+        activePartialIdRef.current[role] = null;
       }
 
       transcriptRef.current = entries;
