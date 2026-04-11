@@ -1,8 +1,8 @@
 import "server-only";
 
+export const APP_NAME = "LeetCode for Interviews";
+
 const env = {
-  appName:
-    process.env.NEXT_PUBLIC_APP_NAME?.trim() || "LeetCode for Interviews",
   nextAuth: {
     secret: process.env.NEXTAUTH_SECRET,
     googleClientId: process.env.GOOGLE_CLIENT_ID,
