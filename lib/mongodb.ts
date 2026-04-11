@@ -28,3 +28,12 @@ export async function getMongoDb() {
   const client = await clientPromise;
   return client.db(env.mongodbDbName);
 }
+
+export async function getOptionalMongoDb() {
+  try {
+    return await getMongoDb();
+  } catch (error) {
+    console.error("Failed to connect to MongoDB.", error);
+    return null;
+  }
+}

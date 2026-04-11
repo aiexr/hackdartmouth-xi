@@ -1,4 +1,4 @@
-# InterviewGym Design System
+# LeetSpeak Design System
 
 ## Design Philosophy
 
@@ -61,7 +61,7 @@ Use `rounded-2xl` as the default for any card-like container. Only use `rounded-
 ## Shadows & Elevation
 
 ### Shadow Scale (Minimal Approach)
-InterviewGym uses **minimal shadows** to maintain a clean, flat aesthetic with subtle depth:
+LeetSpeak uses **minimal shadows** to maintain a clean, flat aesthetic with subtle depth:
 
 - **No shadow (default)**: Most cards have no shadow at rest—rely on borders for definition
 - **Hover shadow**: `hover:shadow-sm` - subtle shadow on hover for interactive cards
@@ -85,7 +85,7 @@ InterviewGym uses **minimal shadows** to maintain a clean, flat aesthetic with s
 ## Colors & Semantic Meaning
 
 ### Color Tokens (from theme.css)
-InterviewGym uses Tailwind v4 CSS variables. Reference `/src/styles/theme.css` for the source of truth.
+LeetSpeak uses Tailwind v4 CSS variables. Reference `/src/styles/theme.css` for the source of truth.
 
 ### Semantic Color Usage
 
@@ -130,7 +130,7 @@ Used sparingly for emphasis:
 ## Typography
 
 ### Type Scale
-InterviewGym relies on semantic HTML headings with default styles from `/src/styles/theme.css`. Do NOT override these with Tailwind classes unless specifically needed.
+LeetSpeak relies on semantic HTML headings with default styles from `/src/styles/theme.css`. Do NOT override these with Tailwind classes unless specifically needed.
 
 - **`<h1>`**: Page titles (e.g., "Good morning, Alex")
 - **`<h2>`**: Section headings (e.g., "Suggested for You", "Weekly Progress")
@@ -434,6 +434,6 @@ import { motion } from "motion/react";
 ## Version & Updates
 
 **Last updated**: 2026-04-11  
-**Maintained by**: InterviewGym design team
+**Maintained by**: LeetSpeak design team
 
 When in doubt, refer to existing components in `/src/app/components/` for live examples of these patterns in practice.
