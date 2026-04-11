@@ -366,7 +366,8 @@ This repo is an App Router Next.js app with routes rooted at `app/` (not `src/ap
 
 Overall plan (based on current app shape)
 - Auth + entry: sign in at `/auth/sign-in`, then navigate from `/`.
-- Practice loop: scenarios live under `/practice` and `/practice/[scenarioId]`.
+- Practice loop: scenarios live under `/practice` and `/practice/[scenarioId]`, organized by five canonical round types (`behavioral`, `technical`, `system-design`, `product`, `case-study`).
+- Technical coding rounds render avatar/video alongside a Monaco editor; other rounds stay avatar + transcript focused.
 - Live coaching and voice surfaces: `/coach` plus app components in `components/app/`.
 - Review and progression: results/feedback under `/review/[scenarioId]` and user state pages under `/profile` and `/settings`.
 - Integration test surface: `/llm` for LLM wiring and document extraction checks.

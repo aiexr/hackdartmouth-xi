@@ -82,10 +82,10 @@ export default async function DashboardPage() {
             <CardContent className="p-7 md:p-8">
               <div className="mt-5">
                 <h1 className="max-w-2xl">
-                  Practice interviewing the LeetSpeak way with focused role tracks and repeatable loops.
+                  Practice interviewing the LeetSpeak way with canonical round types and repeatable loops.
                 </h1>
                 <p className="mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
-                  Choose a role track, jump into a repeatable interview scenario, and review visible progress over time. Weekly goals, streaks, and track completion now pull from saved interview history in MongoDB.
+                  Switch between behavioral, technical coding, system design, product, and case-study rounds, then review visible progress over time. Weekly goals, streaks, and saved interview history still flow through MongoDB-backed scoring.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="lg">

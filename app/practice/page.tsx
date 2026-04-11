@@ -414,7 +414,7 @@ export default function PracticePage() {
                                 {scenario.duration}
                               </p>
 
-                              <p className="mt-3 line-clamp-2 text-sm leading-6 text-foreground/85">
+                              <p className="mt-3 text-sm leading-6 text-foreground/85">
                                 {preview}
                               </p>
 
