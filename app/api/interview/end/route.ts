@@ -86,12 +86,12 @@ function transcriptToText(transcript: unknown) {
     .join("\n");
 }
 
-function getScenario(interview: { scenarioId?: string | null }) {
-  if (!interview.scenarioId) {
+function getScenarioById(scenarioId: string | null | undefined) {
+  if (!scenarioId) {
     return null;
   }
 
-  return scenarios.find((scenario) => scenario.id === interview.scenarioId) ?? null;
+  return scenarios.find((scenario) => scenario.id === scenarioId) ?? null;
 }
 
 function buildCategoryScoringGuidance(category: Scenario["category"] | string) {
@@ -397,7 +397,9 @@ export async function POST(req: NextRequest) {
   const resumeContext = profile?.resumeExtractedText?.trim()
     ? profile.resumeExtractedText.trim().slice(0, 8000)
     : "";
-  const scenario = getScenario(interview);
+  const scenario = getScenarioById(
+    typeof interview.scenarioId === "string" ? interview.scenarioId : null,
+  );
   const interviewCategory = scenario?.category ?? String(interview.type ?? "behavioral");
 
   let gradingResult: NormalizedGradingResult | null = null;

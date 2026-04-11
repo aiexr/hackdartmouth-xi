@@ -171,12 +171,14 @@ export function ProfileEditor() {
       });
 
       if (!res.ok) {
-        const payload = await res.json().catch(() => null);
-        throw new Error(payload?.error || "Failed to upload resume");
+        const payload = asRecord(await res.json().catch(() => null));
+        throw new Error(
+          typeof payload.error === "string" ? payload.error : "Failed to upload resume",
+        );
       }
 
-      const updatedUser = await res.json();
-      setUser(updatedUser);
+      const updatedUser = asRecord(await res.json());
+      setUser(toUser(updatedUser));
       setResumeFile(null);
       setResumeSuccess(true);
       setTimeout(() => setResumeSuccess(false), 3000);
