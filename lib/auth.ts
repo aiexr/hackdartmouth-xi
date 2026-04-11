@@ -1,42 +1,43 @@
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions, Session } from "next-auth";
+import { getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import { MongoClient } from "mongodb";
 
-function getClientPromise() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) return null;
-
-  const globalWithMongo = globalThis as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>;
-  };
-
-  if (!globalWithMongo._mongoClientPromise) {
-    const client = new MongoClient(uri);
-    globalWithMongo._mongoClientPromise = client.connect();
-  }
-
-  return globalWithMongo._mongoClientPromise;
-}
-
-const clientPromise = getClientPromise();
+const googleAuthReady = Boolean(
+  process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET,
+);
 
 export const authOptions: NextAuthOptions = {
-  adapter: clientPromise
-    ? (MongoDBAdapter(clientPromise) as NextAuthOptions["adapter"])
-    : undefined,
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
-    }),
-  ],
+  providers: googleAuthReady
+    ? [
+        GoogleProvider({
+          clientId: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        }),
+      ]
+    : [],
   pages: {
     signIn: "/auth/sign-in",
   },
   session: {
-    strategy: clientPromise ? "database" : "jwt",
+    strategy: "jwt",
   },
+  secret: process.env.NEXTAUTH_SECRET,
 };
 
-export { clientPromise };
+export async function getOptionalServerSession(): Promise<Session | null> {
+  try {
+    return await getServerSession(authOptions);
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      error.digest === "DYNAMIC_SERVER_USAGE"
+    ) {
+      throw error;
+    }
+
+    console.error("Failed to resolve NextAuth server session.", error);
+    return null;
+  }
+}

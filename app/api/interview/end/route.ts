@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { getMongoDb } from "@/lib/mongodb";
+import { getOptionalServerSession } from "@/lib/auth";
+import { getOptionalMongoDb } from "@/lib/mongodb";
 import { ll } from "@/lib/integrations/llm";
 
 type NormalizedGradingResult = {
@@ -212,12 +211,12 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getOptionalServerSession();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = await getMongoDb();
+  const db = await getOptionalMongoDb();
   if (!db) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }

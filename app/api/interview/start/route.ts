@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { getMongoDb } from "@/lib/mongodb";
+import { getOptionalServerSession } from "@/lib/auth";
+import { getOptionalMongoDb } from "@/lib/mongodb";
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getOptionalServerSession();
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = await getMongoDb();
+  const db = await getOptionalMongoDb();
   if (!db) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }

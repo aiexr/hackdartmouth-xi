@@ -1,15 +1,16 @@
 import Link from "next/link";
-import { getServerSession } from "next-auth";
 import { Award, Briefcase, Edit3, User } from "lucide-react";
-import { authOptions } from "@/lib/auth";
+import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
 import { MainShell } from "@/components/app/main-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProfilePage() {
-  const session = await getServerSession(authOptions);
+  const session = await getOptionalServerSession();
   const metrics = await getUserInterviewMetrics(session?.user?.email);
   const profileName = session?.user?.name ?? "Guest user";
   const subtitle = !metrics.hasSession

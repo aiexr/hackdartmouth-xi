@@ -8,7 +8,7 @@ Agents must update this file when they complete work here or materially change s
 2. Persist practice attempts, transcripts, scores, and review history in MongoDB so sessions survive refreshes and power the profile and review surfaces with real data.
 3. Replace the mocked practice-session controls with actual audio capture, live transcript updates, and step progression tied to recorded interview responses.
 4. Wire Gemini scoring into the practice-to-review flow so `/review/[scenarioId]` is generated from a real transcript and rubric evaluation instead of static fixture data.
-5. Harden the deployment path by simplifying the GitHub Actions and Cloudflare setup, removing duplicate deploy surfaces, and making the final deployment URL behavior explicit and reliable.
+5. Harden the deployment path by simplifying the GitHub Actions and Cloudflare setup, removing duplicate deploy surfaces, making the final deployment URL behavior explicit and reliable, and keeping auth/session rendering resilient when integrations are unavailable.
 
 ## Medium Priority
 
