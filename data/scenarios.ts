@@ -11,6 +11,13 @@ export type Scenario = {
   id: string;
   title: string;
   prompt: string;
+  category:
+    | "behavioral"
+    | "technical"
+    | "system-design"
+    | "product"
+    | "case-study";
+  pattern: string;
   trackId: string;
   trackLabel: string;
   difficulty: "Foundations" | "Growth" | "Stretch";
@@ -23,6 +30,17 @@ export type Scenario = {
   hints: string[];
   rubric: string[];
   followUps: string[];
+  codingProblem?: {
+    description: string;
+    examples: Array<{
+      input: string;
+      output: string;
+      explanation?: string;
+    }>;
+    constraints: string[];
+    optimalApproach: string;
+    starterCode?: string;
+  };
 };
 
 export const roleTracks: RoleTrack[] = [
@@ -61,7 +79,7 @@ const AVATAR_AVA =
 const AVATAR_DANIEL =
   "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600";
 
-export const scenarios: Scenario[] = [
+const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
   {
     id: "staff-swe-story",
     title: "Tell me about yourself for a staff-level role",
@@ -584,7 +602,7 @@ export const scenarios: Scenario[] = [
     trackLabel: "Consulting",
     difficulty: "Growth",
     interviewer: "Marcus Rivera",
-    interviewerRole: "Senior Partner",
+    interviewerRole: "Engagement Manager",
     interviewerAvatar: AVATAR_MARCUS,
     mastery: 28,
     duration: "8 min",
@@ -671,7 +689,533 @@ export const scenarios: Scenario[] = [
       "How would you know the turnaround was real and not cosmetic?",
     ],
   },
+  {
+    id: "technical-two-sum",
+    title: "Code Two Sum live",
+    prompt:
+      "We'll work through a coding problem together. Talk through your approach, write the solution in the editor, and explain the complexity tradeoffs as you go.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Foundations",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Senior Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 36,
+    duration: "18 min",
+    focus: ["Hash maps", "Complexity", "Verbal reasoning"],
+    hints: [
+      "Restate the problem before you touch the keyboard.",
+      "Name the brute-force baseline and why you are moving past it.",
+      "Explain why the hash map lookup works in one pass.",
+      "Call out the exact time and space complexity after you code.",
+    ],
+    rubric: [
+      "Correctness",
+      "Complexity analysis",
+      "Communication",
+      "Code quality",
+      "Edge-case awareness",
+    ],
+    followUps: [
+      "What would you change if duplicate values were common?",
+      "How would you test the negative-number and repeated-index cases?",
+    ],
+    codingProblem: {
+      description:
+        "Given an array of integers `nums` and an integer `target`, return the indices of the two numbers such that they add up to `target`. Assume exactly one valid answer exists and you may not use the same element twice.",
+      examples: [
+        {
+          input: "nums = [2,7,11,15], target = 9",
+          output: "[0,1]",
+          explanation: "nums[0] + nums[1] = 9.",
+        },
+        {
+          input: "nums = [3,2,4], target = 6",
+          output: "[1,2]",
+        },
+      ],
+      constraints: [
+        "2 <= nums.length <= 10^4",
+        "-10^9 <= nums[i] <= 10^9",
+        "-10^9 <= target <= 10^9",
+      ],
+      optimalApproach:
+        "Use a hash map from value to index while scanning once. For each number, check whether `target - nums[i]` has already been seen; if so, return the previous index and `i`. This gives O(n) time and O(n) space.",
+      starterCode:
+        "function twoSum(nums: number[], target: number): number[] {\n  // Write your solution here.\n  return [];\n}",
+    },
+  },
+  {
+    id: "technical-valid-parentheses",
+    title: "Validate parentheses with a stack",
+    prompt:
+      "Solve the problem in the editor while narrating your invariants. I care as much about how you reason about correctness as the final code.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Foundations",
+    interviewer: "Sarah Chen",
+    interviewerRole: "Engineering Manager",
+    interviewerAvatar: AVATAR_SARAH,
+    mastery: 33,
+    duration: "18 min",
+    focus: ["Stacks", "Invariants", "Edge cases"],
+    hints: [
+      "Define what the stack represents before coding.",
+      "Decide how you will map closing brackets to openings.",
+      "Handle early failure cases explicitly.",
+      "Close by explaining why leftover stack entries mean invalid input.",
+    ],
+    rubric: [
+      "Correctness",
+      "State management",
+      "Communication",
+      "Code clarity",
+      "Testing instinct",
+    ],
+    followUps: [
+      "How would you simplify the mapping logic further?",
+      "What test cases prove your implementation handles nested and broken input?",
+    ],
+    codingProblem: {
+      description:
+        "Given a string `s` containing just the characters `()[]{}`, determine if the input string is valid. A string is valid if open brackets are closed by the same type of brackets and in the correct order.",
+      examples: [
+        {
+          input: 's = "()[]{}"',
+          output: "true",
+        },
+        {
+          input: 's = "(]"',
+          output: "false",
+          explanation: "The closing bracket does not match the most recent opening bracket.",
+        },
+      ],
+      constraints: [
+        "1 <= s.length <= 10^4",
+        "s consists only of the characters ()[]{}",
+      ],
+      optimalApproach:
+        "Use a stack to track unmatched opening brackets. On every closing bracket, verify it matches the latest opening bracket and fail fast if not. This yields O(n) time and O(n) space in the worst case.",
+      starterCode:
+        "function isValid(s: string): boolean {\n  // Write your solution here.\n  return false;\n}",
+    },
+  },
+  {
+    id: "technical-merge-intervals",
+    title: "Merge overlapping intervals",
+    prompt:
+      "Work the problem live and keep narrating what invariant your merged output maintains after each iteration.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Growth",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Staff Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 29,
+    duration: "20 min",
+    focus: ["Sorting", "Intervals", "Invariants"],
+    hints: [
+      "State why sorting is the right first move.",
+      "Explain what goes in the output when intervals overlap.",
+      "Be explicit about inclusive boundaries.",
+      "Mention the complexity added by the initial sort.",
+    ],
+    rubric: [
+      "Correctness",
+      "Complexity analysis",
+      "Communication",
+      "Data-structure choice",
+      "Edge-case handling",
+    ],
+    followUps: [
+      "How would you adapt the approach if the intervals streamed in over time?",
+      "What cases would you use to verify touching intervals behave correctly?",
+    ],
+    codingProblem: {
+      description:
+        "Given an array of intervals where `intervals[i] = [start_i, end_i]`, merge all overlapping intervals and return an array of the non-overlapping intervals that cover all input intervals.",
+      examples: [
+        {
+          input: "intervals = [[1,3],[2,6],[8,10],[15,18]]",
+          output: "[[1,6],[8,10],[15,18]]",
+        },
+        {
+          input: "intervals = [[1,4],[4,5]]",
+          output: "[[1,5]]",
+          explanation: "Intervals that touch at the boundary should be merged.",
+        },
+      ],
+      constraints: [
+        "1 <= intervals.length <= 10^4",
+        "intervals[i].length == 2",
+        "0 <= start_i <= end_i <= 10^4",
+      ],
+      optimalApproach:
+        "Sort intervals by start time, then scan once while keeping the last merged interval. If the current interval overlaps the last merged interval, extend its end; otherwise append a new interval. This is O(n log n) time and O(n) output space.",
+      starterCode:
+        "function merge(intervals: number[][]): number[][] {\n  // Write your solution here.\n  return [];\n}",
+    },
+  },
+  {
+    id: "technical-top-k-frequent",
+    title: "Find the top K frequent elements",
+    prompt:
+      "Explain the solution space first, then code the version you would ship in an interview while defending the complexity.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Growth",
+    interviewer: "Sarah Chen",
+    interviewerRole: "Engineering Manager",
+    interviewerAvatar: AVATAR_SARAH,
+    mastery: 24,
+    duration: "20 min",
+    focus: ["Frequency counting", "Heaps", "Complexity tradeoffs"],
+    hints: [
+      "Separate counting from selection.",
+      "Name the tradeoff between sorting all counts and maintaining a heap.",
+      "Explain what happens when multiple values share the same frequency.",
+      "Close by stating the complexity of the exact approach you coded.",
+    ],
+    rubric: [
+      "Correctness",
+      "Complexity analysis",
+      "Tradeoff reasoning",
+      "Communication",
+      "Code organization",
+    ],
+    followUps: [
+      "When would you prefer bucket sort instead of a heap?",
+      "How would the approach change if the input were a large data stream?",
+    ],
+    codingProblem: {
+      description:
+        "Given an integer array `nums` and an integer `k`, return the `k` most frequent elements. You may return the answer in any order.",
+      examples: [
+        {
+          input: "nums = [1,1,1,2,2,3], k = 2",
+          output: "[1,2]",
+        },
+        {
+          input: "nums = [1], k = 1",
+          output: "[1]",
+        },
+      ],
+      constraints: [
+        "1 <= nums.length <= 10^5",
+        "-10^4 <= nums[i] <= 10^4",
+        "1 <= k <= number of unique elements",
+      ],
+      optimalApproach:
+        "Count frequencies with a hash map, then either keep a min-heap of size `k` or bucket values by frequency. A heap-based solution runs in O(n log k) time and O(n) space and is usually the clearest interview answer.",
+      starterCode:
+        "function topKFrequent(nums: number[], k: number): number[] {\n  // Write your solution here.\n  return [];\n}",
+    },
+  },
+  {
+    id: "technical-lru-cache",
+    title: "Design an LRU cache",
+    prompt:
+      "Treat this like a collaborative whiteboard-to-code round: explain the data structure design, then implement the core operations while I probe correctness and complexity.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Stretch",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Principal Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 18,
+    duration: "24 min",
+    focus: ["Data structures", "API design", "Complexity guarantees"],
+    hints: [
+      "Start by stating the required complexity for `get` and `put`.",
+      "Explain why a map alone is not enough.",
+      "Define the responsibilities of the linked list nodes before coding.",
+      "Talk through eviction behavior with a concrete example.",
+    ],
+    rubric: [
+      "Correctness",
+      "Complexity guarantees",
+      "Communication",
+      "Implementation quality",
+      "Edge-case awareness",
+    ],
+    followUps: [
+      "What bugs are common when removing and reinserting nodes?",
+      "How would you adapt this if entries also had time-based expiration?",
+    ],
+    codingProblem: {
+      description:
+        "Design a data structure that follows the constraints of a Least Recently Used (LRU) cache. Implement the `LRUCache` class with `get(key)` and `put(key, value)` operations, both in O(1) average time.",
+      examples: [
+        {
+          input:
+            '["LRUCache","put","put","get","put","get","put","get","get","get"] with [[2],[1,1],[2,2],[1],[3,3],[2],[4,4],[1],[3],[4]]',
+          output: "[null,null,null,1,null,-1,null,-1,3,4]",
+        },
+      ],
+      constraints: [
+        "1 <= capacity <= 3000",
+        "0 <= key <= 10^4",
+        "0 <= value <= 10^5",
+        "At most 2 * 10^5 calls will be made to get and put",
+      ],
+      optimalApproach:
+        "Combine a doubly linked list with a hash map from key to node. The list maintains recency order, and the map gives O(1) access to nodes for updates and eviction. Both `get` and `put` stay O(1) on average.",
+      starterCode:
+        "class LRUCache {\n  constructor(capacity: number) {}\n\n  get(key: number): number {\n    return -1;\n  }\n\n  put(key: number, value: number): void {}\n}\n",
+    },
+  },
+  {
+    id: "technical-word-ladder",
+    title: "Solve Word Ladder with BFS",
+    prompt:
+      "Use the editor and narrate your search strategy. I want to hear how you move from brute force to a scalable graph traversal.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Stretch",
+    interviewer: "Sarah Chen",
+    interviewerRole: "Senior Staff Engineer",
+    interviewerAvatar: AVATAR_SARAH,
+    mastery: 14,
+    duration: "24 min",
+    focus: ["Graphs", "BFS", "Complexity reasoning"],
+    hints: [
+      "Explain why shortest path points you toward BFS.",
+      "State how you generate valid neighbors efficiently.",
+      "Be explicit about visited-state management.",
+      "Close with the complexity bottleneck in your implementation.",
+    ],
+    rubric: [
+      "Correctness",
+      "Algorithm choice",
+      "Complexity analysis",
+      "Communication",
+      "Code clarity",
+    ],
+    followUps: [
+      "What would you optimize if the dictionary were very large?",
+      "How would bidirectional BFS change the tradeoffs?",
+    ],
+    codingProblem: {
+      description:
+        "A transformation sequence from `beginWord` to `endWord` uses a dictionary of words where only one letter may change at a time and every intermediate word must exist in the dictionary. Return the length of the shortest transformation sequence, or `0` if none exists.",
+      examples: [
+        {
+          input:
+            'beginWord = "hit", endWord = "cog", wordList = ["hot","dot","dog","lot","log","cog"]',
+          output: "5",
+          explanation: 'One shortest path is "hit" -> "hot" -> "dot" -> "dog" -> "cog".',
+        },
+      ],
+      constraints: [
+        "1 <= beginWord.length <= 10",
+        "1 <= wordList.length <= 5000",
+        "All words have the same length",
+      ],
+      optimalApproach:
+        "Model the words as an implicit graph and run BFS from the begin word. Either generate one-letter mutations on the fly with a hash set lookup or precompute wildcard patterns to reduce repeated work. The intended solution is BFS-based because the first time you reach `endWord` is the shortest path.",
+      starterCode:
+        "function ladderLength(beginWord: string, endWord: string, wordList: string[]): number {\n  // Write your solution here.\n  return 0;\n}",
+    },
+  },
+  {
+    id: "system-url-shortener",
+    title: "Design a URL shortener",
+    prompt:
+      "Design a URL shortener end to end. Start with requirements, then walk through the write path, read path, and the key scaling bottlenecks.",
+    trackId: "staff-engineering",
+    trackLabel: "System Design",
+    difficulty: "Foundations",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Principal Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 27,
+    duration: "22 min",
+    focus: ["Requirements", "Storage design", "Scalability"],
+    hints: [
+      "Clarify redirect latency, scale, and custom alias requirements first.",
+      "Separate short-code generation from redirect serving.",
+      "Talk through hot keys, collisions, and expiration.",
+      "Name the first metrics and alerts you would instrument.",
+    ],
+    rubric: [
+      "Requirement clarity",
+      "Component design",
+      "Tradeoff reasoning",
+      "Scaling awareness",
+      "Communication",
+    ],
+    followUps: [
+      "How would custom aliases and analytics change the design?",
+      "What would you cache and where?",
+    ],
+  },
+  {
+    id: "system-feature-flags",
+    title: "Design a feature flag platform",
+    prompt:
+      "Design a feature flag system that product and engineering teams can use to safely roll features out by audience and environment.",
+    trackId: "staff-engineering",
+    trackLabel: "System Design",
+    difficulty: "Growth",
+    interviewer: "Sarah Chen",
+    interviewerRole: "Engineering Director",
+    interviewerAvatar: AVATAR_SARAH,
+    mastery: 23,
+    duration: "24 min",
+    focus: ["Control planes", "Consistency", "Developer tooling"],
+    hints: [
+      "Split the control plane from the low-latency evaluation path.",
+      "Discuss how rules propagate to SDKs safely.",
+      "Call out the tradeoff between freshness and availability.",
+      "Mention governance concerns like audit history and kill switches.",
+    ],
+    rubric: [
+      "Component clarity",
+      "Tradeoff reasoning",
+      "Scaling awareness",
+      "Operational detail",
+      "Communication",
+    ],
+    followUps: [
+      "How would you prevent bad flag rules from taking production down?",
+      "What guarantees would your SDK make when the config service is unavailable?",
+    ],
+  },
+  {
+    id: "system-realtime-chat",
+    title: "Design a realtime chat system",
+    prompt:
+      "Design a chat system for direct messages and small group chats. Walk me through message delivery, ordering, unread state, and how the architecture changes as traffic grows.",
+    trackId: "staff-engineering",
+    trackLabel: "System Design",
+    difficulty: "Growth",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Principal Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 19,
+    duration: "26 min",
+    focus: ["Realtime delivery", "Ordering", "State synchronization"],
+    hints: [
+      "Clarify online presence, message history, and fan-out assumptions early.",
+      "Separate the write path from websocket delivery.",
+      "Talk about ordering guarantees per conversation, not globally.",
+      "Explain how you would recover clients after disconnects.",
+    ],
+    rubric: [
+      "Requirement clarity",
+      "Component design",
+      "Tradeoff reasoning",
+      "Scaling awareness",
+      "Failure handling",
+    ],
+    followUps: [
+      "How would the design change for large channels instead of small groups?",
+      "Where would you enforce idempotency and deduplication?",
+    ],
+  },
+  {
+    id: "system-news-feed-ranking",
+    title: "Design a news feed ranking system",
+    prompt:
+      "Design the backend for a personalized news feed. Cover candidate generation, ranking, freshness, and how you would balance relevance with system cost.",
+    trackId: "staff-engineering",
+    trackLabel: "System Design",
+    difficulty: "Stretch",
+    interviewer: "Sarah Chen",
+    interviewerRole: "VP Engineering",
+    interviewerAvatar: AVATAR_SARAH,
+    mastery: 16,
+    duration: "28 min",
+    focus: ["Ranking systems", "Freshness", "Scale"],
+    hints: [
+      "Clarify whether the feed is read-heavy, write-heavy, or both.",
+      "Separate candidate generation from final ranking.",
+      "Discuss the tradeoff between precomputation and on-demand ranking.",
+      "Name the abuse, latency, and experimentation risks explicitly.",
+    ],
+    rubric: [
+      "Requirement clarity",
+      "Component design",
+      "Tradeoff reasoning",
+      "Scaling awareness",
+      "Metric awareness",
+    ],
+    followUps: [
+      "How would you explain the relevance-versus-freshness tradeoff to product leadership?",
+      "What signals would you keep out of the first version to reduce complexity?",
+    ],
+  },
 ];
+
+const scenarioCategories: Record<string, Scenario["category"]> = {
+  "staff-swe-story": "behavioral",
+  "staff-swe-mentorship": "behavioral",
+  "staff-swe-system-design-intro": "system-design",
+  "staff-swe-conflict": "behavioral",
+  "staff-swe-incident": "behavioral",
+  "staff-swe-tech-strategy": "product",
+  "staff-swe-ambiguous-initiative": "product",
+  "pm-metric-drop": "product",
+  "pm-product-sense": "product",
+  "pm-prioritization": "product",
+  "pm-stakeholder-pushback": "product",
+  "pm-launch-decision": "product",
+  "pm-zero-to-one": "product",
+  "consulting-market-sizing": "case-study",
+  "consulting-profitability": "case-study",
+  "consulting-market-entry": "case-study",
+  "consulting-client-pushback": "case-study",
+  "consulting-synthesis": "case-study",
+  "consulting-ops-turnaround": "case-study",
+  "technical-two-sum": "technical",
+  "technical-valid-parentheses": "technical",
+  "technical-merge-intervals": "technical",
+  "technical-top-k-frequent": "technical",
+  "technical-lru-cache": "technical",
+  "technical-word-ladder": "technical",
+  "system-url-shortener": "system-design",
+  "system-feature-flags": "system-design",
+  "system-realtime-chat": "system-design",
+  "system-news-feed-ranking": "system-design",
+};
+
+const scenarioPatterns: Record<string, Scenario["pattern"]> = {
+  "staff-swe-story": "self-intro",
+  "staff-swe-mentorship": "coaching-growth",
+  "staff-swe-system-design-intro": "retrospective-architecture",
+  "staff-swe-conflict": "conflict-influence",
+  "staff-swe-incident": "incident-leadership",
+  "staff-swe-tech-strategy": "platform-investment",
+  "staff-swe-ambiguous-initiative": "ambiguous-charter",
+  "pm-metric-drop": "metric-diagnosis",
+  "pm-product-sense": "product-improvement",
+  "pm-prioritization": "roadmap-prioritization",
+  "pm-stakeholder-pushback": "stakeholder-negotiation",
+  "pm-launch-decision": "launch-risk-call",
+  "pm-zero-to-one": "zero-to-one-bet",
+  "consulting-market-sizing": "market-sizing",
+  "consulting-profitability": "profitability-tree",
+  "consulting-market-entry": "market-entry",
+  "consulting-client-pushback": "client-pushback",
+  "consulting-synthesis": "recommendation-synthesis",
+  "consulting-ops-turnaround": "operations-turnaround",
+  "technical-two-sum": "two-sum",
+  "technical-valid-parentheses": "valid-parentheses",
+  "technical-merge-intervals": "merge-intervals",
+  "technical-top-k-frequent": "top-k-frequency",
+  "technical-lru-cache": "lru-cache",
+  "technical-word-ladder": "word-ladder",
+  "system-url-shortener": "url-shortener",
+  "system-feature-flags": "feature-flag-platform",
+  "system-realtime-chat": "realtime-chat",
+  "system-news-feed-ranking": "news-feed-ranking",
+};
+
+export const scenarios: Scenario[] = scenarioBank.map((scenario) => ({
+  ...scenario,
+  category: scenarioCategories[scenario.id] ?? "behavioral",
+  pattern: scenarioPatterns[scenario.id] ?? "general",
+}));
 
 export const featuredScenarios = scenarios.slice(0, 4);
 

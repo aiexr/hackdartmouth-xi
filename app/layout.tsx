@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "LeetSpeak",
   description:
     "A polished MVP for role-specific interview practice with realistic mock sessions, feedback, and progress tracking.",
+  icons: {
+    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
+    shortcut: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

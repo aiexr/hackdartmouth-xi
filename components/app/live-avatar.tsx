@@ -22,6 +22,7 @@ type TranscriptRole = TranscriptEntry["role"];
 
 type LiveAvatarProps = {
   tone?: string;
+  promptRequest?: { id: string; text: string } | null;
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
@@ -35,6 +36,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 export function LiveAvatar({
   tone = "neutral",
+  promptRequest,
   onTranscriptUpdate,
   onSessionEnd,
   onStateChange,
@@ -44,6 +46,7 @@ export function LiveAvatar({
   const userStreamRef = useRef<MediaStream | null>(null);
   const sessionRef = useRef<LiveAvatarSession | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const lastPromptIdRef = useRef<string | null>(null);
   const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
     user: null,
     interviewer: null,
@@ -171,6 +174,24 @@ export function LiveAvatar({
     }
   }, []);
 
+  useEffect(() => {
+    if (!promptRequest || status !== "connected" || !sessionRef.current) {
+      return;
+    }
+
+    if (lastPromptIdRef.current === promptRequest.id) {
+      return;
+    }
+
+    lastPromptIdRef.current = promptRequest.id;
+
+    try {
+      sessionRef.current.message(promptRequest.text);
+    } catch {
+      // Ignore prompt delivery issues and keep the session running.
+    }
+  }, [promptRequest, status]);
+
   const startSession = useCallback(async () => {
     setError(null);
     updateStatus("connecting");
@@ -209,6 +230,7 @@ export function LiveAvatar({
 
       session.on(SessionEvent.SESSION_STATE_CHANGED, (state: SessionState) => {
         if (state === SessionState.CONNECTED) {
+          lastPromptIdRef.current = null;
           updateStatus("connected");
         } else if (state === SessionState.DISCONNECTED) {
           updateStatus("ended");

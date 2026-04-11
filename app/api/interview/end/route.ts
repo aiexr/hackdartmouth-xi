@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { scenarios, type Scenario } from "@/data/scenarios";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models";
@@ -83,6 +84,82 @@ function transcriptToText(transcript: unknown) {
     })
     .filter(Boolean)
     .join("\n");
+}
+
+function getScenario(interview: { scenarioId?: string | null }) {
+  if (!interview.scenarioId) {
+    return null;
+  }
+
+  return scenarios.find((scenario) => scenario.id === interview.scenarioId) ?? null;
+}
+
+function buildCategoryScoringGuidance(category: Scenario["category"] | string) {
+  switch (category) {
+    case "technical":
+      return [
+        "- Weigh code correctness most heavily, then complexity analysis, then communication.",
+        "- Check whether the candidate chose the right algorithm and could defend it.",
+        "- Use the editor snapshot as primary evidence for correctness and implementation quality.",
+      ];
+    case "system-design":
+      return [
+        "- Weigh component clarity, tradeoff reasoning, and scaling awareness most heavily.",
+        "- Reward candidates who clarify requirements before drawing architecture.",
+        "- Look for explicit handling of bottlenecks, failure modes, and data flow choices.",
+      ];
+    case "product":
+      return [
+        "- Weigh problem framing, prioritization quality, metric reasoning, and stakeholder judgment.",
+        "- Reward crisp decisions supported by evidence and explicit tradeoffs.",
+      ];
+    case "case-study":
+      return [
+        "- Weigh top-down structure, business reasoning, synthesis, and recommendation clarity.",
+        "- Reward explicit assumptions, good decomposition, and a crisp final recommendation.",
+      ];
+    case "behavioral":
+    default:
+      return [
+        "- Weigh STAR structure, specificity, and results most heavily.",
+        "- Reward concrete actions the candidate personally drove, not generic team outcomes.",
+      ];
+  }
+}
+
+function buildScenarioContext(scenario: Scenario | null) {
+  if (!scenario) {
+    return [];
+  }
+
+  const parts = [
+    "Scenario context:",
+    `- Title: ${scenario.title}`,
+    `- Category: ${scenario.category}`,
+    `- Pattern: ${scenario.pattern}`,
+    `- Prompt: ${scenario.prompt}`,
+    `- Visible rubric: ${scenario.rubric.join(", ")}`,
+    `- Focus areas: ${scenario.focus.join(", ")}`,
+    `- Follow-ups: ${scenario.followUps.join(" | ") || "None"}`,
+  ];
+
+  if (scenario.codingProblem) {
+    parts.push(
+      `- Coding problem description: ${scenario.codingProblem.description}`,
+      `- Coding examples: ${scenario.codingProblem.examples
+        .map(
+          (example, index) =>
+            `Example ${index + 1}: input ${example.input}; output ${example.output}${
+              example.explanation ? `; explanation ${example.explanation}` : ""
+            }`,
+        )
+        .join(" | ")}`,
+      `- Coding constraints: ${scenario.codingProblem.constraints.join(" | ")}`,
+      `- Expected optimal approach: ${scenario.codingProblem.optimalApproach}`,
+    );
+  }
+
+  return parts;
 }
 
 function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
@@ -227,9 +304,11 @@ export async function POST(req: NextRequest) {
   let body: {
     interviewId?: string;
     transcript?: unknown;
+    editorContent?: unknown;
   } = {
     interviewId: undefined,
     transcript: undefined,
+    editorContent: undefined,
   };
   let documentError: string | null = null;
   let uploadedDocument: { buffer: Buffer; mimeType: string; filename: string } | null = null;
@@ -248,6 +327,10 @@ export async function POST(req: NextRequest) {
       body.transcript =
         typeof transcriptField === "string"
           ? JSON.parse(transcriptField)
+          : undefined;
+      body.editorContent =
+        typeof formData.get("editorContent") === "string"
+          ? formData.get("editorContent")
           : undefined;
 
       // Extract document if present
@@ -285,7 +368,7 @@ export async function POST(req: NextRequest) {
     body = (await req.json()) as typeof body;
   }
 
-  const { interviewId, transcript } = body;
+  const { interviewId, transcript, editorContent } = body;
 
   if (!interviewId) {
     return NextResponse.json({ error: "interviewId required" }, { status: 400 });
@@ -308,10 +391,14 @@ export async function POST(req: NextRequest) {
   }
 
   const transcriptText = transcriptToText(transcript ?? []);
+  const editorSnapshot =
+    typeof editorContent === "string" ? editorContent.trim().slice(0, 6000) : "";
   const profile = await UserModel.getUserByEmail(session.user.email);
   const resumeContext = profile?.resumeExtractedText?.trim()
     ? profile.resumeExtractedText.trim().slice(0, 8000)
     : "";
+  const scenario = getScenario(interview);
+  const interviewCategory = scenario?.category ?? String(interview.type ?? "behavioral");
 
   let gradingResult: NormalizedGradingResult | null = null;
   let gradingError: string | null = null;
@@ -336,11 +423,15 @@ export async function POST(req: NextRequest) {
       "- Evaluate correctness, reasoning, communication clarity, and structure.",
       "- Be specific and evidence-based from the transcript.",
       "- Keep strengths and improvements concise and actionable.",
+      ...buildCategoryScoringGuidance(interviewCategory),
       "",
       "Interview metadata:",
       `- Type: ${String(interview.type ?? "behavioral")}`,
       `- Difficulty: ${String(interview.difficulty ?? "medium")}`,
       `- Scenario ID: ${String(interview.scenarioId ?? "unknown")}`,
+      `- Resolved category: ${interviewCategory}`,
+      "",
+      ...buildScenarioContext(scenario),
       "",
     ];
 
@@ -357,6 +448,16 @@ export async function POST(req: NextRequest) {
     }
 
     promptParts.push(transcriptText);
+
+    if (editorSnapshot) {
+      promptParts.push("", "Current editor snapshot:", editorSnapshot);
+    } else if (interviewCategory === "technical") {
+      promptParts.push(
+        "",
+        "Current editor snapshot:",
+        "No code was captured from the editor. Grade the candidate accordingly using the transcript only.",
+      );
+    }
 
     const userPrompt = promptParts.join("\n");
 

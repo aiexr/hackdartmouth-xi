@@ -32,6 +32,7 @@ type TranscriptRole = TranscriptEntry["role"];
 
 type VoiceCallProps = {
   tone?: string;
+  promptRequest?: { id: string; text: string } | null;
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
@@ -39,12 +40,14 @@ type VoiceCallProps = {
 
 export function VoiceCall({
   tone = "neutral",
+  promptRequest,
   onTranscriptUpdate,
   onSessionEnd,
   onStateChange,
 }: VoiceCallProps) {
   const conversationRef = useRef<VoiceConversation | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const lastPromptIdRef = useRef<string | null>(null);
   const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
     user: null,
     interviewer: null,
@@ -160,6 +163,7 @@ export function VoiceCall({
       const conversation = await VoiceConversation.startSession({
         agentId,
         onConnect: () => {
+          lastPromptIdRef.current = null;
           updateStatus("connected");
         },
         onDisconnect: () => {
@@ -211,6 +215,19 @@ export function VoiceCall({
     conversationRef.current.setMicMuted(newMuted);
     setIsMuted(newMuted);
   }, [isMuted]);
+
+  useEffect(() => {
+    if (!promptRequest || status !== "connected" || !conversationRef.current) {
+      return;
+    }
+
+    if (lastPromptIdRef.current === promptRequest.id) {
+      return;
+    }
+
+    lastPromptIdRef.current = promptRequest.id;
+    conversationRef.current.sendContextualUpdate(promptRequest.text);
+  }, [promptRequest, status]);
 
   useEffect(() => {
     return () => {

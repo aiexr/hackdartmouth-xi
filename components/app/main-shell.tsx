@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Bot,
-  BookOpenCheck,
   Home,
   MessageSquare,
   Settings,
@@ -31,10 +30,12 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-transparent">
       <aside className="hidden w-72 shrink-0 border-r border-border bg-card px-6 py-7 md:flex md:flex-col">
         <Link href="/" className="flex items-center gap-3 px-2">
-          <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <BookOpenCheck className="size-5" />
-          </div>
-          <div className="pt-0.5">
+          <img
+            src="/logo.svg"
+            alt="LeetSpeak logo"
+            className="h-11 w-auto"
+          />
+          <div>
             <div className="text-lg font-semibold tracking-tight">
               LeetSpeak
             </div>
@@ -67,7 +68,17 @@ export function MainShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-end border-b border-border px-6 py-3">
+        <header className="flex items-center justify-between border-b border-border px-6 py-3">
+          <Link href="/" className="flex items-center gap-3 md:hidden">
+            <img
+              src="/logo.svg"
+              alt="LeetSpeak logo"
+              className="h-9 w-auto"
+            />
+            <span className="text-sm font-semibold tracking-tight">
+              LeetSpeak
+            </span>
+          </Link>
           {session?.user ? (
             <div className="flex items-center gap-3">
               <button
