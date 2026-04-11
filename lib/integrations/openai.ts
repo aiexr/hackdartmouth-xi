@@ -38,9 +38,12 @@ function getApiConfig() {
     throw new Error("OPENAI_API_KEY environment variable is not set");
   }
 
+  const baseUrl =
+    process.env.API_BASE_URL || process.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL;
+
   return {
     apiKey,
-    baseUrl: DEFAULT_OPENAI_BASE_URL,
+    baseUrl,
   };
 }
 

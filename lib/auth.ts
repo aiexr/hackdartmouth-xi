@@ -3,9 +3,22 @@ import GoogleProvider from "next-auth/providers/google";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import { MongoClient } from "mongodb";
 
+function isValidMongoUri(uri: string) {
+  const trimmed = uri.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (trimmed.includes("<") || trimmed.includes(">")) {
+    return false;
+  }
+
+  return /^mongodb(\+srv)?:\/\/.+/.test(trimmed);
+}
+
 function getClientPromise() {
   const uri = process.env.MONGODB_URI;
-  if (!uri) return null;
+  if (!uri || !isValidMongoUri(uri)) return null;
 
   const globalWithMongo = globalThis as typeof globalThis & {
     _mongoClientPromise?: Promise<MongoClient>;

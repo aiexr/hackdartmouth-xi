@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
+  Bot,
   BookOpenCheck,
   Home,
   Settings,
@@ -16,6 +17,7 @@ const navigation = [
   { href: "/", label: "Home", icon: Home },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/coach", label: "Coach", icon: Sparkles },
+  { href: "/llm", label: "LLM", icon: Bot },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

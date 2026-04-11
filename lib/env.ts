@@ -2,6 +2,23 @@ import "server-only";
 
 export const APP_NAME = "LeetCode for Interviews";
 
+function isValidMongoUri(uri?: string) {
+  if (!uri) {
+    return false;
+  }
+
+  const trimmed = uri.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (trimmed.includes("<") || trimmed.includes(">")) {
+    return false;
+  }
+
+  return /^mongodb(\+srv)?:\/\/.+/.test(trimmed);
+}
+
 const env = {
   nextAuth: {
     secret: process.env.NEXTAUTH_SECRET,
@@ -27,7 +44,7 @@ export const envFlags = {
   ),
   geminiReady: Boolean(env.geminiApiKey),
   elevenLabsReady: Boolean(env.elevenLabsApiKey && env.elevenLabsVoiceId),
-  mongoReady: Boolean(env.mongodbUri),
+  mongoReady: isValidMongoUri(env.mongodbUri),
 };
 
 export { env };
