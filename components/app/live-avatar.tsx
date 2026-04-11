@@ -371,7 +371,7 @@ export function LiveAvatar({
           {(isActive || status === "ended") && (
             <div
               className={cn(
-                "absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-t",
+                "absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 py-2 bg-linear-to-t",
                 avatarSpeaking ? "from-primary/40" : "from-black/50",
               )}
             >
@@ -426,7 +426,7 @@ export function LiveAvatar({
 
           <div
             className={cn(
-              "absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-t",
+              "absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 py-2 bg-linear-to-t",
               userSpeaking ? "from-primary/40" : "from-black/50",
             )}
           >

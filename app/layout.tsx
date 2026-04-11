@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
-import { SessionProvider } from "@/components/auth/session-provider";
+import { RootProvider } from "@/app/root-provider";
 import "./globals.css";
 
 const bodyFont = Plus_Jakarta_Sans({
@@ -17,10 +17,6 @@ export const metadata: Metadata = {
   title: "LeetSpeak",
   description:
     "A polished MVP for role-specific interview practice with realistic mock sessions, feedback, and progress tracking.",
-  icons: {
-    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
-    shortcut: "/logo.svg",
-  },
 };
 
 export default function RootLayout({
@@ -29,11 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="lofi">
+    <html lang="en">
       <body
-        className={`${bodyFont.variable} ${displayFont.variable} min-h-screen font-[var(--font-body)] text-base-content`}
+        className={`${bodyFont.variable} ${displayFont.variable} min-h-screen font-(--font-body) text-foreground`}
       >
-        <SessionProvider>{children}</SessionProvider>
+        <RootProvider>{children}</RootProvider>
       </body>
     </html>
   );

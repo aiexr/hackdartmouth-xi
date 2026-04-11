@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button";
 export function SignInCard() {
   return (
     <Card className="w-full max-w-xl overflow-hidden bg-white/90">
-      <div className="bg-gradient-to-r from-primary to-indigo-500 px-6 py-5 text-primary-foreground">
-        <div className="inline-flex items-center gap-2 rounded-none bg-white/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
+      <div className="bg-linear-to-r from-primary to-indigo-500 px-6 py-5 text-primary-foreground">
+        <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em]">
           <ShieldCheck className="size-3.5" />
           Secure sign-in
         </div>
