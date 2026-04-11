@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -52,6 +52,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
   const [interviewMode, setInterviewMode] = useState<InterviewMode>("video");
   const [interviewTone, setInterviewTone] = useState<InterviewTone>("neutral");
   const [sessionState, setSessionState] = useState<"idle" | "connecting" | "connected" | "ended">("idle");
+  const sessionStartRef = useRef<number | null>(null);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -113,6 +114,10 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
   useEffect(() => {
     if (sessionState !== "connected") return;
 
+    if (!sessionStartRef.current) {
+      sessionStartRef.current = Date.now();
+    }
+
     const timer = window.setInterval(() => {
       setSeconds((value) => value + 1);
     }, 1000);
@@ -121,7 +126,8 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
   }, [sessionState]);
 
   const handleSessionEnd = useCallback(
-    async (finalTranscript: TranscriptEntry[]) => {
+    async (rawTranscript: TranscriptEntry[]) => {
+      const finalTranscript = rawTranscript.filter((entry) => !entry.partial);
       try {
         window.localStorage.removeItem(storageKey);
       } catch {
@@ -200,8 +206,8 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col lg:flex-row">
-        <section className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-10 text-center md:px-10">
+      <div className="flex flex-1 flex-col lg:flex-row lg:overflow-hidden">
+        <section className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-6 text-center md:px-10">
           <div className="max-w-2xl">
             <p className="text-sm font-medium text-muted-foreground">
               {scenario.interviewer} · {scenario.interviewerRole}
@@ -333,7 +339,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
           )}
         </section>
 
-        <aside className="border-t border-border bg-white/85 backdrop-blur lg:w-[24rem] lg:border-l lg:border-t-0">
+        <aside className="border-t border-border bg-white/85 backdrop-blur lg:w-[24rem] lg:overflow-y-auto lg:border-l lg:border-t-0">
           <div className="grid grid-cols-3 border-b border-border">
             {[
               { id: "rubric", label: "Rubric", icon: MessageSquareText },
@@ -401,33 +407,36 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                 )}
                 {transcript.map((entry, index) => {
                   const isUser = entry.role === "user";
+                  const start = sessionStartRef.current;
+                  let relTime = "";
+                  if (start) {
+                    const diffSec = Math.max(0, Math.round((entry.timestamp.getTime() - start) / 1000));
+                    const m = Math.floor(diffSec / 60);
+                    const s = diffSec % 60;
+                    relTime = `${m}:${s.toString().padStart(2, "0")}`;
+                  }
 
                   return (
-                    <div
-                      key={index}
-                      className={cn("flex gap-3", isUser && "flex-row-reverse text-right")}
-                    >
-                      <div
-                        className={cn(
-                          "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                          isUser
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-secondary-foreground",
-                        )}
-                      >
-                        {isUser ? "Y" : "I"}
+                    <div key={index} className="space-y-1">
+                      <div className={cn("flex items-center gap-2 text-[10px] text-muted-foreground", isUser && "justify-end")}>
+                        <span>{isUser ? "You" : "Interviewer"}</span>
+                        {relTime && <span>{relTime}</span>}
                       </div>
                       <div
-                        className={cn(
-                          "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6",
-                          isUser ? "bg-primary/8" : "bg-muted/70",
-                          entry.partial && "opacity-70",
-                        )}
+                        className={cn("flex gap-3", isUser && "flex-row-reverse text-right")}
                       >
-                        {entry.content}
-                        {entry.partial && (
-                          <span className="ml-1 inline-block animate-pulse">|</span>
-                        )}
+                        <div
+                          className={cn(
+                            "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6",
+                            isUser ? "bg-primary/8" : "bg-muted/70",
+                            entry.partial && "opacity-70",
+                          )}
+                        >
+                          {entry.content}
+                          {entry.partial && (
+                            <span className="ml-1 inline-block animate-pulse">|</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

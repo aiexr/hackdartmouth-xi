@@ -52,8 +52,9 @@ export function LiveAvatar({
   );
 
   const updateTranscript = useCallback(
-    (role: "user" | "interviewer", content: string, partial: boolean) => {
-      if (!content.trim()) return;
+    (role: "user" | "interviewer", rawContent: string, partial: boolean) => {
+      const content = rawContent.replace(/\(.*?\)/g, "").replace(/\s{2,}/g, " ").trim();
+      if (!content) return;
       const entries = [...transcriptRef.current];
       const last = entries[entries.length - 1];
 
