@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       deployment_mode: ${{ steps.meta.outputs.mode }}
-      environment_name: ${{ steps.meta.outputs.environment }}
+      environment_name: ${{ steps.environment_name.outputs.value }}
       deployment_url: ${{ steps.deployment_url.outputs.url }}
     env:
       CI: "true"
@@ -73,9 +73,11 @@ jobs:
           if [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
             echo "mode=production" >> "$GITHUB_OUTPUT"
             echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "branch_slug=production" >> "$GITHUB_OUTPUT"
           else
             echo "mode=preview" >> "$GITHUB_OUTPUT"
             echo "environment=cloudflare-preview-${branch_slug}" >> "$GITHUB_OUTPUT"
+            echo "branch_slug=${branch_slug}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build app for Cloudflare
@@ -137,6 +139,38 @@ jobs:
           else
             echo "url=" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Build deployment label
+        id: environment_name
+        shell: bash
+        env:
+          DEPLOYMENT_MODE: ${{ steps.meta.outputs.mode }}
+          DEPLOYMENT_URL: ${{ steps.deployment_url.outputs.url }}
+          BRANCH_SLUG: ${{ steps.meta.outputs.branch_slug }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${DEPLOYMENT_URL}" ]]; then
+            host="$(printf '%s' "${DEPLOYMENT_URL}" | sed -E 's#^https?://##; s#/.*$##')"
+          else
+            host=""
+          fi
+
+          if [[ "${DEPLOYMENT_MODE}" == "production" ]]; then
+            if [[ -n "${host}" ]]; then
+              label="production - ${host}"
+            else
+              label="production"
+            fi
+          else
+            if [[ -n "${host}" ]]; then
+              label="preview-${BRANCH_SLUG} - ${host}"
+            else
+              label="preview-${BRANCH_SLUG}"
+            fi
+          fi
+
+          echo "value=${label}" >> "$GITHUB_OUTPUT"
 
       - name: Publish deployment URL to workflow summary
         if: steps.deployment_url.outputs.url != ''
