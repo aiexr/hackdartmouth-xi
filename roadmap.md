@@ -7,7 +7,7 @@ Agents must update this file when they complete work here or materially change s
 
 ## High Priority
 
-1. Persist in-progress practice state deeply enough to survive a browser refresh and resume the active loop, not just completed transcript/review history.
+_All current high-priority items shipped. Add the next blocker here._
 
 ## Medium Priority
 

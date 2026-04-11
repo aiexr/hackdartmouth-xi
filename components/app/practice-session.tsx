@@ -32,8 +32,20 @@ const toneOptions = [
 
 type PracticePanel = "rubric" | "hints" | "transcript";
 
+type PersistedPracticeState = {
+  step?: number;
+  seconds?: number;
+  interviewMode?: InterviewMode;
+  interviewTone?: InterviewTone;
+  transcript?: TranscriptEntry[];
+  savedAt?: number;
+};
+
+const PRACTICE_STATE_TTL_MS = 24 * 60 * 60 * 1000;
+
 export function PracticeSession({ scenario }: { scenario: Scenario }) {
   const router = useRouter();
+  const storageKey = `practice-state:${scenario.id}`;
   const [panel, setPanel] = useState<PracticePanel>("rubric");
   const [seconds, setSeconds] = useState(0);
   const [step, setStep] = useState(0);
@@ -42,6 +54,61 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
   const [sessionState, setSessionState] = useState<"idle" | "connecting" | "connected" | "ended">("idle");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [resumed, setResumed] = useState(false);
+
+  // Hydrate in-progress practice state from localStorage so a browser refresh
+  // can resume the active loop instead of resetting everything.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (raw) {
+        const saved = JSON.parse(raw) as PersistedPracticeState;
+        const fresh = !saved.savedAt || Date.now() - saved.savedAt < PRACTICE_STATE_TTL_MS;
+        if (fresh) {
+          if (typeof saved.step === "number") setStep(saved.step);
+          if (typeof saved.seconds === "number") setSeconds(saved.seconds);
+          if (saved.interviewMode) setInterviewMode(saved.interviewMode);
+          if (saved.interviewTone) setInterviewTone(saved.interviewTone);
+          if (Array.isArray(saved.transcript)) {
+            const revived = saved.transcript
+              .filter((entry) => entry && !entry.partial)
+              .map((entry) => ({
+                ...entry,
+                timestamp: new Date(entry.timestamp),
+              }));
+            setTranscript(revived);
+            if (revived.length > 0 || saved.seconds || saved.step) {
+              setResumed(true);
+            }
+          }
+        } else {
+          window.localStorage.removeItem(storageKey);
+        }
+      }
+    } catch {
+      // Ignore corrupted storage — user can just restart.
+    }
+    setHydrated(true);
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      const persistableTranscript = transcript.filter((entry) => !entry.partial);
+      const payload: PersistedPracticeState = {
+        step,
+        seconds,
+        interviewMode,
+        interviewTone,
+        transcript: persistableTranscript,
+        savedAt: Date.now(),
+      };
+      window.localStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch {
+      // Storage unavailable (private mode, quota) — resume is best-effort.
+    }
+  }, [hydrated, storageKey, step, seconds, interviewMode, interviewTone, transcript]);
 
   useEffect(() => {
     if (sessionState !== "connected") return;
@@ -55,6 +122,11 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
 
   const handleSessionEnd = useCallback(
     async (finalTranscript: TranscriptEntry[]) => {
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        // ignore
+      }
       try {
         const startRes = await fetch("/api/interview/start", {
           method: "POST",
@@ -93,7 +165,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
         router.push(`/review/${scenario.id}`);
       }
     },
-    [router, scenario.id, selectedDocument],
+    [router, scenario.id, selectedDocument, storageKey],
   );
 
   const stepCount = scenario.followUps.length + 1;
@@ -139,6 +211,11 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
               <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-muted-foreground">
                 {currentPrompt}
               </p>
+            )}
+            {sessionState === "idle" && resumed && (
+              <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
+                Resuming your previous session · {transcript.length} saved turn{transcript.length === 1 ? "" : "s"}
+              </div>
             )}
           </div>
 
