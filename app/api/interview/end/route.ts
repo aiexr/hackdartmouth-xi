@@ -308,6 +308,7 @@ export async function POST(req: NextRequest) {
         overallScore: gradingResult?.overall_score ?? null,
         letterGrade: gradingResult?.letter_grade ?? null,
         gradingResult,
+        gradingError,
       },
     },
   );

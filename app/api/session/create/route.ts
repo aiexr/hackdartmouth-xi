@@ -11,7 +11,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const body = await req.json();
+  const body = (await req.json()) as {
+    avatarId?: string;
+    elevenlabsSecretId?: string;
+    elevenlabsAgentId?: string;
+  };
   const {
     avatarId = process.env.HEYGEN_AVATAR_ID ?? "default",
     elevenlabsSecretId,

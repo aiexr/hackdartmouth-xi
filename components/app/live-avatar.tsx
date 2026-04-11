@@ -88,11 +88,11 @@ export function LiveAvatar({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = (await res.json()) as { error?: string };
         throw new Error(data.error || "Failed to create session");
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as Record<string, any>;
       const token =
         data.data?.session_token ||
         data.session_token ||

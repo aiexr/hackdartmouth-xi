@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ObjectId } from "mongodb";
 import {
   AlertCircle,
   ArrowLeft,
@@ -11,18 +12,246 @@ import {
   Star,
   TrendingUp,
 } from "lucide-react";
+import { getOptionalServerSession } from "@/lib/auth";
+import { getOptionalMongoDb } from "@/lib/mongodb";
 import { getReviewByScenarioId, getScenarioById } from "@/data/scenarios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+export const dynamic = "force-dynamic";
+
+type PersistedInterview = {
+  scenarioId?: string | null;
+  overallScore?: number | null;
+  letterGrade?: string | null;
+  gradingError?: string | null;
+  gradingResult?: {
+    dimensions?: Array<{ name?: string; score?: number; feedback?: string }>;
+    strengths?: string[];
+    improvements?: string[];
+    key_moments?: Array<{
+      timestamp?: string;
+      type?: "strength" | "improvement" | "note";
+      description?: string;
+    }>;
+  } | null;
+  transcript?: Array<{
+    role?: string;
+    content?: string;
+    timestamp?: string;
+    step?: number;
+  }> | null;
+};
+
+type PersistedKeyMoment = {
+  timestamp?: string;
+  type?: "strength" | "improvement" | "note";
+  description?: string;
+};
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function normalizeTranscript(
+  transcript: PersistedInterview["transcript"],
+  interviewerName: string,
+  keyMoments?: PersistedKeyMoment[] | null,
+) {
+  const keyMomentByTimestamp = new Map(
+    Array.isArray(keyMoments)
+      ? keyMoments
+          .filter(
+            (
+              moment,
+            ): moment is { timestamp: string; type?: "strength" | "improvement" | "note"; description?: string } =>
+              Boolean(moment && isNonEmptyString(moment.timestamp)),
+          )
+          .map((moment) => [moment.timestamp, moment])
+      : [],
+  );
+
+  if (!Array.isArray(transcript)) {
+    return [];
+  }
+
+  return transcript
+    .map((turn) => {
+      if (!turn || !isNonEmptyString(turn.content)) {
+        return null;
+      }
+
+      const timestamp = isNonEmptyString(turn.timestamp) ? turn.timestamp : "--";
+      const moment = keyMomentByTimestamp.get(timestamp);
+
+      return {
+        time: timestamp,
+        speaker: turn.role === "user" ? "You" : interviewerName,
+        text: turn.content.trim(),
+        note: isNonEmptyString(moment?.description) ? moment.description : null,
+        highlight:
+          moment?.type === "strength"
+            ? ("strength" as const)
+            : moment?.type === "improvement"
+              ? ("improve" as const)
+              : undefined,
+      };
+    })
+    .filter(
+      (
+        turn,
+      ): turn is {
+        time: string;
+        speaker: string;
+        text: string;
+        note: string | null;
+        highlight: "strength" | "improve" | undefined;
+      } => Boolean(turn),
+    );
+}
+
+async function getPersistedInterviewReview(
+  interviewId: string,
+  scenarioId: string,
+  userEmail: string,
+) {
+  let objectId: ObjectId;
+  try {
+    objectId = new ObjectId(interviewId);
+  } catch {
+    return {
+      interview: null,
+      previousScore: null,
+      notice: "The saved review link was invalid, so the demo scorecard is shown instead.",
+    };
+  }
+
+  const db = await getOptionalMongoDb();
+  if (!db) {
+    return {
+      interview: null,
+      previousScore: null,
+      notice: "MongoDB is unavailable, so this review fell back to the demo scorecard.",
+    };
+  }
+
+  const interview = (await db.collection("interviews").findOne({
+    _id: objectId,
+    userId: userEmail,
+    scenarioId,
+  })) as PersistedInterview | null;
+
+  if (!interview) {
+    return {
+      interview: null,
+      previousScore: null,
+      notice: "That saved interview could not be found. Showing the demo review instead.",
+    };
+  }
+
+  const previousInterview = (await db
+    .collection("interviews")
+    .find({
+      userId: userEmail,
+      scenarioId,
+      status: "completed",
+      overallScore: { $type: "number" },
+      _id: { $ne: objectId },
+    })
+    .sort({ completedAt: -1, createdAt: -1 })
+    .limit(1)
+    .toArray()) as PersistedInterview[];
+
+  const previousScore =
+    typeof previousInterview[0]?.overallScore === "number"
+      ? previousInterview[0].overallScore
+      : null;
+
+  return {
+    interview,
+    previousScore,
+    notice: null,
+  };
+}
+
 export default async function ReviewPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ scenarioId: string }>;
+  searchParams: Promise<{ interviewId?: string; grading?: string }>;
 }) {
   const { scenarioId } = await params;
+  const { interviewId, grading } = await searchParams;
   const scenario = getScenarioById(scenarioId);
-  const review = getReviewByScenarioId(scenarioId);
+  const staticReview = getReviewByScenarioId(scenarioId);
+  const session = await getOptionalServerSession();
+
+  const persistedReview =
+    interviewId && session?.user?.email
+      ? await getPersistedInterviewReview(interviewId, scenario.id, session.user.email)
+      : null;
+
+  const interview = persistedReview?.interview ?? null;
+  const hasPersistedReview = Boolean(interview);
+  const overallScore =
+    hasPersistedReview && typeof interview?.overallScore === "number"
+      ? interview.overallScore
+      : null;
+  const previousScore = hasPersistedReview ? persistedReview?.previousScore ?? null : null;
+  const scoreDelta =
+    overallScore !== null && previousScore !== null ? overallScore - previousScore : null;
+  const dimensions =
+    hasPersistedReview && Array.isArray(interview?.gradingResult?.dimensions)
+      ? interview.gradingResult.dimensions
+          .filter(
+            (
+              item,
+            ): item is {
+              name: string;
+              score: number;
+              feedback?: string;
+            } => Boolean(item && isNonEmptyString(item.name) && typeof item.score === "number"),
+          )
+          .map((item) => ({
+            name: item.name,
+            score: Math.max(0, Math.min(100, Math.round(item.score))),
+            feedback: isNonEmptyString(item.feedback) ? item.feedback : null,
+          }))
+      : [];
+  const strengths =
+    hasPersistedReview && Array.isArray(interview?.gradingResult?.strengths)
+      ? interview.gradingResult.strengths.filter(isNonEmptyString)
+      : staticReview.strengths;
+  const improvements =
+    hasPersistedReview && Array.isArray(interview?.gradingResult?.improvements)
+      ? interview.gradingResult.improvements.filter(isNonEmptyString)
+      : staticReview.improvements;
+  const tips =
+    hasPersistedReview && improvements.length
+      ? improvements.slice(0, 3)
+      : staticReview.tips;
+  const transcript =
+    hasPersistedReview
+      ? normalizeTranscript(
+          interview?.transcript,
+          scenario.interviewer,
+          interview?.gradingResult?.key_moments,
+        )
+      : staticReview.transcript.map((line) => ({
+          time: line.time,
+          speaker: scenario.interviewer,
+          text: line.text,
+          note: null,
+          highlight: line.highlight,
+        }));
+  const scoreDisplay = hasPersistedReview ? (overallScore ?? "--") : staticReview.overallScore;
+
+  const reviewNotice =
+    persistedReview?.notice ??
+    (grading === "pending"
+      ? "Transcript saved, but AI scoring was unavailable for this attempt."
+      : null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,6 +283,15 @@ export default async function ReviewPage({
       </header>
 
       <div className="mx-auto max-w-5xl space-y-8 px-6 py-8 md:px-10 md:py-10">
+        {reviewNotice ? (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="flex gap-3 p-4 text-sm leading-6 text-amber-900">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <span>{reviewNotice}</span>
+            </CardContent>
+          </Card>
+        ) : null}
+
         <Card className="bg-white/85 text-center">
           <CardContent className="p-8">
             <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
@@ -63,19 +301,44 @@ export default async function ReviewPage({
 
             <div className="mx-auto mt-6 flex size-40 items-center justify-center rounded-full border-[12px] border-secondary bg-white shadow-lg shadow-primary/10">
               <div>
-                <div className="text-5xl font-semibold">{review.overallScore}</div>
+                <div className="text-5xl font-semibold">{scoreDisplay}</div>
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  out of 100
+                  {overallScore !== null || !hasPersistedReview ? "out of 100" : "score pending"}
                 </div>
               </div>
             </div>
 
             <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-600">
               <TrendingUp className="size-4" />
-              {review.overallScore - review.previousScore} points from the last attempt
+              {hasPersistedReview ? (
+                scoreDelta !== null ? (
+                  <>
+                    {scoreDelta >= 0 ? "+" : ""}
+                    {scoreDelta} points from your previous scored attempt
+                  </>
+                ) : overallScore !== null ? (
+                  <>First scored attempt for this scenario</>
+                ) : (
+                  <>Transcript saved successfully, but scoring is still pending</>
+                )
+              ) : (
+                <>{staticReview.overallScore - staticReview.previousScore} points from the last attempt</>
+              )}
             </div>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              The scorecard is static for the MVP, but the layout is already prepared for Gemini-generated rubric feedback and transcript annotations.
+              {hasPersistedReview ? (
+                interview?.gradingError ? (
+                  <>Your transcript was saved, but AI scoring failed: {interview.gradingError}</>
+                ) : overallScore !== null ? (
+                  <>This scorecard is generated from your saved transcript and rubric evaluation.</>
+                ) : (
+                  <>This attempt saved the transcript, but the grading model did not return a score.</>
+                )
+              ) : (
+                <>
+                  The scorecard is static for the MVP, but the layout is already prepared for Gemini-generated rubric feedback and transcript annotations.
+                </>
+              )}
             </p>
           </CardContent>
         </Card>
@@ -86,32 +349,52 @@ export default async function ReviewPage({
               <Star className="size-5 text-primary" />
               Score breakdown
             </h2>
-            <div className="mt-5 space-y-4">
-              {review.dimensions.map((dimension) => (
-                <div key={dimension.name}>
-                  <div className="mb-2 flex items-center justify-between gap-4 text-sm">
-                    <span>{dimension.name}</span>
-                    <span className="font-medium">
-                      {dimension.score}
-                      <span
-                        className={`ml-2 text-xs font-semibold ${
-                          dimension.change >= 0 ? "text-emerald-600" : "text-red-500"
-                        }`}
-                      >
-                        {dimension.change >= 0 ? "+" : ""}
-                        {dimension.change}
+            {hasPersistedReview && !dimensions.length ? (
+              <p className="mt-5 text-sm leading-6 text-muted-foreground">
+                Dimension-level feedback is unavailable for this attempt because the scoring model did not return a rubric breakdown.
+              </p>
+            ) : (
+              <div className="mt-5 space-y-4">
+                {(hasPersistedReview
+                  ? dimensions
+                  : staticReview.dimensions.map((dimension) => ({
+                      name: dimension.name,
+                      score: dimension.score,
+                      feedback: null,
+                      change: dimension.change,
+                    }))).map((dimension) => (
+                  <div key={dimension.name}>
+                    <div className="mb-2 flex items-center justify-between gap-4 text-sm">
+                      <span>{dimension.name}</span>
+                      <span className="font-medium">
+                        {dimension.score}
+                        {"change" in dimension && typeof dimension.change === "number" ? (
+                          <span
+                            className={`ml-2 text-xs font-semibold ${
+                              dimension.change >= 0 ? "text-emerald-600" : "text-red-500"
+                            }`}
+                          >
+                            {dimension.change >= 0 ? "+" : ""}
+                            {dimension.change}
+                          </span>
+                        ) : null}
                       </span>
-                    </span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-primary/12">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${dimension.score}%` }}
+                      />
+                    </div>
+                    {"feedback" in dimension && dimension.feedback ? (
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        {dimension.feedback}
+                      </p>
+                    ) : null}
                   </div>
-                  <div className="h-2.5 rounded-full bg-primary/12">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${dimension.score}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -123,12 +406,18 @@ export default async function ReviewPage({
                 What landed
               </h2>
               <div className="mt-4 space-y-3">
-                {review.strengths.map((item) => (
-                  <p key={item} className="flex gap-3 text-sm leading-6">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-emerald-400" />
-                    <span>{item}</span>
+                {strengths.length ? (
+                  strengths.map((item) => (
+                    <p key={item} className="flex gap-3 text-sm leading-6">
+                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-emerald-400" />
+                      <span>{item}</span>
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    No strengths were returned for this attempt.
                   </p>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
@@ -140,12 +429,18 @@ export default async function ReviewPage({
                 What to tighten
               </h2>
               <div className="mt-4 space-y-3">
-                {review.improvements.map((item) => (
-                  <p key={item} className="flex gap-3 text-sm leading-6">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-amber-400" />
-                    <span>{item}</span>
+                {improvements.length ? (
+                  improvements.map((item) => (
+                    <p key={item} className="flex gap-3 text-sm leading-6">
+                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-amber-400" />
+                      <span>{item}</span>
+                    </p>
+                  ))
+                ) : (
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    No improvement areas were returned for this attempt.
                   </p>
-                ))}
+                )}
               </div>
             </CardContent>
           </Card>
@@ -158,7 +453,7 @@ export default async function ReviewPage({
               Actionable tips
             </h2>
             <div className="mt-4 space-y-3">
-              {review.tips.map((item) => (
+              {tips.map((item) => (
                 <div key={item} className="rounded-[1.35rem] bg-white/70 px-4 py-3 text-sm leading-6">
                   {item}
                 </div>
@@ -171,23 +466,41 @@ export default async function ReviewPage({
           <CardContent className="p-6">
             <h2>Annotated transcript</h2>
             <div className="mt-5 space-y-3">
-              {review.transcript.map((line) => (
-                <div
-                  key={`${line.time}-${line.text}`}
-                  className={`flex items-start gap-4 rounded-[1.35rem] border px-4 py-3 ${
-                    line.highlight === "strength"
-                      ? "border-emerald-200/70 bg-emerald-50"
-                      : line.highlight === "improve"
-                        ? "border-amber-200/70 bg-amber-50"
-                        : "border-border bg-muted/45"
-                  }`}
-                >
-                  <span className="pt-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {line.time}
-                  </span>
-                  <p className="flex-1 text-sm leading-6">{line.text}</p>
+              {transcript.length ? (
+                transcript.map((line) => (
+                  <div
+                    key={`${line.time}-${line.speaker}-${line.text}`}
+                    className={`rounded-[1.35rem] border px-4 py-3 ${
+                      line.highlight === "strength"
+                        ? "border-emerald-200/70 bg-emerald-50"
+                        : line.highlight === "improve"
+                          ? "border-amber-200/70 bg-amber-50"
+                          : "border-border bg-muted/45"
+                    }`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <span className="pt-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        {line.time}
+                      </span>
+                      <div className="flex-1">
+                        <div className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          {line.speaker}
+                        </div>
+                        <p className="text-sm leading-6">{line.text}</p>
+                        {line.note ? (
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                            {line.note}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[1.35rem] border border-dashed border-border px-4 py-6 text-sm leading-6 text-muted-foreground">
+                  This attempt did not save any transcript lines.
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
