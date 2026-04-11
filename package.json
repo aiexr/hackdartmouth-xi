@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",
+    "@elevenlabs/client": "^1.2.0",
     "@heygen/liveavatar-web-sdk": "^0.0.13",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",

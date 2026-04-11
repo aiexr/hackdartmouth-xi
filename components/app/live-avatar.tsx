@@ -14,6 +14,7 @@ export type TranscriptEntry = {
   role: "user" | "interviewer";
   content: string;
   timestamp: Date;
+  partial?: boolean;
 };
 
 type LiveAvatarProps = {
@@ -48,12 +49,30 @@ export function LiveAvatar({
     [onStateChange],
   );
 
-  const addTranscriptEntry = useCallback(
-    (role: "user" | "interviewer", content: string) => {
+  const updateTranscript = useCallback(
+    (role: "user" | "interviewer", content: string, partial: boolean) => {
       if (!content.trim()) return;
-      const entry: TranscriptEntry = { role, content: content.trim(), timestamp: new Date() };
-      transcriptRef.current = [...transcriptRef.current, entry];
-      onTranscriptUpdate?.(transcriptRef.current);
+      const entries = [...transcriptRef.current];
+      const last = entries[entries.length - 1];
+
+      if (partial) {
+        // Update existing partial entry for same role, or create new one
+        if (last && last.role === role && last.partial) {
+          entries[entries.length - 1] = { ...last, content: content.trim() };
+        } else {
+          entries.push({ role, content: content.trim(), timestamp: new Date(), partial: true });
+        }
+      } else {
+        // Final transcription: replace the partial entry with the final one
+        if (last && last.role === role && last.partial) {
+          entries[entries.length - 1] = { role, content: content.trim(), timestamp: new Date() };
+        } else {
+          entries.push({ role, content: content.trim(), timestamp: new Date() });
+        }
+      }
+
+      transcriptRef.current = entries;
+      onTranscriptUpdate?.(entries);
     },
     [onTranscriptUpdate],
   );
@@ -81,10 +100,7 @@ export function LiveAvatar({
       const res = await fetch("/api/session/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          elevenlabsSecretId: process.env.NEXT_PUBLIC_ELEVENLABS_SECRET_ID,
-          elevenlabsAgentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID,
-        }),
+        body: JSON.stringify({ mode: "video" }),
       });
 
       if (!res.ok) {
@@ -128,12 +144,20 @@ export function LiveAvatar({
       session.on(AgentEventsEnum.USER_SPEAK_STARTED, () => setUserSpeaking(true));
       session.on(AgentEventsEnum.USER_SPEAK_ENDED, () => setUserSpeaking(false));
 
+      session.on(AgentEventsEnum.USER_TRANSCRIPTION_CHUNK, (event: { text: string }) => {
+        updateTranscript("user", event.text, true);
+      });
+
       session.on(AgentEventsEnum.USER_TRANSCRIPTION, (event: { text: string }) => {
-        addTranscriptEntry("user", event.text);
+        updateTranscript("user", event.text, false);
+      });
+
+      session.on(AgentEventsEnum.AVATAR_TRANSCRIPTION_CHUNK, (event: { text: string }) => {
+        updateTranscript("interviewer", event.text, true);
       });
 
       session.on(AgentEventsEnum.AVATAR_TRANSCRIPTION, (event: { text: string }) => {
-        addTranscriptEntry("interviewer", event.text);
+        updateTranscript("interviewer", event.text, false);
       });
 
       if (avatarVideoRef.current) {
@@ -147,7 +171,7 @@ export function LiveAvatar({
       setError(message);
       updateStatus("idle");
     }
-  }, [updateStatus, addTranscriptEntry, onSessionEnd, startUserCamera]);
+  }, [updateStatus, updateTranscript, onSessionEnd, startUserCamera]);
 
   const stopSession = useCallback(async () => {
     if (userStreamRef.current) {
