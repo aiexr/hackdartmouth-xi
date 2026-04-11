@@ -1,7 +1,7 @@
 import * as openAiProvider from "@/lib/integrations/openai";
-import * as claudeProvider from "@/lib/integrations/claude";
+import * as geminiProvider from "@/lib/integrations/gemini";
 
-export type LlmProviderName = "openai" | "claude";
+export type LlmProviderName = "openai" | "gemini";
 
 type ProviderModule = {
   getModel: () => string;
@@ -18,7 +18,11 @@ type ProviderModule = {
 
 export function getLlmProvider(): LlmProviderName {
   const provider = (process.env.LLM_PROVIDER || "openai").toLowerCase();
-  return provider === "claude" ? "claude" : "openai";
+  if (provider === "gemini") {
+    return "gemini";
+  }
+
+  return "openai";
 }
 
 function getProviderByName(name: LlmProviderName): ProviderModule {
@@ -26,11 +30,11 @@ function getProviderByName(name: LlmProviderName): ProviderModule {
     return openAiProvider;
   }
 
-  if (name === "claude") {
-    return claudeProvider;
+  if (name === "gemini") {
+    return geminiProvider;
   }
 
-  throw new Error(`Invalid provider: ${name}. Must be 'openai' or 'claude'.`);
+  throw new Error(`Invalid provider: ${name}. Must be 'openai' or 'gemini'.`);
 }
 
 function getProvider(): ProviderModule {

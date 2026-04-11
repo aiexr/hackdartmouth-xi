@@ -9,6 +9,7 @@ const env = {
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   },
   geminiApiKey: process.env.GEMINI_API_KEY,
+  geminiModel: process.env.GEMINI_MODEL,
   llmProvider: process.env.LLM_PROVIDER,
   openAiApiKey: process.env.OPENAI_API_KEY,
   openAiApiBaseUrl: process.env.OPENAI_BASE_URL,
