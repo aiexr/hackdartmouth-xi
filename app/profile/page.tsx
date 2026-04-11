@@ -1,4 +1,4 @@
-import { Award, Briefcase, Edit3, User } from "lucide-react";
+import { Award, Brain, Briefcase, Edit3, Flame, Target, TrendingUp, User } from "lucide-react";
 import { MainShell } from "@/components/app/main-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -66,14 +66,14 @@ export default function ProfilePage() {
 
           <div className="grid gap-4 md:grid-cols-4">
             {[
-              { icon: "🔥", title: "7-day streak", description: "Practiced every day this week" },
-              { icon: "🎯", title: "90+ clarity", description: "Hit elite pacing and structure once" },
-              { icon: "📈", title: "Rapid improver", description: "Gained 18 points in six days" },
-              { icon: "🧠", title: "Loop closer", description: "Finished four full mock loops" },
+              { icon: <Flame className="size-8 text-orange-500" />, title: "7-day streak", description: "Practiced every day this week" },
+              { icon: <Target className="size-8 text-red-500" />, title: "90+ clarity", description: "Hit elite pacing and structure once" },
+              { icon: <TrendingUp className="size-8 text-green-500" />, title: "Rapid improver", description: "Gained 18 points in six days" },
+              { icon: <Brain className="size-8 text-violet-500" />, title: "Loop closer", description: "Finished four full mock loops" },
             ].map((achievement) => (
               <Card key={achievement.title}>
                 <CardContent className="p-5 text-center">
-                  <div className="text-4xl">{achievement.icon}</div>
+                  <div className="flex justify-center">{achievement.icon}</div>
                   <h3 className="mt-4 text-base">{achievement.title}</h3>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {achievement.description}

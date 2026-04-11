@@ -1,6 +1,6 @@
 import "server-only";
 
-export const APP_NAME = "LeetCode for Interviews";
+export const APP_NAME = "LeetSpeak";
 
 const env = {
   nextAuth: {
@@ -16,7 +16,7 @@ const env = {
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
   elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
   mongodbUri: process.env.MONGODB_URI,
-  mongodbDbName: process.env.MONGODB_DB_NAME || "leetcode-for-interviews",
+  mongodbDbName: process.env.MONGODB_DB_NAME || "leetspeak",
 };
 
 export const envFlags = {

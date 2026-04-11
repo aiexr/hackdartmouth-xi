@@ -31,7 +31,7 @@ export default function DashboardPage() {
               </Badge>
               <div className="mt-5">
                 <h1 className="max-w-2xl">
-                  Practice interviewing the way LeetCode lets you practice problem types.
+                  Practice interviewing the way LeetSpeak lets you practice problem types.
                 </h1>
                 <p className="mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
                   Choose a role track, jump into a repeatable interview scenario, and review visible progress over time. The MVP keeps the experience realistic and structured while the backend integrations stay intentionally scaffolded.

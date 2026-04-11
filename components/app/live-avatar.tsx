@@ -7,7 +7,7 @@ import {
   SessionEvent,
   SessionState,
 } from "@heygen/liveavatar-web-sdk";
-import { Mic, MicOff, Phone, PhoneOff, Loader2 } from "lucide-react";
+import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type TranscriptEntry = {
@@ -27,13 +27,18 @@ export function LiveAvatar({
   onSessionEnd,
   onStateChange,
 }: LiveAvatarProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const avatarVideoRef = useRef<HTMLVideoElement>(null);
+  const userVideoRef = useRef<HTMLVideoElement>(null);
+  const userStreamRef = useRef<MediaStream | null>(null);
   const sessionRef = useRef<LiveAvatarSession | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
 
   const [status, setStatus] = useState<"idle" | "connecting" | "connected" | "ended">("idle");
   const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [avatarSpeaking, setAvatarSpeaking] = useState(false);
+  const [userSpeaking, setUserSpeaking] = useState(false);
 
   const updateStatus = useCallback(
     (newStatus: "idle" | "connecting" | "connected" | "ended") => {
@@ -53,9 +58,24 @@ export function LiveAvatar({
     [onTranscriptUpdate],
   );
 
+  const startUserCamera = useCallback(async () => {
+    if (userStreamRef.current) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      userStreamRef.current = stream;
+      if (userVideoRef.current) {
+        userVideoRef.current.srcObject = stream;
+      }
+    } catch {
+      // camera denied
+    }
+  }, []);
+
   const startSession = useCallback(async () => {
     setError(null);
     updateStatus("connecting");
+
+    await startUserCamera();
 
     try {
       const res = await fetch("/api/session/create", {
@@ -73,7 +93,11 @@ export function LiveAvatar({
       }
 
       const data = await res.json();
-      const token = data.session_token || data.token || data.access_token;
+      const token =
+        data.data?.session_token ||
+        data.session_token ||
+        data.token ||
+        data.access_token;
 
       if (!token) {
         throw new Error("No session token received");
@@ -92,6 +116,18 @@ export function LiveAvatar({
         }
       });
 
+      session.on(SessionEvent.SESSION_STREAM_READY, () => {
+        if (avatarVideoRef.current) {
+          session.attach(avatarVideoRef.current);
+          avatarVideoRef.current.play().catch(() => {});
+        }
+      });
+
+      session.on(AgentEventsEnum.AVATAR_SPEAK_STARTED, () => setAvatarSpeaking(true));
+      session.on(AgentEventsEnum.AVATAR_SPEAK_ENDED, () => setAvatarSpeaking(false));
+      session.on(AgentEventsEnum.USER_SPEAK_STARTED, () => setUserSpeaking(true));
+      session.on(AgentEventsEnum.USER_SPEAK_ENDED, () => setUserSpeaking(false));
+
       session.on(AgentEventsEnum.USER_TRANSCRIPTION, (event: { text: string }) => {
         addTranscriptEntry("user", event.text);
       });
@@ -100,21 +136,24 @@ export function LiveAvatar({
         addTranscriptEntry("interviewer", event.text);
       });
 
-      await session.start();
-
-      if (videoRef.current) {
-        session.attach(videoRef.current);
+      if (avatarVideoRef.current) {
+        session.attach(avatarVideoRef.current);
       }
 
+      await session.start();
       sessionRef.current = session;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start session";
       setError(message);
       updateStatus("idle");
     }
-  }, [updateStatus, addTranscriptEntry, onSessionEnd]);
+  }, [updateStatus, addTranscriptEntry, onSessionEnd, startUserCamera]);
 
   const stopSession = useCallback(async () => {
+    if (userStreamRef.current) {
+      userStreamRef.current.getTracks().forEach((t) => t.stop());
+      userStreamRef.current = null;
+    }
     if (sessionRef.current) {
       try {
         await sessionRef.current.stop();
@@ -140,8 +179,22 @@ export function LiveAvatar({
     }
   }, [isMuted]);
 
+  const toggleCamera = useCallback(() => {
+    const stream = userStreamRef.current;
+    if (!stream) return;
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      track.enabled = !track.enabled;
+      setIsCameraOn(track.enabled);
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
+      if (userStreamRef.current) {
+        userStreamRef.current.getTracks().forEach((t) => t.stop());
+        userStreamRef.current = null;
+      }
       if (sessionRef.current) {
         sessionRef.current.stop().catch(() => {});
         sessionRef.current = null;
@@ -149,50 +202,119 @@ export function LiveAvatar({
     };
   }, []);
 
+  const isActive = status === "connected";
+  const isPreSession = status === "idle" || status === "connecting";
+
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="relative aspect-video w-full max-w-2xl overflow-hidden rounded-3xl bg-black/5 shadow-xl">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          className={cn(
-            "size-full object-cover",
-            status !== "connected" && "hidden",
+    <div className="flex w-full flex-col gap-4">
+      {/* Video grid -- always rendered, always 2 columns so refs stay stable */}
+      <div className="grid w-full grid-cols-2 gap-3">
+        {/* Interviewer (avatar) tile */}
+        <div className="relative overflow-hidden rounded-2xl bg-black shadow-lg">
+          <video
+            ref={avatarVideoRef}
+            autoPlay
+            playsInline
+            className="aspect-video size-full object-cover"
+          />
+          {/* Overlay when not yet connected */}
+          {isPreSession && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black">
+              {status === "connecting" ? (
+                <>
+                  <Loader2 className="size-8 animate-spin text-white/60" />
+                  <p className="mt-2 text-sm text-white/50">Interviewer joining...</p>
+                </>
+              ) : (
+                <p className="text-sm text-white/30">Interviewer</p>
+              )}
+            </div>
           )}
-        />
+          {(isActive || status === "ended") && (
+            <div
+              className={cn(
+                "absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-t",
+                avatarSpeaking ? "from-primary/40" : "from-black/50",
+              )}
+            >
+              <span className="text-sm font-medium text-white">Interviewer</span>
+              {avatarSpeaking && (
+                <span className="flex items-center gap-0.5">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="inline-block w-0.5 animate-pulse rounded-full bg-white"
+                      style={{ height: 8 + (i % 2) * 6, animationDelay: `${i * 150}ms` }}
+                    />
+                  ))}
+                </span>
+              )}
+            </div>
+          )}
+          {status === "ended" && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+              <p className="text-sm text-white/70">Interview ended</p>
+            </div>
+          )}
+        </div>
 
-        {status === "idle" && (
-          <div className="flex size-full items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Start the session to begin your interview
-            </p>
-          </div>
-        )}
+        {/* User (webcam) tile */}
+        <div className="relative overflow-hidden rounded-2xl bg-black shadow-lg">
+          <video
+            ref={userVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className={cn(
+              "aspect-video size-full object-cover",
+              !isCameraOn && "hidden",
+            )}
+          />
+          {!isCameraOn && (
+            <div className="flex aspect-video size-full items-center justify-center bg-muted">
+              <VideoOff className="size-8 text-muted-foreground" />
+            </div>
+          )}
 
-        {status === "connecting" && (
-          <div className="flex size-full flex-col items-center justify-center gap-3">
-            <Loader2 className="size-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">
-              Connecting to interviewer...
-            </p>
-          </div>
-        )}
+          {/* Overlay for pre-session states */}
+          {status === "connecting" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
+              <Loader2 className="size-10 animate-spin text-white" />
+              <p className="mt-3 text-sm font-medium text-white">
+                Connecting to your interviewer...
+              </p>
+            </div>
+          )}
 
-        {status === "ended" && (
-          <div className="flex size-full items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Interview session ended
-            </p>
+          <div
+            className={cn(
+              "absolute inset-x-0 bottom-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-t",
+              userSpeaking ? "from-primary/40" : "from-black/50",
+            )}
+          >
+            <span className="text-sm font-medium text-white">You</span>
+            {isMuted && <MicOff className="size-3 text-red-400" />}
+            {userSpeaking && !isMuted && (
+              <span className="flex items-center gap-0.5">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="inline-block w-0.5 animate-pulse rounded-full bg-white"
+                    style={{ height: 8 + (i % 2) * 6, animationDelay: `${i * 150}ms` }}
+                  />
+                ))}
+              </span>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {error && (
         <p className="max-w-md text-center text-sm text-red-500">{error}</p>
       )}
 
-      <div className="flex items-center gap-4">
+      {/* Control bar */}
+      <div className="flex items-center justify-center gap-3">
         {status === "idle" && (
           <button
             onClick={startSession}
@@ -203,18 +325,28 @@ export function LiveAvatar({
           </button>
         )}
 
-        {status === "connected" && (
+        {isActive && (
           <>
             <button
               onClick={toggleMute}
               className={cn(
-                "flex size-12 items-center justify-center rounded-full shadow-md transition hover:scale-[1.02]",
-                isMuted
-                  ? "bg-red-100 text-red-600"
-                  : "bg-white text-muted-foreground",
+                "flex size-12 items-center justify-center rounded-full shadow-md transition hover:scale-105",
+                isMuted ? "bg-red-500 text-white" : "bg-white text-foreground",
               )}
+              title={isMuted ? "Unmute" : "Mute"}
             >
               {isMuted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
+            </button>
+
+            <button
+              onClick={toggleCamera}
+              className={cn(
+                "flex size-12 items-center justify-center rounded-full shadow-md transition hover:scale-105",
+                !isCameraOn ? "bg-red-500 text-white" : "bg-white text-foreground",
+              )}
+              title={isCameraOn ? "Turn off camera" : "Turn on camera"}
+            >
+              {isCameraOn ? <Video className="size-5" /> : <VideoOff className="size-5" />}
             </button>
 
             <button
