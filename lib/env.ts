@@ -12,7 +12,6 @@ const env = {
   geminiModel: process.env.GEMINI_MODEL,
   llmProvider: process.env.LLM_PROVIDER,
   openAiApiKey: process.env.OPENAI_API_KEY,
-  openAiApiBaseUrl: process.env.OPENAI_BASE_URL,
   openAiModel: process.env.OPENAI_MODEL,
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
   elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
