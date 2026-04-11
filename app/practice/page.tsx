@@ -1,126 +1,75 @@
 import Link from "next/link";
-import {
-  Brain,
-  Code2,
-  MessageSquare,
-  Network,
-  Briefcase,
-  BarChart3,
-  ArrowRight,
-} from "lucide-react";
+import { Circle, Search } from "lucide-react";
 import { MainShell } from "@/components/app/main-shell";
-import { Card, CardContent } from "@/components/ui/card";
 import { scenarios } from "@/data/scenarios";
+import { Input } from "@/components/ui/input";
 
-const categories = [
-  {
-    id: "behavioral",
-    name: "Behavioral",
-    description: "STAR method, leadership, conflict resolution, and teamwork scenarios.",
-    icon: MessageSquare,
-    color: "text-indigo-600",
-    bg: "bg-indigo-50",
-    trackId: "staff-engineering",
-    scenarios: ["staff-swe-story", "staff-swe-conflict"],
-  },
-  {
-    id: "technical",
-    name: "Technical",
-    description: "Data structures, algorithms, system architecture, and coding approach.",
-    icon: Code2,
-    color: "text-emerald-600",
-    bg: "bg-emerald-50",
-    trackId: "staff-engineering",
-    scenarios: ["staff-swe-story"],
-  },
-  {
-    id: "system-design",
-    name: "System Design",
-    description: "Scalability, tradeoffs, component design, and infrastructure decisions.",
-    icon: Network,
-    color: "text-sky-600",
-    bg: "bg-sky-50",
-    trackId: "staff-engineering",
-    scenarios: ["staff-swe-conflict"],
-  },
-  {
-    id: "product",
-    name: "Product & Strategy",
-    description: "Prioritization, product sense, metrics, and stakeholder communication.",
-    icon: BarChart3,
-    color: "text-violet-600",
-    bg: "bg-violet-50",
-    trackId: "product-management",
-    scenarios: ["pm-prioritization"],
-  },
-  {
-    id: "case-study",
-    name: "Case Study",
-    description: "Structured thinking, synthesis, recommendations, and executive communication.",
-    icon: Briefcase,
-    color: "text-amber-600",
-    bg: "bg-amber-50",
-    trackId: "consulting",
-    scenarios: ["consulting-synthesis"],
-  },
-  {
-    id: "general",
-    name: "General",
-    description: "Mixed question types to practice adapting across interview formats.",
-    icon: Brain,
-    color: "text-rose-600",
-    bg: "bg-rose-50",
-    trackId: "staff-engineering",
-    scenarios: ["staff-swe-story", "pm-prioritization", "consulting-synthesis"],
-  },
-];
+const difficultyTextStyles: Record<
+  (typeof scenarios)[number]["difficulty"],
+  string
+> = {
+  Foundations: "text-emerald-600",
+  Growth: "text-amber-500",
+  Stretch: "text-red-500",
+};
+
+const difficultyLabels: Record<
+  (typeof scenarios)[number]["difficulty"],
+  string
+> = {
+  Foundations: "Easy",
+  Growth: "Medium",
+  Stretch: "Hard",
+};
 
 export default function PracticePage() {
   return (
     <MainShell>
-      <div className="mx-auto max-w-5xl space-y-8 px-6 py-8 md:px-10 md:py-10">
+      <div className="mx-auto max-w-6xl space-y-6 px-6 py-8 md:px-10 md:py-10">
         <div>
-          <h1 className="text-3xl">Practice</h1>
-          <p className="mt-2 max-w-xl text-base text-muted-foreground">
-            Choose an interview category to start a focused practice session.
+          <h1 className="text-4xl">Practice</h1>
+          <p className="mt-2 text-base text-muted-foreground">
+            Work through interview scenarios in a list format. Pick any row to start a loop.
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((cat) => {
-            const firstScenario = scenarios.find((s) =>
-              cat.scenarios.includes(s.id),
-            );
-            const href = firstScenario
-              ? `/practice/${firstScenario.id}`
-              : `/practice/${scenarios[0].id}`;
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+          <Search className="size-4 text-muted-foreground" />
+          <Input
+            readOnly
+            value=""
+            placeholder="Search scenarios"
+            className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+            aria-label="Search scenarios"
+          />
+        </div>
 
-            return (
-              <Link key={cat.id} href={href}>
-                <Card className="h-full transition hover:shadow-md hover:border-primary/30">
-                  <CardContent className="flex flex-col gap-4 p-6">
-                    <div className="flex items-start justify-between">
-                      <div
-                        className={`flex size-11 items-center justify-center rounded-xl ${cat.bg} ${cat.color}`}
-                      >
-                        <cat.icon className="size-5" />
-                      </div>
-                      <ArrowRight className="size-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-semibold">{cat.name}</h2>
-                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                        {cat.description}
-                      </p>
-                    </div>
-                    <div className="text-xs font-medium text-muted-foreground">
-                      {cat.scenarios.length} {cat.scenarios.length === 1 ? "scenario" : "scenarios"}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_7rem] items-center gap-3 border-b border-border px-4 py-3 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="sr-only">Status</span>
+            <span>Title</span>
+            <span>Difficulty</span>
+          </div>
+          <ul className="divide-y divide-border">
+            {scenarios.map((scenario, index) => (
+              <li key={scenario.id}>
+                <Link
+                  href={`/practice/${scenario.id}`}
+                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_7rem] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/50"
+                >
+                  <span className="flex items-center justify-center">
+                    <Circle className="size-4 text-muted-foreground" />
+                  </span>
+                  <span className="truncate">
+                    {index + 1}. {scenario.title}
+                  </span>
+                  <span className={difficultyTextStyles[scenario.difficulty]}>
+                    {difficultyLabels[scenario.difficulty]}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </MainShell>
