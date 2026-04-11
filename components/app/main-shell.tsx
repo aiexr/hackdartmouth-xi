@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import {
   BookOpenCheck,
   Home,
-  LogIn,
-  LogOut,
   Settings,
   Sparkles,
   User,
@@ -65,44 +63,32 @@ export function MainShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {session?.user ? (
-          <div className="mb-4 flex items-center gap-3 rounded-2xl bg-muted/60 px-4 py-3">
-            {session.user.image ? (
-              <img
-                src={session.user.image}
-                alt=""
-                className="size-9 rounded-full"
-              />
-            ) : (
-              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <User className="size-4" />
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">
-                {session.user.name}
-              </p>
-              <button
-                onClick={() => signOut()}
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-              >
-                <LogOut className="size-3" />
-                Sign out
-              </button>
-            </div>
-          </div>
-        ) : (
-          <Link
-            href="/auth/sign-in"
-            className="mb-4 flex items-center gap-2 rounded-2xl bg-primary/5 px-4 py-3 text-sm font-medium text-primary hover:bg-primary/10"
-          >
-            <LogIn className="size-4" />
-            Sign in
-          </Link>
-        )}
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-end border-b border-border/50 px-6 py-3">
+          <button
+            onClick={() =>
+              session?.user ? signOut() : signIn("google")
+            }
+            className="cursor-pointer rounded-full transition-opacity hover:opacity-80"
+            title={session?.user ? "Sign out" : "Sign in with Google"}
+          >
+            {session?.user?.image ? (
+              <img
+                src={session.user.image}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="size-9 rounded-full ring-2 ring-border"
+              />
+            ) : (
+              <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-primary/20">
+                <User className="size-4" />
+              </div>
+            )}
+          </button>
+        </header>
+
         <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
         <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-[1.75rem] border border-border/80 bg-white/92 p-2 shadow-xl shadow-slate-900/5 backdrop-blur md:hidden">
