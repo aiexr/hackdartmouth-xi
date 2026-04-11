@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 type LlmTestResponse = {
@@ -28,7 +29,8 @@ export default function LlmTestPage() {
   const [systemPrompt, setSystemPrompt] = useState(
     "You are a concise interview prep assistant. Respond with actionable, practical guidance.",
   );
-  const [providerOverride, setProviderOverride] = useState("");
+  const [useProviderOverride, setUseProviderOverride] = useState(false);
+  const [providerOverride, setProviderOverride] = useState<"openai" | "gemini">("openai");
   const [result, setResult] = useState<LlmTestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +55,7 @@ export default function LlmTestPage() {
         body: JSON.stringify({
           prompt,
           systemPrompt,
-          providerOverride: providerOverride || undefined,
+          providerOverride: useProviderOverride ? providerOverride : undefined,
         }),
       });
 
@@ -141,13 +143,37 @@ export default function LlmTestPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Provider override (optional)</label>
-                <Input
-                  value={providerOverride}
-                  onChange={(event) => setProviderOverride(event.target.value)}
-                  placeholder="openai or gemini"
-                />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Provider override (optional)</label>
+                  <Switch
+                    checked={useProviderOverride}
+                    onCheckedChange={setUseProviderOverride}
+                    aria-label="Enable provider override"
+                  />
+                </div>
+
+                {useProviderOverride ? (
+                  <div className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+                    <span
+                      className={providerOverride === "openai" ? "text-sm font-medium text-foreground" : "text-sm text-muted-foreground"}
+                    >
+                      OpenAI
+                    </span>
+                    <Switch
+                      checked={providerOverride === "gemini"}
+                      onCheckedChange={(checked) =>
+                        setProviderOverride(checked ? "gemini" : "openai")
+                      }
+                      aria-label="Toggle provider between OpenAI and Gemini"
+                    />
+                    <span
+                      className={providerOverride === "gemini" ? "text-sm font-medium text-foreground" : "text-sm text-muted-foreground"}
+                    >
+                      Gemini
+                    </span>
+                  </div>
+                ) : null}
               </div>
 
               <Button type="submit" disabled={isLoading}>
