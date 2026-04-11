@@ -348,7 +348,7 @@ export function LiveAvatar({
       {/* Video grid -- always rendered, always 2 columns so refs stay stable */}
       <div className="grid w-full grid-cols-2 gap-3">
         {/* Interviewer (avatar) tile */}
-        <div className="relative overflow-hidden rounded-2xl bg-black shadow-lg">
+        <div className="relative overflow-hidden rounded-none bg-black shadow-lg">
           <video
             ref={avatarVideoRef}
             autoPlay
@@ -381,7 +381,7 @@ export function LiveAvatar({
                   {[0, 1, 2].map((i) => (
                     <span
                       key={i}
-                      className="inline-block w-0.5 animate-pulse rounded-full bg-white"
+                      className="inline-block w-0.5 animate-pulse rounded-none bg-white"
                       style={{ height: 8 + (i % 2) * 6, animationDelay: `${i * 150}ms` }}
                     />
                   ))}
@@ -397,7 +397,7 @@ export function LiveAvatar({
         </div>
 
         {/* User (webcam) tile */}
-        <div className="relative overflow-hidden rounded-2xl bg-black shadow-lg">
+        <div className="relative overflow-hidden rounded-none bg-black shadow-lg">
           <video
             ref={userVideoRef}
             autoPlay
@@ -437,7 +437,7 @@ export function LiveAvatar({
                 {[0, 1, 2].map((i) => (
                   <span
                     key={i}
-                    className="inline-block w-0.5 animate-pulse rounded-full bg-white"
+                    className="inline-block w-0.5 animate-pulse rounded-none bg-white"
                     style={{ height: 8 + (i % 2) * 6, animationDelay: `${i * 150}ms` }}
                   />
                 ))}
@@ -456,7 +456,7 @@ export function LiveAvatar({
         {status === "idle" && (
           <button
             onClick={startSession}
-            className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90"
+            className="flex items-center gap-2 rounded-none bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90"
           >
             <Phone className="size-4" />
             Start Interview
@@ -468,7 +468,7 @@ export function LiveAvatar({
             <button
               onClick={toggleMute}
               className={cn(
-                "flex size-12 items-center justify-center rounded-full shadow-md transition hover:scale-105",
+                "flex size-12 items-center justify-center rounded-none shadow-md transition hover:scale-105",
                 isMuted ? "bg-red-500 text-white" : "bg-white text-foreground",
               )}
               title={isMuted ? "Unmute" : "Mute"}
@@ -479,7 +479,7 @@ export function LiveAvatar({
             <button
               onClick={toggleCamera}
               className={cn(
-                "flex size-12 items-center justify-center rounded-full shadow-md transition hover:scale-105",
+                "flex size-12 items-center justify-center rounded-none shadow-md transition hover:scale-105",
                 !isCameraOn ? "bg-red-500 text-white" : "bg-white text-foreground",
               )}
               title={isCameraOn ? "Turn off camera" : "Turn on camera"}
@@ -489,7 +489,7 @@ export function LiveAvatar({
 
             <button
               onClick={stopSession}
-              className="flex items-center gap-2 rounded-full bg-red-500 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600"
+              className="flex items-center gap-2 rounded-none bg-red-500 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600"
             >
               <PhoneOff className="size-4" />
               End Interview
@@ -500,7 +500,7 @@ export function LiveAvatar({
         {status === "connecting" && (
           <button
             disabled
-            className="flex items-center gap-2 rounded-full bg-muted px-6 py-3 text-sm font-medium text-muted-foreground"
+            className="flex items-center gap-2 rounded-none bg-muted px-6 py-3 text-sm font-medium text-muted-foreground"
           >
             <Loader2 className="size-4 animate-spin" />
             Connecting...

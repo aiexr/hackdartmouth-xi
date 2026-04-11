@@ -294,12 +294,12 @@ export default async function ReviewPage({
 
         <Card className="bg-white/85 text-center">
           <CardContent className="p-8">
-            <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+            <div className="inline-flex items-center gap-2 rounded-none bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
               <Award className="size-4" />
               Session complete
             </div>
 
-            <div className="mx-auto mt-6 flex size-40 items-center justify-center rounded-full border-[12px] border-secondary bg-white shadow-lg shadow-primary/10">
+            <div className="mx-auto mt-6 flex size-40 items-center justify-center rounded-none border-[12px] border-secondary bg-white shadow-lg shadow-primary/10">
               <div>
                 <div className="text-5xl font-semibold">{scoreDisplay}</div>
                 <div className="text-xs font-medium text-muted-foreground/90">
@@ -380,9 +380,9 @@ export default async function ReviewPage({
                         ) : null}
                       </span>
                     </div>
-                    <div className="h-2.5 rounded-full bg-primary/12">
+                    <div className="h-2.5 rounded-none bg-primary/12">
                       <div
-                        className="h-full rounded-full bg-primary"
+                        className="h-full rounded-none bg-primary"
                         style={{ width: `${dimension.score}%` }}
                       />
                     </div>
@@ -409,7 +409,7 @@ export default async function ReviewPage({
                 {strengths.length ? (
                   strengths.map((item) => (
                     <p key={item} className="flex gap-3 text-sm leading-6">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-emerald-400" />
+                      <span className="mt-2 size-1.5 shrink-0 rounded-none bg-emerald-400" />
                       <span>{item}</span>
                     </p>
                   ))
@@ -432,7 +432,7 @@ export default async function ReviewPage({
                 {improvements.length ? (
                   improvements.map((item) => (
                     <p key={item} className="flex gap-3 text-sm leading-6">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-amber-400" />
+                      <span className="mt-2 size-1.5 shrink-0 rounded-none bg-amber-400" />
                       <span>{item}</span>
                     </p>
                   ))
@@ -454,7 +454,7 @@ export default async function ReviewPage({
             </h2>
             <div className="mt-4 space-y-3">
               {tips.map((item) => (
-                <div key={item} className="rounded-[1.35rem] bg-white/70 px-4 py-3 text-sm leading-6">
+                <div key={item} className="rounded-none bg-white/70 px-4 py-3 text-sm leading-6">
                   {item}
                 </div>
               ))}
@@ -470,7 +470,7 @@ export default async function ReviewPage({
                 transcript.map((line) => (
                   <div
                     key={`${line.time}-${line.speaker}-${line.text}`}
-                    className={`rounded-[1.35rem] border px-4 py-3 ${
+                    className={`rounded-none border px-4 py-3 ${
                       line.highlight === "strength"
                         ? "border-emerald-200/70 bg-emerald-50"
                         : line.highlight === "improve"
@@ -497,7 +497,7 @@ export default async function ReviewPage({
                   </div>
                 ))
               ) : (
-                <div className="rounded-[1.35rem] border border-dashed border-border px-4 py-6 text-sm leading-6 text-muted-foreground">
+                <div className="rounded-none border border-dashed border-border px-4 py-6 text-sm leading-6 text-muted-foreground">
                   This attempt did not save any transcript lines.
                 </div>
               )}

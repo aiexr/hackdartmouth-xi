@@ -177,7 +177,7 @@ export default function LlmTestPage() {
                 </div>
 
                 {useProviderOverride ? (
-                  <div className="flex items-center gap-3 rounded-md border border-border px-3 py-2">
+                  <div className="flex items-center gap-3 rounded-none border border-border px-3 py-2">
                     <span
                       className={providerOverride === "openai" ? "text-sm font-medium text-foreground" : "text-sm text-muted-foreground"}
                     >
@@ -220,12 +220,12 @@ export default function LlmTestPage() {
             </div>
 
             {error ? (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+              <div className="rounded-none border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
                 {error}
               </div>
             ) : null}
 
-            <div className="min-h-28 whitespace-pre-wrap rounded-xl border border-border bg-muted/40 p-4 text-sm leading-6">
+            <div className="min-h-28 whitespace-pre-wrap rounded-none border border-border bg-muted/40 p-4 text-sm leading-6">
               {result?.content || "Run a test prompt to see model output here."}
             </div>
           </CardContent>
@@ -309,13 +309,13 @@ export default function LlmTestPage() {
               </div>
 
               {documentError ? (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                <div className="rounded-none border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
                   {documentError}
                 </div>
               ) : null}
 
               {documentResult && (
-                <div className="max-h-72 overflow-y-auto rounded-xl border border-border bg-muted/40 p-4 text-sm leading-6 whitespace-pre-wrap">
+                <div className="max-h-72 overflow-y-auto rounded-none border border-border bg-muted/40 p-4 text-sm leading-6 whitespace-pre-wrap">
                   {documentResult.text}
                 </div>
               )}

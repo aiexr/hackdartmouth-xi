@@ -132,7 +132,7 @@ function DifficultyBadge({ difficulty }: { difficulty: Scenario["difficulty"] })
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[0.7rem] font-medium",
+        "inline-flex items-center rounded-none border px-2.5 py-1 text-[0.7rem] font-medium",
         difficultyBadgeStyles[difficulty],
       )}
     >
@@ -244,7 +244,7 @@ export default function PracticePage() {
       <div className="mx-auto max-w-7xl space-y-6 px-6 py-8 md:px-10 md:py-10">
         <section
           className={cn(
-            "overflow-hidden rounded-[28px] border border-border bg-card",
+            "overflow-hidden rounded-none border border-border bg-card",
             "bg-gradient-to-br",
             activeMeta.accent,
           )}
@@ -255,7 +255,7 @@ export default function PracticePage() {
                 Practice by Round Type
               </p>
               <div className="flex items-center gap-3">
-                <div className={cn("rounded-2xl border px-3 py-2", activeMeta.pill)}>
+                <div className={cn("rounded-none border px-3 py-2", activeMeta.pill)}>
                   <activeMeta.icon className="size-5" />
                 </div>
                 <div>
@@ -280,7 +280,7 @@ export default function PracticePage() {
                     type="button"
                     onClick={() => setActiveRound(round)}
                     className={cn(
-                      "rounded-2xl border p-4 text-left transition",
+                      "rounded-none border p-4 text-left transition",
                       active
                         ? "border-foreground bg-background shadow-sm"
                         : "border-border/70 bg-background/70 hover:border-foreground/20 hover:bg-background",
@@ -308,7 +308,7 @@ export default function PracticePage() {
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder={`Search ${activeMeta.label.toLowerCase()} scenarios`}
-                  className="h-11 rounded-full border-border/70 bg-background pl-10"
+                  className="h-11 rounded-none border-border/70 bg-background pl-10"
                   aria-label="Search scenarios"
                 />
               </label>
@@ -316,7 +316,7 @@ export default function PracticePage() {
               <button
                 type="button"
                 onClick={() => router.push("/practice/random")}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/70 bg-background px-4 py-2 text-sm font-medium transition hover:border-foreground/20 hover:bg-background/95"
+                className="inline-flex items-center justify-center gap-2 rounded-none border border-border/70 bg-background px-4 py-2 text-sm font-medium transition hover:border-foreground/20 hover:bg-background/95"
               >
                 <Shuffle className="size-4" />
                 Random
@@ -326,7 +326,7 @@ export default function PracticePage() {
                 type="button"
                 onClick={() => setFavoritesOnly((value) => !value)}
                 className={cn(
-                  "inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition",
+                  "inline-flex items-center justify-center gap-2 rounded-none border px-4 py-2 text-sm font-medium transition",
                   favoritesOnly
                     ? "border-amber-300 bg-amber-50 text-amber-700"
                     : "border-border/70 bg-background hover:border-foreground/20 hover:bg-background/95",
@@ -349,7 +349,7 @@ export default function PracticePage() {
             {scenariosByDifficulty.map(({ difficulty, scenarios: difficultyScenarios }) => (
               <div
                 key={difficulty}
-                className="rounded-[24px] border border-border bg-card p-5 md:p-6"
+                className="rounded-none border border-border bg-card p-5 md:p-6"
               >
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -366,7 +366,7 @@ export default function PracticePage() {
                 </div>
 
                 {difficultyScenarios.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
+                  <div className="rounded-none border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
                     No {difficulty.toLowerCase()} scenarios match the current filters.
                   </div>
                 ) : (
@@ -383,7 +383,7 @@ export default function PracticePage() {
                           key={scenario.id}
                           type="button"
                           onClick={() => router.push(`/practice/${scenario.id}`)}
-                          className="group rounded-[22px] border border-border bg-background p-4 text-left transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-sm"
+                          className="group rounded-none border border-border bg-background p-4 text-left transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-sm"
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
@@ -393,13 +393,13 @@ export default function PracticePage() {
                                 </span>
                                 <span
                                   className={cn(
-                                    "rounded-full border px-2 py-0.5 text-[0.7rem] font-medium",
+                                    "rounded-none border px-2 py-0.5 text-[0.7rem] font-medium",
                                     roundMeta[scenario.category].pill,
                                   )}
                                 >
                                   {roundMeta[scenario.category].label}
                                 </span>
-                                <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[0.7rem] text-muted-foreground">
+                                <span className="rounded-none border border-border bg-muted/50 px-2 py-0.5 text-[0.7rem] text-muted-foreground">
                                   {formatPattern(scenario.pattern)}
                                 </span>
                               </div>
@@ -422,7 +422,7 @@ export default function PracticePage() {
                                 {scenario.focus.slice(0, 3).map((focus) => (
                                   <span
                                     key={focus}
-                                    className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[0.7rem] text-muted-foreground"
+                                    className="rounded-none border border-border bg-muted/40 px-2.5 py-1 text-[0.7rem] text-muted-foreground"
                                   >
                                     {focus}
                                   </span>
@@ -442,7 +442,7 @@ export default function PracticePage() {
                                 toggleFavorite(scenario.id);
                               }}
                               className={cn(
-                                "rounded-full border p-2 transition",
+                                "rounded-none border p-2 transition",
                                 isFavorite
                                   ? "border-amber-300 bg-amber-50 text-amber-600"
                                   : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground",
@@ -461,7 +461,7 @@ export default function PracticePage() {
           </section>
 
           <aside className="space-y-4">
-            <div className="rounded-[24px] border border-border bg-card p-5">
+            <div className="rounded-none border border-border bg-card p-5">
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Active Queue
               </p>
@@ -470,15 +470,15 @@ export default function PracticePage() {
                 {activeMeta.detail}
               </p>
               <div className="mt-5 space-y-3">
-                <div className="rounded-2xl bg-muted/50 p-4">
+                <div className="rounded-none bg-muted/50 p-4">
                   <p className="text-xs text-muted-foreground">Visible scenarios</p>
                   <p className="mt-1 text-2xl font-semibold">{totalVisible}</p>
                 </div>
-                <div className="rounded-2xl bg-muted/50 p-4">
+                <div className="rounded-none bg-muted/50 p-4">
                   <p className="text-xs text-muted-foreground">Favorites in this round</p>
                   <p className="mt-1 text-2xl font-semibold">{favoriteCount}</p>
                 </div>
-                <div className="rounded-2xl bg-muted/50 p-4">
+                <div className="rounded-none bg-muted/50 p-4">
                   <p className="text-xs text-muted-foreground">Round total</p>
                   <p className="mt-1 text-2xl font-semibold">
                     {roundCounts[activeRound]}
@@ -487,7 +487,7 @@ export default function PracticePage() {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-border bg-card p-5">
+            <div className="rounded-none border border-border bg-card p-5">
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Difficulty Flow
               </p>

@@ -241,7 +241,7 @@ export function VoiceCall({
   return (
     <div className="flex w-full flex-col items-center gap-6">
       {/* Audio visualization area */}
-      <div className="flex aspect-video w-full max-w-2xl items-center justify-center rounded-2xl bg-black/5 shadow-lg">
+      <div className="flex aspect-video w-full max-w-2xl items-center justify-center rounded-none bg-black/5 shadow-lg">
         {status === "idle" && (
           <p className="text-sm text-muted-foreground">
             Start a voice call with your interviewer
@@ -260,7 +260,7 @@ export function VoiceCall({
             {/* Speaking indicator */}
             <div
               className={cn(
-                "flex size-24 items-center justify-center rounded-full transition-all duration-300",
+                "flex size-24 items-center justify-center rounded-none transition-all duration-300",
                 agentSpeaking
                   ? "bg-primary/20 ring-4 ring-primary/30 scale-110"
                   : "bg-muted",
@@ -268,7 +268,7 @@ export function VoiceCall({
             >
               <div
                 className={cn(
-                  "flex size-16 items-center justify-center rounded-full transition-all",
+                  "flex size-16 items-center justify-center rounded-none transition-all",
                   agentSpeaking ? "bg-primary text-white" : "bg-muted-foreground/20 text-muted-foreground",
                 )}
               >
@@ -284,7 +284,7 @@ export function VoiceCall({
                 <div
                   key={i}
                   className={cn(
-                    "w-1.5 rounded-full transition-all",
+                    "w-1.5 rounded-none transition-all",
                     agentSpeaking ? "bg-primary animate-pulse" : "bg-muted-foreground/30",
                   )}
                   style={{
@@ -311,7 +311,7 @@ export function VoiceCall({
         {status === "idle" && (
           <button
             onClick={startCall}
-            className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90"
+            className="flex items-center gap-2 rounded-none bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90"
           >
             <Phone className="size-4" />
             Start Call
@@ -323,7 +323,7 @@ export function VoiceCall({
             <button
               onClick={toggleMute}
               className={cn(
-                "flex size-12 items-center justify-center rounded-full shadow-md transition hover:scale-105",
+                "flex size-12 items-center justify-center rounded-none shadow-md transition hover:scale-105",
                 isMuted ? "bg-red-500 text-white" : "bg-white text-foreground",
               )}
               title={isMuted ? "Unmute" : "Mute"}
@@ -333,7 +333,7 @@ export function VoiceCall({
 
             <button
               onClick={endCall}
-              className="flex items-center gap-2 rounded-full bg-red-500 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600"
+              className="flex items-center gap-2 rounded-none bg-red-500 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600"
             >
               <PhoneOff className="size-4" />
               End Call
@@ -344,7 +344,7 @@ export function VoiceCall({
         {status === "connecting" && (
           <button
             disabled
-            className="flex items-center gap-2 rounded-full bg-muted px-6 py-3 text-sm font-medium text-muted-foreground"
+            className="flex items-center gap-2 rounded-none bg-muted px-6 py-3 text-sm font-medium text-muted-foreground"
           >
             <Loader2 className="size-4 animate-spin" />
             Connecting...

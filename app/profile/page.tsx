@@ -59,10 +59,10 @@ export default async function ProfilePage() {
                 src={session.user.image}
                 alt={profileName}
                 referrerPolicy="no-referrer"
-                className="size-22 rounded-full object-cover ring-4 ring-primary/10"
+                className="size-22 rounded-none object-cover ring-4 ring-primary/10"
               />
             ) : (
-              <div className="flex size-22 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <div className="flex size-22 items-center justify-center rounded-none bg-primary/10 text-primary">
                 <User className="size-10" />
               </div>
             )}
@@ -185,7 +185,7 @@ export default async function ProfilePage() {
                   {(() => {
                     const Icon = achievementIcons[achievement.icon] ?? Award;
                     return (
-                      <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-amber-50">
+                      <div className="mx-auto flex size-12 items-center justify-center rounded-none bg-amber-50">
                         <Icon className="size-6 text-amber-500" />
                       </div>
                     );

@@ -46,9 +46,9 @@ export function StreakCard({
       {stats.map((stat) => (
         <div
           key={stat.label}
-          className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-4"
+          className="flex flex-col items-center gap-2 rounded-none border border-border bg-card p-4"
         >
-          <div className={cn("flex size-10 items-center justify-center rounded-xl", stat.bg)}>
+          <div className={cn("flex size-10 items-center justify-center rounded-none", stat.bg)}>
             <stat.icon className={cn("size-5", stat.color)} />
           </div>
           <div className="text-center">

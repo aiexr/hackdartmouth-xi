@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
-import { RootProvider } from "@/app/root-provider";
+import { SessionProvider } from "@/components/auth/session-provider";
 import "./globals.css";
 
 const bodyFont = Plus_Jakarta_Sans({
@@ -29,11 +29,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="lofi">
       <body
-        className={`${bodyFont.variable} ${displayFont.variable} min-h-screen font-[var(--font-body)] text-foreground`}
+        className={`${bodyFont.variable} ${displayFont.variable} min-h-screen font-[var(--font-body)] text-base-content`}
       >
-        <RootProvider>{children}</RootProvider>
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );

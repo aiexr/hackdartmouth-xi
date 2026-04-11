@@ -250,14 +250,14 @@ export function ProfileEditor() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+            <div className="rounded-none border border-red-200 bg-red-50 p-4 flex items-start gap-3">
               <AlertCircle className="size-4 text-red-600 mt-0.5 shrink-0" />
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
+            <div className="rounded-none border border-green-200 bg-green-50 p-4 flex items-start gap-3">
               <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
               <p className="text-sm text-green-800">Profile updated successfully!</p>
             </div>
@@ -287,7 +287,7 @@ export function ProfileEditor() {
             </p>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
+          <div className="space-y-4 rounded-none border border-border/70 bg-muted/30 p-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -346,7 +346,7 @@ export function ProfileEditor() {
 
             {(resumeError || resumeSuccess) && (
               <div
-                className={`rounded-lg border p-3 text-sm ${
+                className={`rounded-none border p-3 text-sm ${
                   resumeError
                     ? "border-red-200 bg-red-50 text-red-800"
                     : "border-green-200 bg-green-50 text-green-800"
@@ -357,7 +357,7 @@ export function ProfileEditor() {
             )}
 
             {(currentResumeName || legacyResumeUrl) && (
-              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border/80 bg-background px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-center gap-3 rounded-none border border-dashed border-border/80 bg-background px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{currentResumeName || "Resume link"}</p>
                   <p className="text-xs text-muted-foreground">
@@ -396,7 +396,7 @@ export function ProfileEditor() {
                   type="button"
                   onClick={() => handleInputChange("focusTrack", track.id)}
                   disabled={saving}
-                  className={`flex items-center justify-between rounded-lg border-2 p-3 text-left transition-colors ${
+                  className={`flex items-center justify-between rounded-none border-2 p-3 text-left transition-colors ${
                     formData.focusTrack === track.id
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/50"

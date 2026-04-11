@@ -10,11 +10,15 @@ import {
   FileText,
   Lightbulb,
   MessageSquareText,
+<<<<<<< HEAD
   Minus,
   Phone,
   RefreshCcw,
   Smile,
   Sparkles,
+=======
+  Phone,
+>>>>>>> fb97397 (feat: merge ui theme with non-border-radiused elements and fix hydration logic)
   Video,
   X,
   Flame,
@@ -35,15 +39,14 @@ const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
 });
 
 type InterviewMode = "video" | "call";
+<<<<<<< HEAD
 type InterviewTone = "friendly" | "neutral" | "tough";
 type PracticePanel = "rubric" | "hints" | "transcript";
 type PracticePrompt = { id: string; text: string } | null;
+=======
+>>>>>>> fb97397 (feat: merge ui theme with non-border-radiused elements and fix hydration logic)
 
-const toneOptions = [
-  { id: "friendly" as const, label: "Friendly", icon: Smile, description: "Warm and encouraging" },
-  { id: "neutral" as const, label: "Neutral", icon: Minus, description: "Standard professional" },
-  { id: "tough" as const, label: "Tough", icon: Flame, description: "Pushes back hard" },
-];
+type InterviewTone = "friendly" | "neutral" | "tough";
 
 type PersistedPracticeState = {
   seconds?: number;
@@ -154,9 +157,12 @@ export function PracticeSession({
   displayTitle?: string;
 }) {
   const router = useRouter();
+<<<<<<< HEAD
   const storageKey = `practice-state:${scenario.id}`;
   const isTechnical = scenario.category === "technical";
 
+=======
+>>>>>>> fb97397 (feat: merge ui theme with non-border-radiused elements and fix hydration logic)
   const [panel, setPanel] = useState<PracticePanel>("rubric");
   const [seconds, setSeconds] = useState(0);
   const [interviewMode, setInterviewMode] = useState<InterviewMode>(
@@ -187,6 +193,13 @@ export function PracticeSession({
     setInterviewMode("video");
   }, [isTechnical]);
 
+<<<<<<< HEAD
+=======
+  const storageKey = `practice-session-${scenario.id}`;
+
+  // Hydrate in-progress practice state from localStorage so a browser refresh
+  // can resume the active loop instead of resetting everything.
+>>>>>>> fb97397 (feat: merge ui theme with non-border-radiused elements and fix hydration logic)
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(storageKey);
@@ -225,7 +238,11 @@ export function PracticeSession({
       // Ignore corrupted storage.
     }
     setHydrated(true);
+<<<<<<< HEAD
   }, [isTechnical, scenario.id, storageKey]);
+=======
+  }, [storageKey, scenario.id]);
+>>>>>>> fb97397 (feat: merge ui theme with non-border-radiused elements and fix hydration logic)
 
   useEffect(() => {
     if (!hydrated) return;
@@ -295,12 +312,15 @@ export function PracticeSession({
       const finalTranscript = rawTranscript.filter((entry) => !entry.partial);
 
       try {
+<<<<<<< HEAD
         window.localStorage.removeItem(storageKey);
       } catch {
         // ignore
       }
 
       try {
+=======
+>>>>>>> fb97397 (feat: merge ui theme with non-border-radiused elements and fix hydration logic)
         const startRes = await fetch("/api/interview/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -345,7 +365,8 @@ export function PracticeSession({
           });
         }
 
-        router.push(`/review/${scenario.id}?interviewId=${id}`);
+        window.localStorage.removeItem(storageKey);
+        router.push(`/review/${scenario.id}`);
       } catch {
         router.push(`/review/${scenario.id}`);
       }
@@ -410,8 +431,8 @@ export function PracticeSession({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-border bg-white/75 backdrop-blur">
-        <div className="flex items-center justify-between px-4 py-3">
+      <header className="border-b border-border bg-white/75 px-5 py-4 backdrop-blur md:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <Link href="/" className="text-muted-foreground transition hover:text-foreground">
             <X className="size-5" />
           </Link>
@@ -439,6 +460,7 @@ export function PracticeSession({
               "grid min-h-0 flex-1 gap-6",
               isTechnical && "xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]",
             )}
+<<<<<<< HEAD
           >
             <div className="flex min-h-0 flex-col items-center gap-6 rounded-[28px] border border-border bg-card p-6 text-center">
               <div className="max-w-2xl space-y-3">
@@ -454,6 +476,69 @@ export function PracticeSession({
                     Resuming your previous session · {transcript.length} saved turn
                     {transcript.length === 1 ? "" : "s"}
                   </div>
+=======
+          </div>
+
+          {/* Mode selector -- only shown before session starts */}
+          {sessionState === "idle" && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 rounded-none border border-border bg-white p-1">
+                <button
+                  onClick={() => setInterviewMode("video")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
+                    interviewMode === "video"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Video className="size-4" />
+                  Video
+                </button>
+                <button
+                  onClick={() => setInterviewMode("call")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
+                    interviewMode === "call"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Phone className="size-4" />
+                  Voice
+                </button>
+              </div>
+
+              {/* Document upload */}
+              <div className="flex max-w-sm items-center gap-3 rounded-none border border-border bg-muted/40 px-4 py-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                  <FileText className="size-4" />
+                  <input
+                    type="file"
+                    accept=".pdf,.docx"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      if (file) {
+                        setSelectedDocument(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <span>{selectedDocument ? "Change" : "Upload"} resume</span>
+                </label>
+                {selectedDocument && (
+                  <>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedDocument.name}
+                    </span>
+                    <button
+                      onClick={() => setSelectedDocument(null)}
+                      className="ml-auto text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </>
+>>>>>>> fb97397 (feat: merge ui theme with non-border-radiused elements and fix hydration logic)
                 )}
               </div>
 
@@ -490,6 +575,7 @@ export function PracticeSession({
                     </div>
                   )}
 
+<<<<<<< HEAD
                   {isTechnical && (
                     <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
                       <Braces className="size-4" />
@@ -568,6 +654,18 @@ export function PracticeSession({
                   ))}
                 </div>
               )}
+=======
+          {sessionState === "idle" && (
+            <div className="flex flex-wrap justify-center gap-2">
+              {scenario.focus.map((focus) => (
+                <span
+                  key={focus}
+                  className="rounded-none border border-border bg-white/75 px-3 py-1 text-sm font-medium text-foreground/85"
+                >
+                  {focus}
+                </span>
+              ))}
+>>>>>>> fb97397 (feat: merge ui theme with non-border-radiused elements and fix hydration logic)
             </div>
 
             {isTechnical && codingProblem ? (
@@ -706,7 +804,7 @@ export function PracticeSession({
                 {scenario.rubric.map((item, index) => (
                   <div
                     key={item}
-                    className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3"
+                    className="flex items-center justify-between rounded-none bg-muted/60 px-4 py-3"
                   >
                     <span className="text-sm font-medium">{item}</span>
                     <span className="text-xs font-medium text-muted-foreground/85">
@@ -724,7 +822,7 @@ export function PracticeSession({
                 </p>
                 {scenario.hints.map((hint, index) => (
                   <div key={hint} className="flex gap-3">
-                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-semibold text-amber-700">
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-none bg-amber-100 text-xs font-semibold text-amber-700">
                       {index + 1}
                     </div>
                     <p className="text-sm leading-6">{hint}</p>
@@ -770,7 +868,7 @@ export function PracticeSession({
                       >
                         <div
                           className={cn(
-                            "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6",
+                            "max-w-[85%] rounded-none px-4 py-3 text-sm leading-6",
                             isUser ? "bg-primary/8" : "bg-muted/70",
                             entry.partial && "opacity-70",
                           )}

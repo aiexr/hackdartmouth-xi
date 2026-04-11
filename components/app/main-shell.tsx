@@ -6,7 +6,6 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Bot,
   Home,
-  MessageSquare,
   Settings,
   Sparkles,
   User,
@@ -15,7 +14,6 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/practice", label: "Practice", icon: MessageSquare },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/coach", label: "Coach", icon: Sparkles },
   { href: "/llm", label: "LLM", icon: Bot },
@@ -35,7 +33,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
             alt="LeetSpeak logo"
             className="h-11 w-auto"
           />
-          <div>
+          <div className="pt-0.5">
             <div className="text-lg font-semibold tracking-tight">
               LeetSpeak
             </div>
@@ -52,7 +50,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all",
+                  "flex items-center gap-3 rounded-none px-4 py-3 text-sm font-medium transition-all",
                   active
                     ? "bg-secondary text-secondary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -122,7 +120,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
-        <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-2xl border border-border bg-card p-2 md:hidden">
+        <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-none border border-border bg-card p-2 md:hidden">
           {navigation.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -132,7 +130,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex min-w-16 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[0.72rem] font-medium",
+                  "flex min-w-16 flex-col items-center gap-1 rounded-none px-3 py-2 text-[0.72rem] font-medium",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >

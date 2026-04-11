@@ -88,7 +88,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border px-3 py-2">
+      <div className="overflow-x-auto rounded-none border border-border px-3 py-2">
         <div className="min-w-max">
           {/* Month labels */}
           <div className="flex" style={{ paddingLeft: 26 }}>
@@ -151,7 +151,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
                           borderRadius: 2,
                         }}
                       >
-                        <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background shadow-lg group-hover:block">
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-none bg-foreground px-2.5 py-1.5 text-xs font-medium text-background shadow-lg group-hover:block">
                           {label}
                           <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-foreground" />
                         </div>

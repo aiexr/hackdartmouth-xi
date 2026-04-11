@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { MessageCircleMore, Send, Sparkles, Target, FileText, Linkedin } from "lucide-react";
 import { coachMessages } from "@/data/scenarios";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,37 +12,29 @@ const quickActions = [
     title: "Analyze my LinkedIn",
     description: "Compare your positioning to the target loop.",
     icon: Linkedin,
-    href: "/profile",
   },
   {
     title: "Resume review",
     description: "Find weak framing before the interview happens.",
     icon: FileText,
-    href: "/profile",
   },
   {
     title: "Set a plan",
     description: "Build a one-week role-specific practice sequence.",
     icon: Target,
-    href: null,
   },
 ];
 
 export function CoachConversation() {
-  const router = useRouter();
   const [message, setMessage] = useState("");
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
         {quickActions.map((item) => (
-          <Card
-            key={item.title}
-            className={`bg-white/80 ${item.href ? "cursor-pointer transition hover:ring-2 hover:ring-primary/20" : ""}`}
-            onClick={item.href ? () => router.push(item.href) : undefined}
-          >
+          <Card key={item.title} className="bg-white/80">
             <CardContent className="p-5">
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
+              <div className="flex size-11 items-center justify-center rounded-none bg-secondary text-secondary-foreground">
                 <item.icon className="size-5" />
               </div>
               <h3 className="mt-4 text-base">{item.title}</h3>
@@ -71,7 +62,7 @@ export function CoachConversation() {
                 className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
               >
                 <div
-                  className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                  className={`flex size-9 shrink-0 items-center justify-center rounded-none text-xs font-semibold ${
                     isUser
                       ? "bg-primary text-primary-foreground"
                       : "bg-gradient-to-br from-violet-500 to-indigo-500 text-white"
@@ -80,7 +71,7 @@ export function CoachConversation() {
                   {isUser ? "A" : "C"}
                 </div>
                 <div
-                  className={`max-w-[85%] rounded-[1.5rem] px-4 py-3 text-sm leading-6 ${
+                  className={`max-w-[85%] rounded-none px-4 py-3 text-sm leading-6 ${
                     isUser ? "bg-primary text-primary-foreground" : "bg-muted/75"
                   }`}
                 >
