@@ -8,18 +8,39 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
-import {
-  improvementThemes,
-  roleTracks,
-  weeklyGoals,
-} from "@/data/scenarios";
+import { getOptionalServerSession } from "@/lib/auth";
+import { getUserInterviewMetrics } from "@/lib/interview-metrics";
 import { MainShell } from "@/components/app/main-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
-export default function DashboardPage() {
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  const session = await getOptionalServerSession();
+  const metrics = await getUserInterviewMetrics(session?.user?.email);
+  const loopProgress = Math.min(
+    100,
+    (metrics.weeklyCompleted / metrics.weeklyTarget) * 100,
+  );
+  const loopCount = `${metrics.weeklyCompleted}/${metrics.weeklyTarget}`;
+  const weeklyCopy = !metrics.hasSession
+    ? "Sign in to sync interview history and see weekly progress from MongoDB."
+    : !metrics.databaseReady
+      ? "MongoDB is not configured yet, so progress data is waiting on the backend."
+      : metrics.weeklyCompleted
+        ? metrics.remainingLoops
+          ? `${metrics.remainingLoops} more interview ${
+              metrics.remainingLoops === 1 ? "loop keeps" : "loops keep"
+            } this week on track.`
+          : "This week's practice goal is already complete."
+        : "Complete your first interview loop this week to start the tracker.";
+  const streakLabel = metrics.streakDays
+    ? `${metrics.streakDays}-day streak active`
+    : "No active streak";
+
   return (
     <MainShell>
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
@@ -31,10 +52,10 @@ export default function DashboardPage() {
               </Badge>
               <div className="mt-5">
                 <h1 className="max-w-2xl">
-                  Practice interviewing the way LeetCode lets you practice problem types.
+                  Practice interviewing the LeetSpeak way with focused role tracks and repeatable loops.
                 </h1>
                 <p className="mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
-                  Choose a role track, jump into a repeatable interview scenario, and review visible progress over time. The MVP keeps the experience realistic and structured while the backend integrations stay intentionally scaffolded.
+                  Choose a role track, jump into a repeatable interview scenario, and review visible progress over time. Weekly goals, streaks, and track completion now pull from saved interview history in MongoDB.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="lg">
@@ -79,11 +100,11 @@ export default function DashboardPage() {
                       stroke="#4f46e5"
                       strokeWidth="10"
                       strokeLinecap="round"
-                      strokeDasharray={`${(2 / 4) * 327} 327`}
+                      strokeDasharray={`${(loopProgress / 100) * 327} 327`}
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-3xl font-semibold">2/4</span>
+                    <span className="text-3xl font-semibold">{loopCount}</span>
                     <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                       loops
                     </span>
@@ -91,11 +112,11 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Two more interview loops puts this week back on track.
+                    {weeklyCopy}
                   </p>
                   <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
                     <Zap className="size-4" />
-                    7-day streak active
+                    {streakLabel}
                   </div>
                 </div>
               </div>
@@ -107,7 +128,7 @@ export default function DashboardPage() {
                 Current goals
               </div>
               <div className="mt-4 space-y-4">
-                {weeklyGoals.map((goal) => (
+                {metrics.goals.map((goal) => (
                   <div key={goal.label}>
                     <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
                       <span>{goal.label}</span>
@@ -123,8 +144,6 @@ export default function DashboardPage() {
           </div>
         </section>
 
-
-
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
             <div className="mb-4 flex items-center gap-2">
@@ -132,7 +151,7 @@ export default function DashboardPage() {
               <h2>Role tracks</h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
-              {roleTracks.map((track) => (
+              {metrics.tracks.map((track) => (
                 <Card key={track.id}>
                   <CardContent className="p-5">
                     <div
@@ -168,7 +187,7 @@ export default function DashboardPage() {
               <h2>Learn from recent misses</h2>
             </div>
             <div className="space-y-4">
-              {improvementThemes.map((item) => (
+              {metrics.improvements.map((item) => (
                 <Card key={item.id}>
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-3">

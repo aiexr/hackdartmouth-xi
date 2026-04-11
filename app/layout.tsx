@@ -14,7 +14,7 @@ const displayFont = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "LeetCode for Interviews",
+  title: "LeetSpeak",
   description:
     "A polished MVP for role-specific interview practice with realistic mock sessions, feedback, and progress tracking.",
 };

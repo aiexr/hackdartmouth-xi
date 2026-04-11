@@ -34,10 +34,10 @@ export function MainShell({ children }: { children: React.ReactNode }) {
           </div>
           <div>
             <div className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-primary/70">
-              Interview Practice
+              Interview Prep
             </div>
             <div className="text-lg font-semibold tracking-tight">
-              LeetCode for Interviews
+              LeetSpeak
             </div>
           </div>
         </Link>

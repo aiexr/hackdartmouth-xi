@@ -2,9 +2,9 @@
 
 https://hackdartmouth-xi.alex-6e4.workers.dev
 
-# LeetCode for Interviews
+# LeetSpeak
 
-`LeetCode for Interviews` is a clean MVP foundation for a role-specific mock interview practice app built with Next.js, TypeScript, Tailwind CSS, shadcn/ui patterns, and Cloudflare Workers via OpenNext.
+`LeetSpeak` is a clean MVP foundation for a role-specific mock interview practice app built with Next.js, TypeScript, Tailwind CSS, shadcn/ui patterns, and Cloudflare Workers via OpenNext.
 
 The repo keeps the existing `design/` folder intact and uses it as the source of truth for:
 
@@ -62,7 +62,7 @@ I preserved the spirit of the original design while adapting the content to the 
 - TypeScript
 - Tailwind CSS v4
 - shadcn/ui-style components in `components/ui/`
-- Firebase Auth client scaffold
+- NextAuth.js with Google OAuth and MongoDB adapter
 - Gemini request scaffold
 - ElevenLabs request scaffold
 - MongoDB Atlas connection scaffold
@@ -114,7 +114,7 @@ Important compatibility notes:
 - `app/settings/page.tsx`
   Product settings page.
 - `app/auth/sign-in/page.tsx`
-  Firebase-auth-oriented sign-in shell.
+  NextAuth-oriented sign-in shell.
 - `app/practice/[scenarioId]/page.tsx`
   Dynamic interview practice route.
 - `app/review/[scenarioId]/page.tsx`
@@ -127,7 +127,7 @@ Important compatibility notes:
 - `components/app/main-shell.tsx`
   Desktop sidebar and mobile bottom navigation for the main app surfaces.
 - `components/app/status-grid.tsx`
-  Shows Firebase, Gemini, ElevenLabs, and Mongo readiness on the dashboard.
+  Shows NextAuth, Gemini, ElevenLabs, and Mongo readiness on the dashboard.
 - `components/app/practice-session.tsx`
   Live mock interview UI with timer, mic controls, prompt progression, and side panels.
 - `components/app/coach-conversation.tsx`
@@ -157,8 +157,8 @@ These are lightweight shadcn/ui-style primitives used by the MVP:
   Shared `cn()` utility.
 - `lib/env.ts`
   Server-side env loading and readiness flags.
-- `lib/firebase/client.ts`
-  Firebase client bootstrap for future auth wiring.
+- `lib/auth.ts`
+  NextAuth configuration with Google provider and MongoDB adapter wiring.
 - `lib/gemini.ts`
   Gemini request helper scaffold for scoring / feedback.
 - `lib/elevenlabs.ts`
@@ -187,12 +187,10 @@ The production app excludes `design/` from TypeScript build checks so it stays i
 
 Copy `.dev.vars.example` to `.dev.vars` and fill in values for:
 
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
 - `GEMINI_API_KEY`
 - `ELEVENLABS_API_KEY`
 - `ELEVENLABS_VOICE_ID`
@@ -262,7 +260,7 @@ Results:
 
 The UI foundation is ready. The next real product work should be:
 
-1. connect Firebase Auth flows to the sign-in surface
+1. finish the NextAuth sign-in flow and session-aware app gating
 2. persist users, attempts, transcripts, and scores in MongoDB Atlas
 3. wire microphone capture and transcript storage
 4. call Gemini for interviewer turns, scoring, and structured feedback
