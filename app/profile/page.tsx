@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { Award, Brain, Briefcase, Edit3, Flame, Target, TrendingUp, User } from "lucide-react";
+import { Award, Briefcase, Edit3, User } from "lucide-react";
 import { getOptionalServerSession } from "@/lib/auth";
-import { getOptionalMongoDb } from "@/lib/mongodb";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
+import { UserModel } from "@/lib/models";
 import { MainShell } from "@/components/app/main-shell";
-import { ProfileContextEditor } from "@/components/app/profile-context-editor";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,32 +12,23 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const session = await getOptionalServerSession();
-  const [metrics, db] = await Promise.all([
-    getUserInterviewMetrics(session?.user?.email),
-    getOptionalMongoDb(),
-  ]);
-
-  let userContext = { resumeText: "", linkedinText: "", jobDescriptionText: "" };
-  if (session?.user?.email && db) {
-    const profile = await db
-      .collection("user_profiles")
-      .findOne({ userId: session.user.email });
-    if (profile) {
-      userContext = {
-        resumeText: (profile.resumeText as string) ?? "",
-        linkedinText: (profile.linkedinText as string) ?? "",
-        jobDescriptionText: (profile.jobDescriptionText as string) ?? "",
-      };
-    }
-  }
-  const profileName = session?.user?.name ?? "Guest user";
+  const metrics = await getUserInterviewMetrics(session?.user?.email);
+  const dbUser = session?.user?.email ? await UserModel.getUserByEmail(session.user.email) : null;
+  
+  const profileName = (dbUser?.name || session?.user?.name) ?? "Guest user";
+  const profileBio = dbUser?.bio || null;
+  const profileFocusTrack = dbUser?.focusTrack || null;
+  
   const subtitle = !metrics.hasSession
     ? "Sign in to save interviews and unlock profile progress."
     : !metrics.databaseReady
       ? "MongoDB is not configured yet, so profile stats are waiting on persistence."
-      : metrics.topTrackName
-        ? `${metrics.topTrackName} focus · ${metrics.completedSessions} completed practice loops`
-        : "No completed interview loops yet";
+      : profileFocusTrack && metrics.completedSessions
+        ? `${profileFocusTrack} focus · ${metrics.completedSessions} completed practice loops`
+        : metrics.topTrackName && metrics.completedSessions
+          ? `${metrics.topTrackName} focus · ${metrics.completedSessions} completed practice loops`
+          : "No completed interview loops yet";
+  
   const profileActionHref = session?.user ? "/settings" : "/auth/sign-in";
   const profileActionLabel = session?.user ? "Edit profile" : "Sign in";
 
@@ -75,12 +65,13 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
 
-        {session?.user && (
-          <ProfileContextEditor
-            resumeText={userContext.resumeText}
-            linkedinText={userContext.linkedinText}
-            jobDescriptionText={userContext.jobDescriptionText}
-          />
+        {profileBio && (
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="mb-3">About</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">{profileBio}</p>
+            </CardContent>
+          </Card>
         )}
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -123,12 +114,7 @@ export default async function ProfilePage() {
             {metrics.achievements.map((achievement) => (
               <Card key={achievement.title}>
                 <CardContent className="p-5 text-center">
-                  <div className="flex justify-center">
-                    {achievement.icon === "flame" && <Flame className="size-8 text-orange-500" />}
-                    {achievement.icon === "target" && <Target className="size-8 text-red-500" />}
-                    {achievement.icon === "trending-up" && <TrendingUp className="size-8 text-green-500" />}
-                    {achievement.icon === "brain" && <Brain className="size-8 text-violet-500" />}
-                  </div>
+                  <div className="text-4xl">{achievement.icon}</div>
                   <h3 className="mt-4 text-base">{achievement.title}</h3>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {achievement.description}

@@ -76,6 +76,25 @@ The implementation preserves the spirit of the original design while adapting co
 - LiveAvatar session token + secret setup routes
 - ElevenLabs call-mode agent wiring
 - Cloudflare Workers deployment via `@opennextjs/cloudflare`
+- `pdf-text-extract` + `mammoth` for server-side document extraction (PDF, DOCX)
+
+## Agent compatibility
+
+If Claude Code is used, create a symlink so it picks up the same agent instructions:
+
+```bash
+ln -s AGENTS.md CLAUDE.md
+```
+
+## Document Upload Feature
+
+Users can optionally upload a resume or document (PDF, DOCX) during practice sessions. The document is extracted to plain text and included in the interview grading context so the LLM can reference the candidate's background and experience when evaluating performance.
+
+- File size limit: 10 MB
+- Supported formats: PDF, DOCX (Word)
+- Upload is optional; interviews without documents are graded normally
+- If extraction fails, the interview proceeds without the document context
+- Extraction is handled server-side using `pdf-text-extract` (PDF) and `mammoth` (DOCX)
 
 ## Cloudflare / OpenNext setup
 
@@ -180,6 +199,8 @@ These are lightweight shadcn/ui-style primitives used by the MVP:
 
 ### Data and service foundation
 
+LLM architecture note: route app-level LLM calls through `lib/integrations/llm.ts` so provider selection, model overrides/fallbacks, defaults, and JSON parsing stay centralized.
+
 - `data/scenarios.ts`
   Typed mock data for role tracks, scenarios, review payloads, profile data, and coach messages.
 - `lib/utils.ts`
@@ -223,7 +244,8 @@ The production app excludes `design/` from TypeScript build checks so it stays i
 Copy `.dev.vars.example` to `.dev.vars` and fill in values for:
 
 - `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL`
+- `NEXTAUTH_URL` (set to your local URL for dev; for Cloudflare prod, set `AUTH_TRUST_HOST=1` and do not hardcode this to a different domain)
+- `AUTH_TRUST_HOST` (`1` in prod so NextAuth builds callback URLs from the request host)
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `LLM_PROVIDER` (`openai` or `gemini`)

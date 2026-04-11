@@ -2,7 +2,7 @@
 
 ## Pushing
 When pushing to main, just do 
-`git pull`
+`git pull --rebase`
 
 `git add .`
 
@@ -237,6 +237,10 @@ The agent may:
 
 Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo. That means when a task has been completed say that by putting (Completed) next to it. 
 
+## Agent doc maintenance
+
+When project context, routes, APIs, deployment setup, or core workflows change materially, agents must update `AGENTS.md` in the same task/PR so instructions stay accurate.
+
 ## LLM call policy
 
 When making any LLM call in this repo, route it through `lib/integrations/llm.ts`.
@@ -244,6 +248,9 @@ When making any LLM call in this repo, route it through `lib/integrations/llm.ts
 Do not call provider modules directly from app routes/components unless you are actively changing the integration layer itself.
 
 `lib/integrations/llm.ts` is where provider selection, model override/fallback behavior, shared defaults, and optional JSON parsing are handled.
+
+`ll()` in `lib/integrations/llm.ts` is text-only and does not accept file objects/binary payloads directly.
+For uploaded files, extract text first (for example via `lib/document-extract.ts`) and then pass the extracted text context into the `ll()` prompt.
 
 ---
 
@@ -337,185 +344,66 @@ Given a human prompt:
 When forced to choose, prefer **safe speed over ambitious redesign**.
 
 
-Project specific context:
+Project specific context (current state)
+
 LiveAvatar - docs.liveavatar.com - is a real-time AI avatar API that lets you spin up a talking, lifelike avatar in just a few lines of code. Great for AI tutors, support agents, training sims, companions - anything that benefits from a real human-feeling interaction. https://docs.liveavatar.com/ . Available credits: $100 https://heygen.notion.site/Hackathon-How-to-Build-with-LiveAvatar-API-334449792c6980e98a81cfebaa9e3bb0?source=copy_link .
 
 ElevenLabs - https://elevenlabs.io/docs/overview/intro
 Creator mode
 
+This repo is an App Router Next.js app with routes rooted at `app/` (not `src/app`).
 
+Overall plan (based on current app shape)
+- Auth + entry: sign in at `/auth/sign-in`, then navigate from `/`.
+- Practice loop: scenarios live under `/practice` and `/practice/[scenarioId]`.
+- Live coaching and voice surfaces: `/coach` plus app components in `components/app/`.
+- Review and progression: results/feedback under `/review/[scenarioId]` and user state pages under `/profile` and `/settings`.
+- Integration test surface: `/llm` for LLM wiring and document extraction checks.
 
+Current page routes
+- /
+- /auth/sign-in
+- /coach
+- /llm
+- /practice
+- /practice/[scenarioId]
+- /profile
+- /review/[scenarioId]
+- /settings
 
+Current API routes
+- POST /api/session/create
+- POST /api/session/setup-secret
+- GET /api/health
+- POST /api/llm/test
+- POST /api/document/extract
+- POST /api/interview/start
+- POST /api/interview/end
+- GET /api/interview/[id]
+- GET/POST /api/interview/[id]/transcript
+- GET /api/interviews
+- NextAuth handler at /api/auth/[...nextauth]
 
-AI Interview Prepper — Full Plan
-Context
-AI-powered interview prep for HackDartmouth XI. Face-to-face mock interviews with a realistic avatar, covering behavioral, technical, and system design. Post-interview grading + feedback, LeetSpeak-style.
-Sponsors: LiveAvatar (HeyGen), ElevenLabs, Gemini
-
-Core Pipeline
-User speaks → ElevenLabs STT → Gemini 2.5 Flash → ElevenLabs TTS → LiveAvatar avatar → User
-
-All three sponsors connected via the native ElevenLabs Agent Plugin for LiveAvatar.
-
-Tech Stack
-Layer
-Tech
-Why
-Frontend
-Next.js 14 (App Router) + TypeScript + Tailwind
-Fast to build, SSR, great DX
-Avatar
-@heygen/liveavatar-web-sdk (LITE mode + ElevenLabs plugin)
-Realistic lip-synced talking avatar
-Voice + Conversation
-ElevenLabs Conversational AI (WebSocket/WebRTC)
-Bundles STT + TTS + LLM orchestration
-LLM Brain
-Gemini 2.5 Flash (via ElevenLabs agent config)
-OR Chat.Dartmouth.edu for testing
-Interview logic, questions, grading
-Post-Interview Grading
-Gemini API (direct, text-based) OR
-Chat.Dartmouth.edu for testing
-Structured evaluation of full transcript
-Database
-MongoDB Atlas (Mongoose ODM)
-Free tier, flexible document schema
-Auth
-NextAuth.js (MongoDB adapter)
-Google/GitHub OAuth
-Deployment
-TBD, possibly CloudFlare.
-Zero-config Next.js deploys, free tier
-
-
-Application Flow
-1. Landing / Dashboard
-Sign in via NextAuth.js (Google/GitHub OAuth)
-Dashboard shows past interviews with LeetSpeak-style scores + progress chart
-"Start Interview" button
-2. Interview Setupvercel
-Pick type: Behavioral / Technical / System Design / Custom (paste job description)
-Pick difficulty: Easy / Medium / Hard
-Optional: upload resume for personalized questions
-3. Live Interview Session
-Backend creates LiveAvatar session token (API key stays server-side)
-Frontend initializes LiveAvatar SDK in LITE mode with ElevenLabs Agent Plugin
-Avatar appears — interviewer introduces themselves
-Real-time back-and-forth (5-8 questions, ~15-20 min)
-Transcript captured via ElevenLabs events
-4. Post-Interview Grading
-Full transcript → LLM API for structured evaluation
-Grading rubric (1-10 per dimension):
-Behavioral: STAR structure, specificity, self-awareness, communication
-Technical: correctness, problem-solving, thought process, optimization
-Overall score + letter grade
-Per-question feedback + "key moments" highlights
-
-Routes
-/                          → Landing page
-/dashboard                 → Interview history, scores, progress
-/interview/setup           → Pick type, difficulty, resume
-/interview/session         → Live avatar interview (full screen)
-/interview/[id]/results    → Grading + feedback
-
-API Routes
-POST /api/session/create   → LiveAvatar token + ElevenLabs agent
-POST /api/interview/start  → Record interview start
-POST /api/interview/end    → Receive transcript, trigger grading
-GET  /api/interview/[id]   → Get results
-GET  /api/interviews       → List past interviews
-
-
-LiveAvatar + ElevenLabs Plugin Setup
-Store ElevenLabs API key via LiveAvatar secrets endpoint (one-time)
-Create ElevenLabs agent with Gemini 2.5 Flash + interview system prompt + voice
-Start LiveAvatar session in LITE mode with avatar_id + ElevenLabs plugin config
-Frontend renders avatar via @heygen/liveavatar-web-sdk
-Listen for elevenlabs_agent_event for transcript data
-
-ElevenLabs Agent System Prompts
-Behavioral: "You are a senior hiring manager. Ask one question at a time. Probe depth with follow-ups. Evaluate STAR method..."
-Technical: "You are a senior engineer. Present coding problems verbally. Ask candidate to explain approach before coding. Probe edge cases..."
-System Design: "You are a staff engineer. Start with a broad problem, let the candidate drive, ask clarifying questions..."
-
-Grading Implementation
-Post-interview, send full transcript to Gemini API:
-Returns JSON: {
-  overall_score (1-100), letter_grade (A+ to F),
-  dimensions: [{ name, score, feedback }],
-  per_question: [{ question, answer_summary, score, feedback }],
-  strengths: [string], improvements: [string],
-  key_moments: [{ timestamp, type, description }]
-}
-
-
-MongoDB Schema (Mongoose)
-Interview {
-  userId: String (indexed),
-  type: 'behavioral' | 'technical' | 'system_design',
-  difficulty: 'easy' | 'medium' | 'hard',
-  status: String,
-  transcript: [{ role, content, timestamp }],
-  overallScore: Number,
-  letterGrade: String,
-  gradingResult: Mixed,
-  createdAt: Date,
-  completedAt: Date
-}
-
-
-File Structure
-hackdartmouth-xi/
-├── src/
-│   ├── app/
-│   │   ├── page.tsx                    # Landing
-│   │   ├── dashboard/page.tsx          # Interview history
-│   │   ├── interview/
-│   │   │   ├── setup/page.tsx          # Interview config
-│   │   │   ├── session/page.tsx        # Live interview
-│   │   │   └── [id]/results/page.tsx   # Feedback
-│   │   └── api/
-│   │       ├── session/create/route.ts
-│   │       ├── interview/
-│   │       │   ├── start/route.ts
-│   │       │   ├── end/route.ts
-│   │       │   └── [id]/route.ts
-│   │       └── interviews/route.ts
-│   ├── components/
-│   │   ├── AvatarPlayer.tsx
-│   │   ├── InterviewControls.tsx
-│   │   ├── ScoreCard.tsx
-│   │   ├── ProgressChart.tsx
-│   │   └── TranscriptView.tsx
-│   ├── lib/
-│   │   ├── liveavatar.ts
-│   │   ├── elevenlabs.ts
-│   │   ├── gemini.ts
-│   │   ├── mongodb.ts
-│   │   └── prompts.ts
-│   ├── models/
-│   │   ├── Interview.ts
-│   │   └── User.ts
-│   └── types/
-│       └── interview.ts
-├── .env.local
-├── package.json
-├── tailwind.config.ts
-└── next.config.ts
-
+LLM and document flow
+- Route all LLM calls through `lib/integrations/llm.ts`.
+- Provider integrations live under `lib/integrations/`.
+- Uploaded files should be text-extracted via `lib/document-extract.ts` before prompt composition.
 
 Deployment
-Push repo to GitHub
-Connect repo on provider.
-Add env vars: MONGODB_URI, NEXTAUTH_SECRET, NEXTAUTH_URL, HEYGEN_API_KEY, ELEVENLABS_API_KEY, GEMINI_API_KEY, CHAT_DARTMOUTH_API_KEY
-Deploy — every git push auto-deploys
+- Cloudflare/OpenNext is configured (`open-next.config.ts`, `wrangler.jsonc`).
+- Use package scripts (`preview`, `deploy`) for OpenNext/Cloudflare workflows.
 
-Build Order (hackathon speed)
-Scaffold — create-next-app + Tailwind + MongoDB + NextAuth
-Avatar + conversation — LiveAvatar + ElevenLabs plugin (the core demo)
-Interview flow — Setup page → live session
-Grading — Gemini evaluation + results page
-Dashboard — History, scores, progress chart
-Deploy to Provider — connect GitHub, add env vars, done
-Polish — Landing page, resume upload, custom job descriptions
+Common runtime envs
+- NEXTAUTH_SECRET
+- GOOGLE_CLIENT_ID
+- GOOGLE_CLIENT_SECRET
+- MONGODB_URI
+- MONGODB_DB_NAME
+- OPENAI_API_KEY
+- OPENAI_MODEL
+- GEMINI_API_KEY
+- GEMINI_MODEL
+- LLM_PROVIDER
+- ELEVENLABS_API_KEY
+- ELEVENLABS_VOICE_ID
+- HEYGEN_API_KEY

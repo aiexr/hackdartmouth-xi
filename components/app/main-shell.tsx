@@ -34,10 +34,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <BookOpenCheck className="size-5" />
           </div>
-          <div>
-            <div className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-primary/70">
-              Interview Prep
-            </div>
+          <div className="pt-0.5">
             <div className="text-lg font-semibold tracking-tight">
               LeetSpeak
             </div>
