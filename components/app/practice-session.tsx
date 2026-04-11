@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,53 +8,62 @@ import {
   FileText,
   Lightbulb,
   MessageSquareText,
-  Mic,
-  MicOff,
-  Pause,
-  SkipForward,
-  Volume2,
   X,
 } from "lucide-react";
 import type { Scenario } from "@/data/scenarios";
+import { LiveAvatar, type TranscriptEntry } from "@/components/app/live-avatar";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-
-const transcriptPreview = [
-  {
-    speaker: "Interviewer",
-    text: "Walk me through your background and why this role is the natural next step.",
-  },
-  {
-    speaker: "You",
-    text: "I currently operate as a senior engineer with staff-level scope across platform reliability and developer tooling...",
-  },
-  {
-    speaker: "You",
-    text: "The thread across those roles is that I like solving leveraged problems that make product teams faster.",
-  },
-];
 
 type PracticePanel = "rubric" | "hints" | "transcript";
 
 export function PracticeSession({ scenario }: { scenario: Scenario }) {
   const router = useRouter();
   const [panel, setPanel] = useState<PracticePanel>("rubric");
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [step, setStep] = useState(0);
+  const [avatarState, setAvatarState] = useState<"idle" | "connecting" | "connected" | "ended">("idle");
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
 
   useEffect(() => {
-    if (!isRecording || isPaused) {
-      return;
-    }
+    if (avatarState !== "connected") return;
 
     const timer = window.setInterval(() => {
       setSeconds((value) => value + 1);
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [isPaused, isRecording]);
+  }, [avatarState]);
+
+  const handleSessionEnd = useCallback(
+    async (finalTranscript: TranscriptEntry[]) => {
+      try {
+        const startRes = await fetch("/api/interview/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "behavioral",
+            scenarioId: scenario.id,
+          }),
+        });
+        const { id } = await startRes.json();
+
+        await fetch("/api/interview/end", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            interviewId: id,
+            transcript: finalTranscript,
+          }),
+        });
+
+        router.push(`/review/${scenario.id}`);
+      } catch {
+        router.push(`/review/${scenario.id}`);
+      }
+    },
+    [router, scenario.id],
+  );
 
   const stepCount = scenario.followUps.length + 1;
   const progress = ((step + 1) / stepCount) * 100;
@@ -65,15 +74,6 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
     const remainder = seconds % 60;
     return `${minutes}:${remainder.toString().padStart(2, "0")}`;
   }, [seconds]);
-
-  function handleAdvance() {
-    if (step < scenario.followUps.length) {
-      setStep((value) => value + 1);
-      return;
-    }
-
-    router.push(`/review/${scenario.id}`);
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -98,30 +98,27 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
       </header>
 
       <div className="flex flex-1 flex-col lg:flex-row">
-        <section className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-10 text-center md:px-10">
+        <section className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-10 text-center md:px-10">
           <div className="max-w-2xl">
-            <div className="relative mx-auto mb-6 flex size-32 items-center justify-center rounded-full bg-white p-1 shadow-xl shadow-primary/10">
-              <img
-                src={scenario.interviewerAvatar}
-                alt={scenario.interviewer}
-                className="size-full rounded-full object-cover"
-              />
-              {isRecording && !isPaused ? (
-                <div className="absolute -bottom-1 -right-1 flex size-10 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-                  <Volume2 className="size-5" />
-                </div>
-              ) : null}
-            </div>
-
             <p className="text-sm font-medium text-muted-foreground">
               {scenario.interviewer} · {scenario.interviewerRole}
             </p>
-            <h1 className="mt-2 text-3xl md:text-4xl">{scenario.title}</h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg leading-8 text-muted-foreground">
-              {currentPrompt}
-            </p>
+            <h1 className="mt-1 text-2xl md:text-3xl">{scenario.title}</h1>
+            {avatarState === "idle" && (
+              <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-muted-foreground">
+                {currentPrompt}
+              </p>
+            )}
+          </div>
 
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <LiveAvatar
+            onTranscriptUpdate={setTranscript}
+            onSessionEnd={handleSessionEnd}
+            onStateChange={setAvatarState}
+          />
+
+          {avatarState === "idle" && (
+            <div className="flex flex-wrap justify-center gap-2">
               {scenario.focus.map((focus) => (
                 <span
                   key={focus}
@@ -131,60 +128,6 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                 </span>
               ))}
             </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {isRecording ? (
-              <button
-                onClick={() => setIsPaused((value) => !value)}
-                className="flex size-12 items-center justify-center rounded-full bg-white shadow-md transition hover:scale-[1.02]"
-              >
-                <Pause className="size-5 text-muted-foreground" />
-              </button>
-            ) : null}
-
-            <button
-              onClick={() => {
-                setIsRecording((value) => !value);
-                setIsPaused(false);
-              }}
-              className={cn(
-                "flex size-[4.5rem] items-center justify-center rounded-full text-white shadow-xl transition",
-                isRecording
-                  ? "bg-red-500 shadow-red-500/30 hover:bg-red-600"
-                  : "bg-primary shadow-primary/25 hover:bg-primary/90",
-              )}
-            >
-              {isRecording ? <MicOff className="size-8" /> : <Mic className="size-8" />}
-            </button>
-
-            {isRecording ? (
-              <button
-                onClick={handleAdvance}
-                className="flex size-12 items-center justify-center rounded-full bg-white shadow-md transition hover:scale-[1.02]"
-              >
-                <SkipForward className="size-5 text-muted-foreground" />
-              </button>
-            ) : null}
-          </div>
-
-          {isRecording ? (
-            <div className="flex items-end gap-1">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "w-1.5 rounded-full bg-primary transition-all",
-                    isPaused ? "h-3 opacity-35" : "animate-pulse",
-                  )}
-                  style={{ height: isPaused ? 12 : 14 + ((index % 3) + 1) * 8 }}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Start the mic to simulate a live response.
-            </p>
           )}
         </section>
 
@@ -249,12 +192,17 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
 
             {panel === "transcript" ? (
               <div className="space-y-4">
-                {transcriptPreview.map((entry) => {
-                  const isUser = entry.speaker === "You";
+                {transcript.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Transcript will appear here once the interview starts.
+                  </p>
+                )}
+                {transcript.map((entry, index) => {
+                  const isUser = entry.role === "user";
 
                   return (
                     <div
-                      key={`${entry.speaker}-${entry.text}`}
+                      key={index}
                       className={cn("flex gap-3", isUser && "flex-row-reverse text-right")}
                     >
                       <div
@@ -273,7 +221,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                           isUser ? "bg-primary/8" : "bg-muted/70",
                         )}
                       >
-                        {entry.text}
+                        {entry.content}
                       </div>
                     </div>
                   );
