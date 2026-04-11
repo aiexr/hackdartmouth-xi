@@ -88,7 +88,6 @@ Package scripts:
 - `npm run preview` runs the OpenNext Cloudflare preview flow
 - `npm run deploy` runs the OpenNext Cloudflare deploy flow
 - `npm run cf-typegen` generates Cloudflare env types
-- `.github/workflows/cloudflare-deploy.yml` runs the production Cloudflare deploy from GitHub Actions on pushes to `main`
  
 Important compatibility notes:
 
@@ -97,11 +96,6 @@ Important compatibility notes:
 - no `@cloudflare/next-on-pages`
 - no `export const runtime = "edge"` was introduced
 - `wrangler.jsonc` `name` and `services[].service` must match the actual Cloudflare Worker name used by Workers Builds for this repo
-
-GitHub Actions deploy secrets:
-
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
 
 ## File structure
 

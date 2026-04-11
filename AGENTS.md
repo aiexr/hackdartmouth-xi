@@ -1,5 +1,15 @@
 # AGENTS.md
 
+When pushing to main, just do 
+`git pull`
+
+`git add .`
+
+and commit your changes to main; rebase if needed
+just dont slow down work. 
+
+
+
 ## Purpose
 
 This repository is designed for fast execution by coding agents working from short human prompts.
