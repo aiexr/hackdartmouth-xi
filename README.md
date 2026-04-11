@@ -1,3 +1,7 @@
+# Deployment
+
+https://hackdartmouth-xi.alex-6e4.workers.dev
+
 # LeetCode for Interviews
 
 `LeetCode for Interviews` is a clean MVP foundation for a role-specific mock interview practice app built with Next.js, TypeScript, Tailwind CSS, shadcn/ui patterns, and Cloudflare Workers via OpenNext.
@@ -13,7 +17,7 @@ The repo keeps the existing `design/` folder intact and uses it as the source of
 
 This implementation does not treat `design/` as production code. Instead, it translates the important design ideas into a real Next app-router project that can build and deploy through Cloudflare Workers.
 
-## What I built
+## What we built
 
 I created the first working app foundation with the following product surfaces:
 
