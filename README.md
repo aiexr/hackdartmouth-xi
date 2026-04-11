@@ -78,6 +78,14 @@ The implementation preserves the spirit of the original design while adapting co
 - Cloudflare Workers deployment via `@opennextjs/cloudflare`
 - `pdf-text-extract` + `mammoth` for server-side document extraction (PDF, DOCX)
 
+## Agent compatibility
+
+If Claude Code is used, create a symlink so it picks up the same agent instructions:
+
+```bash
+ln -s AGENTS.md CLAUDE.md
+```
+
 ## Document Upload Feature
 
 Users can optionally upload a resume or document (PDF, DOCX) during practice sessions. The document is extracted to plain text and included in the interview grading context so the LLM can reference the candidate's background and experience when evaluating performance.
