@@ -219,6 +219,10 @@ The agent may:
 - duplicate a small amount of code to avoid destabilizing shared abstractions
 - leave TODOs only when they directly matter to the task
 
+## Roadmap maintenance
+
+Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo.
+
 ---
 
 ## Preferred implementation style
@@ -493,4 +497,3 @@ Grading — Gemini evaluation + results page
 Dashboard — History, scores, progress chart
 Deploy to Provider — connect GitHub, add env vars, done
 Polish — Landing page, resume upload, custom job descriptions
-
