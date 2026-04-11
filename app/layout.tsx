@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { SessionProvider } from "@/components/auth/session-provider";
 import "./globals.css";
 
 const bodyFont = Plus_Jakarta_Sans({
@@ -28,7 +29,7 @@ export default function RootLayout({
       <body
         className={`${bodyFont.variable} ${displayFont.variable} min-h-screen font-[var(--font-body)] text-foreground`}
       >
-        {children}
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );
