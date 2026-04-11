@@ -5,7 +5,6 @@ Agents must update this file when they complete work here or materially change s
 
 ## High Priority
 
-1. Implement real Firebase authentication flows on `/auth/sign-in` and gate user-specific routes behind an actual session instead of placeholder buttons and env-readiness text.
 2. Persist practice attempts, transcripts, scores, and review history in MongoDB so sessions survive refreshes and power the profile and review surfaces with real data.
 3. Replace the mocked practice-session controls with actual audio capture, live transcript updates, and step progression tied to recorded interview responses.
 4. Wire Gemini scoring into the practice-to-review flow so `/review/[scenarioId]` is generated from a real transcript and rubric evaluation instead of static fixture data.
@@ -14,7 +13,7 @@ Agents must update this file when they complete work here or materially change s
 ## Medium Priority
 
 1. Add server-side API routes for creating attempts, appending transcript turns, requesting AI scoring, and reading prior sessions so UI state is not trapped in client-only components.
-2. Build a real user progress model for dashboard, weekly goals, and profile stats so those pages reflect stored completion data instead of fixed mock percentages.
+2. Build a real user progress model for dashboard, weekly goals, and profile stats so those pages reflect stored completion data instead of fixed mock percentages. (Completed)
 3. Integrate ElevenLabs voice playback into interview sessions so interviewer prompts can be spoken instead of only rendered as text.
 4. Add robust loading, empty, and error states across practice, review, auth, and settings flows so partially configured integrations fail gracefully.
 5. Add automated verification for the critical paths: auth bootstrap, API health, scenario routing, and Cloudflare deployment workflow behavior.

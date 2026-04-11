@@ -222,7 +222,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }
 
-  const body = await req.json();
+  const body = (await req.json()) as {
+    interviewId?: string;
+    transcript?: unknown;
+  };
   const { interviewId, transcript } = body;
 
   if (!interviewId) {
