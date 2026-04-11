@@ -4,6 +4,45 @@ import { MainShell } from "@/components/app/main-shell";
 import { scenarios } from "@/data/scenarios";
 import { Input } from "@/components/ui/input";
 
+const categories = [
+  {
+    id: "behavioral",
+    name: "Behavioral",
+    description: "STAR method, leadership, conflict resolution, and teamwork scenarios.",
+    scenarios: ["staff-swe-story", "staff-swe-conflict"],
+  },
+  {
+    id: "technical",
+    name: "Technical",
+    description: "Data structures, algorithms, system architecture, and coding approach.",
+    scenarios: ["staff-swe-story"],
+  },
+  {
+    id: "system-design",
+    name: "System Design",
+    description: "Scalability, tradeoffs, component design, and infrastructure decisions.",
+    scenarios: ["staff-swe-conflict"],
+  },
+  {
+    id: "product",
+    name: "Product & Strategy",
+    description: "Prioritization, product sense, metrics, and stakeholder communication.",
+    scenarios: ["pm-prioritization"],
+  },
+  {
+    id: "case-study",
+    name: "Case Study",
+    description: "Structured thinking, synthesis, recommendations, and executive communication.",
+    scenarios: ["consulting-synthesis"],
+  },
+  {
+    id: "general",
+    name: "General",
+    description: "Mixed question types to practice adapting across interview formats.",
+    scenarios: ["staff-swe-story", "pm-prioritization", "consulting-synthesis"],
+  },
+];
+
 const difficultyTextStyles: Record<
   (typeof scenarios)[number]["difficulty"],
   string
@@ -23,6 +62,8 @@ const difficultyLabels: Record<
 };
 
 export default function PracticePage() {
+  const scenarioById = new Map(scenarios.map((scenario, index) => [scenario.id, { scenario, index }]));
+
   return (
     <MainShell>
       <div className="mx-auto max-w-6xl space-y-6 px-6 py-8 md:px-10 md:py-10">
@@ -51,24 +92,47 @@ export default function PracticePage() {
             <span>Difficulty</span>
           </div>
           <ul className="divide-y divide-border">
-            {scenarios.map((scenario, index) => (
-              <li key={scenario.id}>
-                <Link
-                  href={`/practice/${scenario.id}`}
-                  className="grid grid-cols-[1.75rem_minmax(0,1fr)_7rem] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/50"
-                >
-                  <span className="flex items-center justify-center">
-                    <Circle className="size-4 text-muted-foreground" />
-                  </span>
-                  <span className="truncate">
-                    {index + 1}. {scenario.title}
-                  </span>
-                  <span className={difficultyTextStyles[scenario.difficulty]}>
-                    {difficultyLabels[scenario.difficulty]}
-                  </span>
-                </Link>
-              </li>
-            ))}
+            {categories.map((category) => {
+              const categoryScenarios = category.scenarios
+                .map((scenarioId) => scenarioById.get(scenarioId))
+                .filter((entry): entry is { scenario: (typeof scenarios)[number]; index: number } => Boolean(entry));
+
+              if (!categoryScenarios.length) {
+                return null;
+              }
+
+              return (
+                <li key={category.id}>
+                  <div className="border-b border-border bg-muted/35 px-4 py-3">
+                    <p className="text-sm">{category.name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{category.description}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {categoryScenarios.length} {categoryScenarios.length === 1 ? "scenario" : "scenarios"}
+                    </p>
+                  </div>
+                  <ul className="divide-y divide-border">
+                    {categoryScenarios.map(({ scenario, index }) => (
+                      <li key={`${category.id}-${scenario.id}`}>
+                        <Link
+                          href={`/practice/${scenario.id}`}
+                          className="grid grid-cols-[1.75rem_minmax(0,1fr)_7rem] items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted/50"
+                        >
+                          <span className="flex items-center justify-center">
+                            <Circle className="size-4 text-muted-foreground" />
+                          </span>
+                          <span className="truncate">
+                            {index + 1}. {scenario.title}
+                          </span>
+                          <span className={difficultyTextStyles[scenario.difficulty]}>
+                            {difficultyLabels[scenario.difficulty]}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
