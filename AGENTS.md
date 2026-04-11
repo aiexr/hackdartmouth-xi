@@ -221,7 +221,7 @@ The agent may:
 
 ## Roadmap maintenance
 
-Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo.
+Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo. That means when a task has been completed say that by putting (Completed) next to it. 
 
 ---
 
