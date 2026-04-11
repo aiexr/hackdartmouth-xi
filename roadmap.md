@@ -25,3 +25,4 @@ Agents must update this file when they complete work here or materially change s
 3. Improve observability with request logging and basic analytics for session starts, completions, scoring failures, and deployment health.
 4. Refine the settings surface to support real user preferences for voice, feedback style, and practice defaults once persistence is in place.
 5. Tighten docs across `README.md` and deployment instructions so local setup, environment variables, and Cloudflare/GitHub responsibilities are unambiguous for new contributors.
+6. Add an internal LLM sandbox tab and page for integration smoke tests. (Completed)

@@ -29,6 +29,28 @@ function normalizeModelName(model: string) {
   return model.startsWith("models/") ? model.slice("models/".length) : model;
 }
 
+function formatGeminiApiError(status: number, bodyText: string) {
+  try {
+    const parsed = JSON.parse(bodyText) as {
+      error?: { message?: string; details?: Array<{ reason?: string }> };
+    };
+    const reason = parsed.error?.details?.[0]?.reason;
+    const message = parsed.error?.message;
+
+    if (reason === "API_KEY_HTTP_REFERRER_BLOCKED") {
+      return `Gemini API key is referrer-restricted for browser use. This server-side call has no allowed referrer. Create/use a server key (or relax referrer restrictions) in Google Cloud and enable Generative Language API.`;
+    }
+
+    if (message) {
+      return `Gemini request failed with ${status}: ${message}`;
+    }
+  } catch {
+    // Fallback to raw text below.
+  }
+
+  return `Gemini request failed with ${status}: ${bodyText.slice(0, 300)}`;
+}
+
 function extractContent(responseJson: unknown): string {
   if (!responseJson || typeof responseJson !== "object") {
     return "";
@@ -84,7 +106,8 @@ export async function fetchAvailableModels(): Promise<
     });
 
     if (!response.ok) {
-      throw new Error(`Model list request failed with ${response.status}`);
+      const text = await response.text();
+      throw new Error(formatGeminiApiError(response.status, text));
     }
 
     const json = (await response.json()) as {
@@ -157,7 +180,7 @@ export async function execute(
       if (!response.ok) {
         const text = await response.text();
         throw new Error(
-          `Model ${normalizedModel} failed with ${response.status}: ${text.slice(0, 300)}`,
+          `Model ${normalizedModel} failed: ${formatGeminiApiError(response.status, text)}`,
         );
       }
 

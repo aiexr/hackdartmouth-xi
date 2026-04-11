@@ -1,13 +1,26 @@
 import { MongoClient } from "mongodb";
 import { env } from "@/lib/env";
 
+function isValidMongoUri(uri: string) {
+  const trimmed = uri.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (trimmed.includes("<") || trimmed.includes(">")) {
+    return false;
+  }
+
+  return /^mongodb(\+srv)?:\/\/.+/.test(trimmed);
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var __mongoClientPromise__: Promise<MongoClient> | undefined;
 }
 
 export function getMongoClient() {
-  if (!env.mongodbUri) {
+  if (!env.mongodbUri || !isValidMongoUri(env.mongodbUri)) {
     return null;
   }
 
