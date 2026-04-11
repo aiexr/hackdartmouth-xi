@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   BookOpenCheck,
-  Flame,
   Home,
   LogIn,
   LogOut,
@@ -101,33 +100,6 @@ export function MainShell({ children }: { children: React.ReactNode }) {
             Sign in
           </Link>
         )}
-
-        <div className="rounded-[1.75rem] border border-amber-200/70 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-[0_24px_50px_-40px_rgba(251,146,60,0.7)]">
-          <div className="flex items-center gap-2 text-orange-700">
-            <Flame className="size-5" />
-            <span className="text-sm font-semibold">7-day streak</span>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-orange-800/75">
-            Keep the loop going. Consistency matters more than session length.
-          </p>
-          <div className="mt-4 flex gap-1.5">
-            {["M", "T", "W", "T", "F", "S", "S"].map((label, index) => (
-              <div
-                key={`${label}-${index}`}
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-xl text-[0.7rem] font-semibold",
-                  index < 5
-                    ? "bg-orange-500 text-white"
-                    : index === 5
-                      ? "bg-orange-200 text-orange-700"
-                      : "bg-white/70 text-orange-400",
-                )}
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-        </div>
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
