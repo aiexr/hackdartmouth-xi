@@ -84,6 +84,7 @@ Package scripts:
 - `npm run preview` runs the OpenNext Cloudflare preview flow
 - `npm run deploy` runs the OpenNext Cloudflare deploy flow
 - `npm run cf-typegen` generates Cloudflare env types
+- `.github/workflows/cloudflare-deploy.yml` runs Cloudflare deploys from GitHub Actions and writes the resulting URL back to the commit as a GitHub deployment
 
 Important compatibility notes:
 
@@ -92,6 +93,26 @@ Important compatibility notes:
 - no `@cloudflare/next-on-pages`
 - no `export const runtime = "edge"` was introduced
 - `wrangler.jsonc` `name` and `services[].service` must match the actual Cloudflare Worker name used by Workers Builds for this repo
+
+## GitHub Actions deploys
+
+If you want the deployed URL attached directly to each GitHub commit, use the GitHub Actions workflow in `.github/workflows/cloudflare-deploy.yml`.
+
+Required GitHub secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Optional GitHub repository variable:
+
+- `CLOUDFLARE_PRODUCTION_URL`
+
+Behavior:
+
+- pushes to non-default branches run `npx @opennextjs/cloudflare upload`, extract the `Version Preview URL`, and attach it to the commit as a GitHub deployment
+- pushes to the default branch run `npx @opennextjs/cloudflare deploy` and attach `CLOUDFLARE_PRODUCTION_URL` if you set it
+
+If you adopt the GitHub Actions workflow as the source of truth for deployments, disable Cloudflare connected builds to avoid duplicate builds and deploys.
 
 ## File structure
 
