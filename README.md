@@ -180,6 +180,8 @@ These are lightweight shadcn/ui-style primitives used by the MVP:
 
 ### Data and service foundation
 
+LLM architecture note: route app-level LLM calls through `lib/integrations/llm.ts` so provider selection, model overrides/fallbacks, defaults, and JSON parsing stay centralized.
+
 - `data/scenarios.ts`
   Typed mock data for role tracks, scenarios, review payloads, profile data, and coach messages.
 - `lib/utils.ts`
