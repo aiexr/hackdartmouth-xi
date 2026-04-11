@@ -155,6 +155,7 @@ export function VoiceCall({
       if (!agentId) {
         throw new Error("Missing ElevenLabs agent id");
       }
+      const resumeContext = typeof data.resumeContext === "string" ? data.resumeContext : "";
 
       const conversation = await VoiceConversation.startSession({
         agentId,
@@ -184,7 +185,10 @@ export function VoiceCall({
 
       // Inject tone modifier into the agent's context
       const tonePrompt = TONE_PROMPTS[tone] ?? TONE_PROMPTS.neutral;
-      conversation.sendContextualUpdate(tonePrompt);
+      const contextualUpdate = resumeContext
+        ? `${tonePrompt}\n\nCandidate resume context:\n${resumeContext}`
+        : tonePrompt;
+      conversation.sendContextualUpdate(contextualUpdate);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start call";
       setError(message);

@@ -1,6 +1,15 @@
 import { getOptionalServerSession } from "@/lib/auth";
 import { UserModel } from "@/lib/models";
 
+function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUserByEmail>>) {
+  if (!user) {
+    return null;
+  }
+
+  const { resumeExtractedText, resumeStorageKey, ...publicUser } = user;
+  return publicUser;
+}
+
 export async function GET() {
   const session = await getOptionalServerSession();
 
@@ -20,7 +29,7 @@ export async function GET() {
       );
     }
 
-    return Response.json(user);
+    return Response.json(sanitizeUserForClient(user));
   } catch (error) {
     console.error("Failed to fetch user profile:", error);
     return Response.json({ error: "Failed to fetch profile" }, { status: 500 });
@@ -57,7 +66,7 @@ export async function PATCH(request: Request) {
       return Response.json({ error: "Failed to update profile - user not found or DB connection failed" }, { status: 500 });
     }
 
-    return Response.json(updatedUser);
+    return Response.json(sanitizeUserForClient(updatedUser));
   } catch (error) {
     console.error("Failed to update user profile:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

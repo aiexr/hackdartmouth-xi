@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getOptionalServerSession } from "@/lib/auth";
+import { UserModel } from "@/lib/models";
 
 const LIVEAVATAR_API = "https://api.liveavatar.com";
 
@@ -23,6 +25,14 @@ function pickRandomAvatar() {
   return AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)];
 }
 
+function summarizeResumeText(resumeText: string | null | undefined) {
+  if (!resumeText) {
+    return "";
+  }
+
+  return resumeText.replace(/\s+/g, " ").trim().slice(0, 1200);
+}
+
 export async function POST(req: NextRequest) {
   const heygenKey = process.env.HEYGEN_API_KEY;
   if (!heygenKey) {
@@ -39,9 +49,11 @@ export async function POST(req: NextRequest) {
       : {};
   const mode = body.mode === "call" ? "call" : "video";
   const tone = typeof body.tone === "string" ? body.tone : "neutral";
+  const session = await getOptionalServerSession();
+  const user = session?.user?.email ? await UserModel.getUserByEmail(session.user.email) : null;
+  const resumeContext = summarizeResumeText(user?.resumeExtractedText);
 
   if (mode === "video") {
-    // FULL mode — LiveAvatar handles avatar + voice + STT + LLM + TTS
     const avatar = pickRandomAvatar();
     const sessionBody = {
       mode: "FULL",
@@ -50,7 +62,8 @@ export async function POST(req: NextRequest) {
         context_id: TONE_CONTEXTS[tone] ?? TONE_CONTEXTS.neutral,
         language: "en",
       },
-      llm_configuration_id: process.env.HEYGEN_LLM_CONFIG_ID ?? "e7541a91-b99f-49ab-a3fa-5a4dea83a169",
+      llm_configuration_id:
+        process.env.HEYGEN_LLM_CONFIG_ID ?? "e7541a91-b99f-49ab-a3fa-5a4dea83a169",
     };
 
     const res = await fetch(`${LIVEAVATAR_API}/v1/sessions/token`, {
@@ -79,10 +92,10 @@ export async function POST(req: NextRequest) {
       ...data,
       interviewMode: "video",
       avatarName: avatar.name,
+      resumeContext,
     });
   }
 
-  // CALL mode — return ElevenLabs agent config for direct connection
   const elevenLabsAgentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
   if (!elevenLabsAgentId) {
     return NextResponse.json(
@@ -94,5 +107,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     interviewMode: "call",
     agentId: elevenLabsAgentId,
+    resumeContext,
   });
 }

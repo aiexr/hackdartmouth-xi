@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
+import { UserModel } from "@/lib/models";
 import { ll } from "@/lib/integrations/llm";
 
 const MAX_DOCUMENT_FILE_SIZE = 10 * 1024 * 1024;
@@ -307,6 +308,10 @@ export async function POST(req: NextRequest) {
   }
 
   const transcriptText = transcriptToText(transcript ?? []);
+  const profile = await UserModel.getUserByEmail(session.user.email);
+  const resumeContext = profile?.resumeExtractedText?.trim()
+    ? profile.resumeExtractedText.trim().slice(0, 8000)
+    : "";
 
   let gradingResult: NormalizedGradingResult | null = null;
   let gradingError: string | null = null;
@@ -340,6 +345,17 @@ export async function POST(req: NextRequest) {
     ];
 
     promptParts.push("Transcript:");
+
+    if (resumeContext) {
+      promptParts.splice(
+        promptParts.length - 1,
+        0,
+        "Candidate resume:",
+        resumeContext,
+        "",
+      );
+    }
+
     promptParts.push(transcriptText);
 
     const userPrompt = promptParts.join("\n");

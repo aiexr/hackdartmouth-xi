@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Save } from "lucide-react";
+import { AlertCircle, CheckCircle2, Download, FileText, Loader2, Save, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,18 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function parseDate(value: unknown): Date | null {
+  if (typeof value !== "string" && typeof value !== "number") {
+    return null;
+  }
+
+  const parsedDate = new Date(value);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
 function toUser(value: Record<string, unknown>): User {
+  const preferences = asRecord(value.preferences);
+
   return {
     email: typeof value.email === "string" ? value.email : "",
     name: typeof value.name === "string" ? value.name : "",
@@ -31,28 +42,44 @@ function toUser(value: Record<string, unknown>): User {
       typeof value.resumeUrl === "string" || value.resumeUrl === null
         ? value.resumeUrl
         : null,
+    resumeStorageKey:
+      typeof value.resumeStorageKey === "string" || value.resumeStorageKey === null
+        ? value.resumeStorageKey
+        : null,
+    resumeFileName:
+      typeof value.resumeFileName === "string" || value.resumeFileName === null
+        ? value.resumeFileName
+        : null,
+    resumeMimeType:
+      typeof value.resumeMimeType === "string" || value.resumeMimeType === null
+        ? value.resumeMimeType
+        : null,
+    resumeUploadedAt: parseDate(value.resumeUploadedAt),
+    resumeExtractedText:
+      typeof value.resumeExtractedText === "string" || value.resumeExtractedText === null
+        ? value.resumeExtractedText
+        : null,
     preferences: {
       voiceId:
-        typeof asRecord(value.preferences).voiceId === "string" ||
-        asRecord(value.preferences).voiceId === null
-          ? (asRecord(value.preferences).voiceId as string | null)
+        typeof preferences.voiceId === "string" || preferences.voiceId === null
+          ? (preferences.voiceId as string | null)
           : null,
       feedbackStyle:
-        asRecord(value.preferences).feedbackStyle === "detailed" ||
-        asRecord(value.preferences).feedbackStyle === "concise" ||
-        asRecord(value.preferences).feedbackStyle === "structured"
+        preferences.feedbackStyle === "detailed" ||
+        preferences.feedbackStyle === "concise" ||
+        preferences.feedbackStyle === "structured"
           ? (asRecord(value.preferences).feedbackStyle as
               | "detailed"
               | "concise"
               | "structured")
           : "structured",
       practiceReminders:
-        typeof asRecord(value.preferences).practiceReminders === "boolean"
-          ? (asRecord(value.preferences).practiceReminders as boolean)
+        typeof preferences.practiceReminders === "boolean"
+          ? (preferences.practiceReminders as boolean)
           : true,
       weeklyGoal:
-        typeof asRecord(value.preferences).weeklyGoal === "number"
-          ? (asRecord(value.preferences).weeklyGoal as number)
+        typeof preferences.weeklyGoal === "number"
+          ? (preferences.weeklyGoal as number)
           : 3,
     },
     createdAt:
@@ -78,13 +105,16 @@ export function ProfileEditor() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingResume, setUploadingResume] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [resumeSuccess, setResumeSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
     bio: "",
-    resumeUrl: "",
     focusTrack: "",
   });
 
@@ -100,7 +130,6 @@ export function ProfileEditor() {
         setFormData({
           name: parsedUser.name || "",
           bio: parsedUser.bio || "",
-          resumeUrl: parsedUser.resumeUrl || "",
           focusTrack: parsedUser.focusTrack || "",
         });
       } catch (err) {
@@ -121,6 +150,53 @@ export function ProfileEditor() {
     setError(null);
     setSuccess(false);
   };
+
+  const handleResumeUpload = async () => {
+    if (!resumeFile) {
+      setResumeError("Choose a PDF or DOCX file first.");
+      return;
+    }
+
+    setUploadingResume(true);
+    setResumeError(null);
+    setResumeSuccess(false);
+
+    try {
+      const formData = new FormData();
+      formData.append("resume", resumeFile);
+
+      const res = await fetch("/api/user/profile/resume", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        throw new Error(payload?.error || "Failed to upload resume");
+      }
+
+      const updatedUser = await res.json();
+      setUser(updatedUser);
+      setResumeFile(null);
+      setResumeSuccess(true);
+      setTimeout(() => setResumeSuccess(false), 3000);
+    } catch (err) {
+      setResumeError(err instanceof Error ? err.message : "Failed to upload resume");
+    } finally {
+      setUploadingResume(false);
+    }
+  };
+
+  const currentResumeName = user?.resumeFileName || null;
+  const legacyResumeUrl = user?.resumeUrl || null;
+  const hasPersistentResume = Boolean(user?.resumeStorageKey);
+  const currentResumeUploadedAt = user?.resumeUploadedAt
+    ? user.resumeUploadedAt.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,14 +249,14 @@ export function ProfileEditor() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 flex items-start gap-3">
-              <AlertCircle className="size-4 text-red-600 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="size-4 text-red-600 mt-0.5 shrink-0" />
               <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
 
           {success && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
-              <CheckCircle2 className="size-4 text-green-600 mt-0.5 flex-shrink-0" />
+              <CheckCircle2 className="size-4 text-green-600 mt-0.5 shrink-0" />
               <p className="text-sm text-green-800">Profile updated successfully!</p>
             </div>
           )}
@@ -209,15 +285,104 @@ export function ProfileEditor() {
             </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Resume URL</label>
-            <Input
-              value={formData.resumeUrl}
-              onChange={(e) => handleInputChange("resumeUrl", e.target.value)}
-              placeholder="https://example.com/resume.pdf (optional)"
-              type="url"
-              disabled={saving}
-            />
+          <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileText className="size-4 text-muted-foreground" />
+                  <label className="text-sm font-medium">Resume</label>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Upload a PDF or DOCX. The file is saved for future sessions and reused in interview grading.
+                </p>
+              </div>
+              {(currentResumeName || legacyResumeUrl || resumeFile) && (
+                <Badge className="shrink-0">
+                  {hasPersistentResume ? "Saved" : legacyResumeUrl ? "Link" : "Selected"}
+                </Badge>
+              )}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+              <div className="space-y-2">
+                <Input
+                  type="file"
+                  accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setResumeFile(file);
+                    setResumeError(null);
+                    setResumeSuccess(false);
+                  }}
+                  disabled={saving || uploadingResume}
+                />
+                <p className="text-xs text-muted-foreground">
+                  PDF or DOCX up to 10 MB.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                className="gap-2"
+                onClick={handleResumeUpload}
+                disabled={saving || uploadingResume || !resumeFile}
+              >
+                {uploadingResume ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="size-4" />
+                    {currentResumeName ? "Replace Resume" : "Upload Resume"}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {(resumeError || resumeSuccess) && (
+              <div
+                className={`rounded-lg border p-3 text-sm ${
+                  resumeError
+                    ? "border-red-200 bg-red-50 text-red-800"
+                    : "border-green-200 bg-green-50 text-green-800"
+                }`}
+              >
+                {resumeError || "Resume uploaded successfully."}
+              </div>
+            )}
+
+            {(currentResumeName || legacyResumeUrl) && (
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-border/80 bg-background px-4 py-3 text-sm">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{currentResumeName || "Resume link"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentResumeName
+                      ? currentResumeUploadedAt
+                        ? `Uploaded ${currentResumeUploadedAt}`
+                        : "Stored on your profile"
+                      : "Legacy link stored on your profile"}
+                  </p>
+                </div>
+                {hasPersistentResume ? (
+                  <Button asChild variant="ghost" size="sm" className="gap-2">
+                    <a href="/api/user/profile/resume" target="_blank" rel="noreferrer">
+                      <Download className="size-4" />
+                      Download
+                    </a>
+                  </Button>
+                ) : legacyResumeUrl ? (
+                  <Button asChild variant="ghost" size="sm" className="gap-2">
+                    <a href={legacyResumeUrl} target="_blank" rel="noreferrer">
+                      <Download className="size-4" />
+                      Open Link
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
