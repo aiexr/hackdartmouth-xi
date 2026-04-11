@@ -235,7 +235,11 @@ The agent may:
 
 ## Roadmap maintenance
 
-Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo. That means when a task has been completed say that by putting (Completed) next to it. 
+Agents must keep `roadmap.md` up to date when they add, complete, reprioritize, or materially change work in the repo.
+
+**When you finish a roadmap task, remove that line from the active priority list in `roadmap.md` in the same change that implements it.** Don't just tag it `(Completed)` and leave it sitting in High / Medium / Low Priority — delete the entry so the active list stays focused on work still to be done. If the roadmap keeps a `## Completed` section, move a one-line summary there; otherwise the line is gone.
+
+Do this every time — the removal is part of the task, not a follow-up.
 
 ## Agent doc maintenance
 

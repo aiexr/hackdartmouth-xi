@@ -21,10 +21,9 @@ Agents must update this file when they complete work here or materially change s
 
 ## Low Priority
 
-1. Expand the scenario catalog in `data/scenarios.ts` so each track has enough breadth to support repeated use without obvious repetition.
-2. Add scenario authoring/admin tooling or a structured content pipeline so prompts, rubrics, and follow-ups are not maintained only as hardcoded TypeScript data.
-3. Improve observability with request logging and basic analytics for session starts, completions, scoring failures, and deployment health.
-4. Refine the settings surface to support real user preferences for voice, feedback style, and practice defaults once persistence is in place.
-5. Tighten docs across `README.md` and deployment instructions so local setup, environment variables, and Cloudflare/GitHub responsibilities are unambiguous for new contributors.
-6. Add an internal LLM sandbox tab and page for integration smoke tests. (Completed)
-7. Add optional document/resume upload to interview sessions so grading can reference candidate background. (Completed)
+1. Add scenario authoring/admin tooling or a structured content pipeline so prompts, rubrics, and follow-ups are not maintained only as hardcoded TypeScript data.
+2. Improve observability with request logging and basic analytics for session starts, completions, scoring failures, and deployment health.
+3. Refine the settings surface to support real user preferences for voice, feedback style, and practice defaults once persistence is in place.
+4. Tighten docs across `README.md` and deployment instructions so local setup, environment variables, and Cloudflare/GitHub responsibilities are unambiguous for new contributors.
+5. Add an internal LLM sandbox tab and page for integration smoke tests. (Completed)
+6. Add optional document/resume upload to interview sessions so grading can reference candidate background. (Completed)
