@@ -91,6 +91,7 @@ Important compatibility notes:
 - no static-only Pages output
 - no `@cloudflare/next-on-pages`
 - no `export const runtime = "edge"` was introduced
+- `wrangler.jsonc` `name` and `services[].service` must match the actual Cloudflare Worker name used by Workers Builds for this repo
 
 ## File structure
 

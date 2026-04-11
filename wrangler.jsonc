@@ -1,7 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "leetcode-for-interviews",
+  // In Workers Builds, this must match the connected Worker name so the
+  // self-service binding resolves during deploy.
+  "name": "hackdartmouth-xi",
   "compatibility_date": "2026-04-11",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
@@ -14,7 +16,7 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "leetcode-for-interviews"
+      "service": "hackdartmouth-xi"
     }
   ]
 }
