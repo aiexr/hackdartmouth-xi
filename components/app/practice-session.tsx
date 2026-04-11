@@ -144,11 +144,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
 
           {/* Mode + tone selectors -- only shown before session starts */}
           {sessionState === "idle" && (
-<<<<<<< HEAD
             <div className="flex flex-col items-center gap-3">
-=======
-            <div className="space-y-4">
->>>>>>> ad74597d0c9a83dc07fe5142907278a6430a12fb
               <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
                 <button
                   onClick={() => setInterviewMode("video")}
@@ -176,7 +172,6 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                 </button>
               </div>
 
-<<<<<<< HEAD
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Tone:</span>
                 {toneOptions.map((tone) => (
@@ -195,7 +190,8 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                     {tone.label}
                   </button>
                 ))}
-=======
+              </div>
+
               {/* Document upload */}
               <div className="flex max-w-sm items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
                 <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
@@ -226,7 +222,6 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                     </button>
                   </>
                 )}
->>>>>>> ad74597d0c9a83dc07fe5142907278a6430a12fb
               </div>
             </div>
           )}

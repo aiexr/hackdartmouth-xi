@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Award, Briefcase, Edit3, User } from "lucide-react";
+import { Award, Brain, Briefcase, Edit3, Flame, Target, TrendingUp, User, type LucideIcon } from "lucide-react";
+
+const achievementIcons: Record<string, LucideIcon> = {
+  flame: Flame,
+  target: Target,
+  "trending-up": TrendingUp,
+  brain: Brain,
+};
 import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
 import { UserModel } from "@/lib/models";
@@ -114,7 +121,14 @@ export default async function ProfilePage() {
             {metrics.achievements.map((achievement) => (
               <Card key={achievement.title}>
                 <CardContent className="p-5 text-center">
-                  <div className="text-4xl">{achievement.icon}</div>
+                  {(() => {
+                    const Icon = achievementIcons[achievement.icon] ?? Award;
+                    return (
+                      <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-amber-50">
+                        <Icon className="size-6 text-amber-500" />
+                      </div>
+                    );
+                  })()}
                   <h3 className="mt-4 text-base">{achievement.title}</h3>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {achievement.description}

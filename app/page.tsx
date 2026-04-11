@@ -2,6 +2,8 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  Calendar,
+  Flame,
   Play,
   Target,
   TrendingUp,
@@ -12,7 +14,6 @@ import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
 import { ActivityCalendar } from "@/components/app/activity-calendar";
 import { MainShell } from "@/components/app/main-shell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -142,27 +143,42 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <section className="grid grid-cols-[3fr_1fr] gap-4">
+        <section className="grid grid-cols-[3fr_1fr] items-stretch gap-4">
           <div className="min-w-0">
             <ActivityCalendar
               activityDays={metrics.activityDays}
               totalSessions={metrics.completedSessions}
             />
           </div>
-          <div className="flex flex-col justify-between gap-2 rounded-xl border border-border bg-card p-5">
-            <div className="text-center">
-              <div className="text-3xl font-semibold">{metrics.streakDays}</div>
-              <div className="text-xs text-muted-foreground">Current streak</div>
+          <div className="flex flex-col justify-around rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-orange-50">
+                <Flame className="size-5 text-orange-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-semibold leading-tight">{metrics.streakDays}</div>
+                <div className="text-xs text-muted-foreground">Current streak</div>
+              </div>
             </div>
             <div className="h-px bg-border" />
-            <div className="text-center">
-              <div className="text-3xl font-semibold">{metrics.longestStreak}</div>
-              <div className="text-xs text-muted-foreground">Longest streak</div>
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-amber-50">
+                <Trophy className="size-5 text-amber-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-semibold leading-tight">{metrics.longestStreak}</div>
+                <div className="text-xs text-muted-foreground">Longest streak</div>
+              </div>
             </div>
             <div className="h-px bg-border" />
-            <div className="text-center">
-              <div className="text-3xl font-semibold">{metrics.activityDays.filter((d) => d.count > 0).length}</div>
-              <div className="text-xs text-muted-foreground">Active days</div>
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-50">
+                <Calendar className="size-5 text-emerald-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-semibold leading-tight">{metrics.activityDays.filter((d) => d.count > 0).length}</div>
+                <div className="text-xs text-muted-foreground">Active days</div>
+              </div>
             </div>
           </div>
         </section>
@@ -213,21 +229,14 @@ export default async function DashboardPage() {
               {metrics.improvements.map((item) => (
                 <Card key={item.id}>
                   <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <Badge className="bg-accent text-accent-foreground">
-                        {item.tag}
-                      </Badge>
-                      <span className="text-xs font-medium text-muted-foreground/90">
-                        {item.source}
-                      </span>
-                    </div>
-                    <h3 className="mt-4 text-lg">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    <p className="text-sm leading-6 text-foreground">
                       {item.description}
                     </p>
-                    <span className="mt-2 inline-block text-xs text-muted-foreground">
-                      {item.tag}
-                    </span>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{item.tag}</span>
+                      <span>-</span>
+                      <span>{item.source}</span>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

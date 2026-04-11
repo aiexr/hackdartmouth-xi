@@ -10,8 +10,8 @@ function getIntensity(count: number) {
 
 const fills = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"];
 
-const CELL = 8;
-const GAP = 2;
+const CELL = 12;
+const GAP = 3;
 const STEP = CELL + GAP;
 
 const monthLabels = [
@@ -88,7 +88,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border px-3 py-2">
+      <div className="overflow-visible rounded-lg border border-border px-3 py-2">
           {/* Month labels */}
           <div className="flex" style={{ paddingLeft: 26 }}>
             {months.map((m, i) => {
@@ -135,17 +135,26 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
 
                     const intensity = getIntensity(day.count);
 
+                    const label = day.count === 0
+                      ? `No interviews on ${day.date}`
+                      : `${day.count} interview${day.count !== 1 ? "s" : ""} on ${day.date}`;
+
                     return (
                       <div
                         key={day.date}
+                        className="group relative"
                         style={{
                           width: CELL,
                           height: CELL,
                           backgroundColor: fills[intensity],
                           borderRadius: 2,
                         }}
-                        title={`${day.date}: ${day.count} session${day.count !== 1 ? "s" : ""}`}
-                      />
+                      >
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1.5 text-xs font-medium text-background shadow-lg group-hover:block">
+                          {label}
+                          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-foreground" />
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
