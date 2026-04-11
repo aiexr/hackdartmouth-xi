@@ -2,7 +2,7 @@
 
 ## Design Philosophy
 
-InterviewGym combines the **calm, structured approach of Brilliant** with the **warmth and motivation of Duolingo**. The design should feel like a training gym—clean, bright, and highly structured but approachable rather than intimidating.
+LeetSpeak combines the **calm, structured approach of Brilliant** with the **warmth and motivation of Duolingo**. The design should feel like a training gym—clean, bright, and highly structured but approachable rather than intimidating.
 
 ### Core Principles
 

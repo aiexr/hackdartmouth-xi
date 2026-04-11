@@ -1,7 +1,5 @@
 NEXTJS_ENV=development
 
-NEXT_PUBLIC_APP_NAME="LeetCode for Interviews"
-
 # NextAuth
 NEXTAUTH_SECRET=""
 NEXTAUTH_URL="http://localhost:3000"
@@ -14,10 +12,6 @@ GEMINI_MODEL="gemini-2.5-flash"
 LLM_PROVIDER="openai"
 OPENAI_API_KEY=""
 OPENAI_MODEL="google_genai.gemini-2.5-flash"
-OPENAI_BASE_URL=""
-ANTHROPIC_API_KEY=""
-CLAUDE_MODEL="claude-opus-4-6"
-CLAUDE_BASE_URL=""
 
 # ElevenLabs
 ELEVENLABS_API_KEY=""

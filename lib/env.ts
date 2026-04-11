@@ -1,8 +1,8 @@
 import "server-only";
 
+export const APP_NAME = "LeetCode for Interviews";
+
 const env = {
-  appName:
-    process.env.NEXT_PUBLIC_APP_NAME?.trim() || "LeetCode for Interviews",
   nextAuth: {
     secret: process.env.NEXTAUTH_SECRET,
     googleClientId: process.env.GOOGLE_CLIENT_ID,
@@ -12,11 +12,7 @@ const env = {
   geminiModel: process.env.GEMINI_MODEL,
   llmProvider: process.env.LLM_PROVIDER,
   openAiApiKey: process.env.OPENAI_API_KEY,
-  openAiApiBaseUrl: process.env.OPENAI_BASE_URL,
   openAiModel: process.env.OPENAI_MODEL,
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY,
-  claudeModel: process.env.CLAUDE_MODEL,
-  claudeBaseUrl: process.env.CLAUDE_BASE_URL,
   elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
   elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
   mongodbUri: process.env.MONGODB_URI,

@@ -9,7 +9,7 @@ export default function ProfilePage() {
   return (
     <MainShell>
       <div className="mx-auto max-w-5xl space-y-8 px-6 py-8 md:px-10 md:py-10">
-        <Card className="bg-white/80">
+        <Card>
           <CardContent className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center">
             <div className="flex size-[5.5rem] items-center justify-center rounded-full bg-primary/10 text-primary">
               <User className="size-10" />
@@ -30,7 +30,7 @@ export default function ProfilePage() {
 
         <div className="grid gap-4 md:grid-cols-4">
           {profileStats.map((item) => (
-            <Card key={item.label} className="bg-white/80">
+            <Card key={item.label}>
               <CardContent className="p-5 text-center">
                 <div className={`text-3xl font-semibold ${item.accent}`}>{item.value}</div>
                 <p className="mt-2 text-sm text-muted-foreground">{item.label}</p>
@@ -39,7 +39,7 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        <Card className="bg-white/85">
+        <Card>
           <CardContent className="p-6">
             <h2>Skill mastery</h2>
             <div className="mt-5 space-y-5">
@@ -71,7 +71,7 @@ export default function ProfilePage() {
               { icon: "📈", title: "Rapid improver", description: "Gained 18 points in six days" },
               { icon: "🧠", title: "Loop closer", description: "Finished four full mock loops" },
             ].map((achievement) => (
-              <Card key={achievement.title} className="bg-white/80">
+              <Card key={achievement.title}>
                 <CardContent className="p-5 text-center">
                   <div className="text-4xl">{achievement.icon}</div>
                   <h3 className="mt-4 text-base">{achievement.title}</h3>

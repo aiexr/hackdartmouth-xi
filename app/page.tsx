@@ -24,9 +24,9 @@ export default function DashboardPage() {
     <MainShell>
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="overflow-hidden border-none bg-gradient-to-br from-white via-white to-indigo-50/70 shadow-[0_35px_90px_-50px_rgba(79,70,229,0.45)]">
+          <Card className="overflow-hidden">
             <CardContent className="p-7 md:p-8">
-              <Badge className="border-primary/10 bg-primary/8 text-primary">
+              <Badge className="bg-secondary text-secondary-foreground">
                 Role-specific mock interview practice
               </Badge>
               <div className="mt-5">
@@ -55,7 +55,7 @@ export default function DashboardPage() {
           </Card>
 
           <div className="grid gap-4">
-            <div className="rounded-[1.75rem] border border-border/70 bg-white/80 p-5 shadow-sm">
+            <div className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <Target className="size-4" />
                 Weekly progress
@@ -68,7 +68,7 @@ export default function DashboardPage() {
                       cy="60"
                       r="52"
                       fill="none"
-                      stroke="#e7e7f5"
+                      stroke="#f0effc"
                       strokeWidth="10"
                     />
                     <circle
@@ -93,7 +93,7 @@ export default function DashboardPage() {
                   <p className="text-sm leading-6 text-muted-foreground">
                     Two more interview loops puts this week back on track.
                   </p>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
                     <Zap className="size-4" />
                     7-day streak active
                   </div>
@@ -101,8 +101,8 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-[1.75rem] border border-border/70 bg-white/80 p-5 shadow-sm">
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-secondary-foreground">
                 <TrendingUp className="size-4" />
                 Current goals
               </div>
@@ -133,7 +133,7 @@ export default function DashboardPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               {roleTracks.map((track) => (
-                <Card key={track.id} className="bg-white/80">
+                <Card key={track.id}>
                   <CardContent className="p-5">
                     <div
                       className={`flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br ${track.gradient} text-white shadow-lg`}
@@ -169,10 +169,10 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-4">
               {improvementThemes.map((item) => (
-                <Card key={item.id} className="bg-white/80">
+                <Card key={item.id}>
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-3">
-                      <Badge className="border-amber-200 bg-amber-50 text-amber-700">
+                      <Badge className="bg-accent text-accent-foreground">
                         {item.tag}
                       </Badge>
                       <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">

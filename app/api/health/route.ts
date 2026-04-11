@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { env, envFlags } from "@/lib/env";
+import { APP_NAME, envFlags } from "@/lib/env";
 
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    app: env.appName,
+    app: APP_NAME,
     integrations: envFlags,
     timestamp: new Date().toISOString(),
   });

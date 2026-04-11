@@ -2,7 +2,7 @@ import { env } from "@/lib/env";
 
 export const DEFAULT_OPENAI_MODEL = "google_genai.gemini-2.5-flash";
 
-const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_OPENAI_BASE_URL = "https://chat.dartmouth.edu/v1";
 
 const NON_CHAT_MODEL_KEYWORDS = [
   "openai_responses.",
@@ -40,7 +40,7 @@ function getApiConfig() {
 
   return {
     apiKey,
-    baseUrl: (env.openAiApiBaseUrl || DEFAULT_OPENAI_BASE_URL).replace(/\/$/, ""),
+    baseUrl: DEFAULT_OPENAI_BASE_URL,
   };
 }
 
