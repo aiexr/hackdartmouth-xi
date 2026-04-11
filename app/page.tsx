@@ -47,9 +47,6 @@ export default async function DashboardPage() {
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <Card className="overflow-hidden">
             <CardContent className="p-7 md:p-8">
-              <Badge className="bg-secondary text-secondary-foreground">
-                Role-specific mock interview practice
-              </Badge>
               <div className="mt-5">
                 <h1 className="max-w-2xl">
                   Practice interviewing the LeetSpeak way with focused role tracks and repeatable loops.
@@ -105,7 +102,7 @@ export default async function DashboardPage() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-3xl font-semibold">{loopCount}</span>
-                    <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground/90">
                       loops
                     </span>
                   </div>
@@ -194,7 +191,7 @@ export default async function DashboardPage() {
                       <Badge className="bg-accent text-accent-foreground">
                         {item.tag}
                       </Badge>
-                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      <span className="text-xs font-medium text-muted-foreground/90">
                         {item.source}
                       </span>
                     </div>

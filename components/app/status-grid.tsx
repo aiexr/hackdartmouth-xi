@@ -40,7 +40,7 @@ export function StatusGrid() {
                 <item.icon className="size-5" />
               </div>
               <span
-                className={`rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
                   item.ready
                     ? "bg-emerald-50 text-emerald-700"
                     : "bg-amber-50 text-amber-700"

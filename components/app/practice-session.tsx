@@ -166,7 +166,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
               {scenario.focus.map((focus) => (
                 <span
                   key={focus}
-                  className="rounded-full border border-border bg-white/75 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                  className="rounded-full border border-border bg-white/75 px-3 py-1 text-sm font-medium text-foreground/85"
                 >
                   {focus}
                 </span>
@@ -210,7 +210,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
                     className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3"
                   >
                     <span className="text-sm font-medium">{item}</span>
-                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground/85">
                       {index + 1}
                     </span>
                   </div>
