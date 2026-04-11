@@ -76,6 +76,17 @@ The implementation preserves the spirit of the original design while adapting co
 - LiveAvatar session token + secret setup routes
 - ElevenLabs call-mode agent wiring
 - Cloudflare Workers deployment via `@opennextjs/cloudflare`
+- `pdf-text-extract` + `mammoth` for server-side document extraction (PDF, DOCX)
+
+## Document Upload Feature
+
+Users can optionally upload a resume or document (PDF, DOCX) during practice sessions. The document is extracted to plain text and included in the interview grading context so the LLM can reference the candidate's background and experience when evaluating performance.
+
+- File size limit: 10 MB
+- Supported formats: PDF, DOCX (Word)
+- Upload is optional; interviews without documents are graded normally
+- If extraction fails, the interview proceeds without the document context
+- Extraction is handled server-side using `pdf-text-extract` (PDF) and `mammoth` (DOCX)
 
 ## Cloudflare / OpenNext setup
 

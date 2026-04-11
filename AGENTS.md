@@ -245,6 +245,9 @@ Do not call provider modules directly from app routes/components unless you are 
 
 `lib/integrations/llm.ts` is where provider selection, model override/fallback behavior, shared defaults, and optional JSON parsing are handled.
 
+`ll()` in `lib/integrations/llm.ts` is text-only and does not accept file objects/binary payloads directly.
+For uploaded files, extract text first (for example via `lib/document-extract.ts`) and then pass the extracted text context into the `ll()` prompt.
+
 ---
 
 ## Preferred implementation style

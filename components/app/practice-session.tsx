@@ -30,6 +30,7 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
   const [interviewMode, setInterviewMode] = useState<InterviewMode>("video");
   const [sessionState, setSessionState] = useState<"idle" | "connecting" | "connected" | "ended">("idle");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
 
   useEffect(() => {
     if (sessionState !== "connected") return;
@@ -54,21 +55,34 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
         });
         const { id } = await startRes.json();
 
-        await fetch("/api/interview/end", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            interviewId: id,
-            transcript: finalTranscript,
-          }),
-        });
+        // If a document is selected, use FormData; otherwise use JSON
+        if (selectedDocument) {
+          const formData = new FormData();
+          formData.append("interviewId", id);
+          formData.append("transcript", JSON.stringify(finalTranscript));
+          formData.append("document", selectedDocument);
+
+          await fetch("/api/interview/end", {
+            method: "POST",
+            body: formData,
+          });
+        } else {
+          await fetch("/api/interview/end", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              interviewId: id,
+              transcript: finalTranscript,
+            }),
+          });
+        }
 
         router.push(`/review/${scenario.id}`);
       } catch {
         router.push(`/review/${scenario.id}`);
       }
     },
-    [router, scenario.id],
+    [router, scenario.id, selectedDocument],
   );
 
   const stepCount = scenario.followUps.length + 1;
@@ -119,31 +133,65 @@ export function PracticeSession({ scenario }: { scenario: Scenario }) {
 
           {/* Mode selector -- only shown before session starts */}
           {sessionState === "idle" && (
-            <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
-              <button
-                onClick={() => setInterviewMode("video")}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
-                  interviewMode === "video"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
+                <button
+                  onClick={() => setInterviewMode("video")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                    interviewMode === "video"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Video className="size-4" />
+                  Video
+                </button>
+                <button
+                  onClick={() => setInterviewMode("call")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                    interviewMode === "call"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <Phone className="size-4" />
+                  Voice
+                </button>
+              </div>
+
+              {/* Document upload */}
+              <div className="flex max-w-sm items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                  <FileText className="size-4" />
+                  <input
+                    type="file"
+                    accept=".pdf,.docx"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      if (file) {
+                        setSelectedDocument(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <span>{selectedDocument ? "Change" : "Upload"} resume</span>
+                </label>
+                {selectedDocument && (
+                  <>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedDocument.name}
+                    </span>
+                    <button
+                      onClick={() => setSelectedDocument(null)}
+                      className="ml-auto text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </>
                 )}
-              >
-                <Video className="size-4" />
-                Video
-              </button>
-              <button
-                onClick={() => setInterviewMode("call")}
-                className={cn(
-                  "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
-                  interviewMode === "call"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Phone className="size-4" />
-                Voice
-              </button>
+              </div>
             </div>
           )}
 
