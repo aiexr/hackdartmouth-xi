@@ -9,7 +9,12 @@
   "keep_vars": true,
   // Public runtime defaults only. Keep secrets in Cloudflare env secrets.
   "vars": {
-    "NEXTAUTH_URL": "https://hackdartmouth-xi.alex-6e4.workers.dev"
+    "NEXTAUTH_URL": "https://hackdartmouth-xi.alex-6e4.workers.dev",
+    "NEXTJS_ENV": "development",
+    "GEMINI_MODEL": "gemini-2.5-flash",
+    "LLM_PROVIDER": "openai",
+    "OPENAI_MODEL": "openai.gpt-oss-120b",
+    "MONGODB_DB_NAME": "hackdartmouth"
   },
   "assets": {
     "directory": ".open-next/assets",
@@ -23,5 +28,7 @@
       "binding": "WORKER_SELF_REFERENCE",
       "service": "hackdartmouth-xi"
     }
-  ]
+  ],
+  // Secrets configured in Cloudflare dashboard - these will be injected at runtime
+  "secrets": ["NEXTAUTH_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "MONGODB_URI", "OPENAI_API_KEY", "GEMINI_API_KEY", "ELEVENLABS_API_KEY", "HEYGEN_API_KEY"]
 }
