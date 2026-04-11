@@ -1,7 +1,6 @@
 # Deployment
 
-
-hackdartmouth-xi.alex-6e4.workers.dev
+https://hackdartmouth-xi.alex-6e4.workers.dev
 
 # LeetCode for Interviews
 
