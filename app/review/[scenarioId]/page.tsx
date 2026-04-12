@@ -23,6 +23,7 @@ export const dynamic = "force-dynamic";
 
 type PersistedInterview = {
   scenarioId?: string | null;
+  type?: string | null;
   overallScore?: number | null;
   letterGrade?: string | null;
   gradingError?: string | null;
@@ -60,6 +61,38 @@ type PersistedKeyMoment = {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function formatScenarioTitleFromId(scenarioId: string) {
+  const normalized = scenarioId
+    .replace(/^lc-/, "")
+    .replace(/^quant-/, "")
+    .split("-")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+  return normalized || "Interview review";
+}
+
+function getPracticeHref(scenarioId: string, interviewType?: string | null) {
+  if (scenarioId.startsWith("lc-")) {
+    const slug = scenarioId.slice(3);
+    const params = new URLSearchParams();
+
+    if (interviewType === "behavioral" || interviewType === "system-design") {
+      params.set("mode", interviewType);
+    }
+
+    const queryString = params.toString();
+    return queryString ? `/practice/lc/${slug}?${queryString}` : `/practice/lc/${slug}`;
+  }
+
+  if (scenarioId.startsWith("quant-")) {
+    return `/practice/quant/${scenarioId.slice(6)}`;
+  }
+
+  return `/practice/${scenarioId}`;
 }
 
 function normalizeTranscript(
@@ -121,7 +154,7 @@ function normalizeTranscript(
 
 async function getPersistedInterviewReview(
   interviewId: string,
-  scenarioId: string,
+  routeScenarioId: string,
   userEmail: string,
 ) {
   let objectId: ObjectId;
@@ -147,7 +180,6 @@ async function getPersistedInterviewReview(
   const interview = (await db.collection("interviews").findOne({
     _id: objectId,
     userId: userEmail,
-    scenarioId,
   })) as PersistedInterview | null;
 
   if (!interview) {
@@ -157,6 +189,9 @@ async function getPersistedInterviewReview(
       notice: "That saved interview could not be found. Showing the demo review instead.",
     };
   }
+
+  const scenarioId =
+    isNonEmptyString(interview.scenarioId) ? interview.scenarioId : routeScenarioId;
 
   const previousInterview = (await db
     .collection("interviews")
@@ -200,7 +235,7 @@ export default async function ReviewPage({
 
   const persistedReview =
     interviewId && session?.user?.email
-      ? await getPersistedInterviewReview(interviewId, scenario.id, session.user.email)
+      ? await getPersistedInterviewReview(interviewId, scenarioId, session.user.email)
       : null;
 
   const interview = persistedReview?.interview ?? null;
@@ -208,7 +243,11 @@ export default async function ReviewPage({
   const persistedReviewLoadFailed = Boolean(
     interviewId && persistedReview?.notice && !persistedReview?.interview,
   );
-  const showStaticReview = !hasPersistedReview && !persistedReviewLoadFailed;
+  const hasKnownScenario = scenario.id === scenarioId;
+  const displayTitle = hasKnownScenario ? scenario.title : formatScenarioTitleFromId(scenarioId);
+  const interviewerName = hasKnownScenario ? scenario.interviewer : "Interviewer";
+  const practiceHref = getPracticeHref(scenarioId, interview?.type);
+  const showStaticReview = hasKnownScenario && !hasPersistedReview && !persistedReviewLoadFailed;
   const showReviewContent = hasPersistedReview || showStaticReview;
   const overallScore =
     hasPersistedReview && typeof interview?.overallScore === "number"
@@ -257,13 +296,13 @@ export default async function ReviewPage({
     hasPersistedReview
       ? normalizeTranscript(
           interview?.transcript,
-          scenario.interviewer,
+          interviewerName,
           interview?.gradingResult?.key_moments,
         )
       : showStaticReview
         ? staticReview.transcript.map((line) => ({
             time: line.time,
-            speaker: scenario.interviewer,
+            speaker: interviewerName,
             text: line.text,
             note: null,
             highlight: line.highlight,
@@ -300,10 +339,10 @@ export default async function ReviewPage({
             <ArrowLeft className="size-4" />
             Dashboard
           </Link>
-          <h3 className="hidden text-base md:block">{scenario.title}</h3>
+          <h3 className="hidden text-base md:block">{displayTitle}</h3>
           <div className="flex gap-2">
             <Button asChild variant="secondary">
-              <Link href={`/practice/${scenario.id}`}>
+              <Link href={practiceHref}>
                 <RotateCcw className="size-4" />
                 Retry
               </Link>
@@ -675,7 +714,7 @@ export default async function ReviewPage({
 
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button asChild variant="secondary" size="lg">
-            <Link href={`/practice/${scenario.id}`}>
+            <Link href={practiceHref}>
               <RotateCcw className="size-4" />
               Practice again
             </Link>

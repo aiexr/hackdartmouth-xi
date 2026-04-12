@@ -82,6 +82,8 @@ const EDITOR_CONTEXT_MAX_LINES = 80;
 const EDITOR_CONTEXT_MAX_CHARS = 3200;
 const INTERNAL_PROMPT_MARKER = "[[internal-interviewer-context]]";
 const GRACEFUL_END_MESSAGE = "Thank you for your time today. I'm going to end the interview here now.";
+const INTERVIEWER_CLOSING_DELAY_MIN_MS = 3200;
+const INTERVIEWER_CLOSING_DELAY_MAX_MS = 5000;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"
@@ -200,6 +202,18 @@ function shouldEndFromUserRequest(text: string) {
   ];
 
   return endRequests.some((phrase) => normalized.includes(phrase));
+}
+
+function getInterviewerClosureDelayMs(text: string) {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const punctuationMarks = (text.match(/[.!?]/g) ?? []).length;
+  const estimatedDelay =
+    1800 + words * 220 + Math.max(0, punctuationMarks - 1) * 350;
+
+  return Math.max(
+    INTERVIEWER_CLOSING_DELAY_MIN_MS,
+    Math.min(INTERVIEWER_CLOSING_DELAY_MAX_MS, estimatedDelay),
+  );
 }
 
 function buildInitialInterviewerPrompt(scenario: Scenario) {
@@ -324,6 +338,7 @@ export function PracticeSession({
   const gracefulEndFallbackTimeoutRef = useRef<number | null>(null);
   const savedCodeVersionRef = useRef(0);
   const lastInterviewerClosureTurnIdRef = useRef<string | null>(null);
+  const sessionEndHandledRef = useRef(false);
 
   const stopActiveSession = useCallback(() => {
     if (gracefulEndFallbackTimeoutRef.current) {
@@ -492,6 +507,7 @@ export function PracticeSession({
       lastModeratedTurnIdRef.current = null;
       moderationEndingRef.current = false;
       pendingGracefulEndRef.current = false;
+      sessionEndHandledRef.current = false;
       if (gracefulEndFallbackTimeoutRef.current) {
         window.clearTimeout(gracefulEndFallbackTimeoutRef.current);
         gracefulEndFallbackTimeoutRef.current = null;
@@ -596,9 +612,14 @@ export function PracticeSession({
 
     pendingGracefulEndRef.current = false;
     moderationEndingRef.current = true;
-    window.setTimeout(() => {
+
+    if (gracefulEndFallbackTimeoutRef.current) {
+      window.clearTimeout(gracefulEndFallbackTimeoutRef.current);
+    }
+
+    gracefulEndFallbackTimeoutRef.current = window.setTimeout(() => {
       stopActiveSession();
-    }, 1400);
+    }, getInterviewerClosureDelayMs(latestInterviewerTurn.content));
   }, [sessionState, stopActiveSession, transcript]);
 
   const handleShareCodeWithInterviewer = useCallback(() => {
@@ -663,9 +684,11 @@ export function PracticeSession({
 
   const handleSessionEnd = useCallback(
     async (rawTranscript: TranscriptEntry[]) => {
-      if (isGrading) {
+      if (sessionEndHandledRef.current || isGrading) {
         return;
       }
+
+      sessionEndHandledRef.current = true;
       setIsGrading(true);
       let interviewId: string | null = null;
 

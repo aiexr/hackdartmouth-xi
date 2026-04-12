@@ -65,6 +65,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const deliveredPromptIdsRef = useRef<Set<string>>(new Set());
   const deliveredPromptTextsRef = useRef<Set<string>>(new Set());
+  const sessionEndDeliveredRef = useRef(false);
   const wasConnectedRef = useRef(false);
   const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
     user: null,
@@ -85,6 +86,15 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
     },
     [onStateChange],
   );
+
+  const emitSessionEnd = useCallback(() => {
+    if (sessionEndDeliveredRef.current) {
+      return;
+    }
+
+    sessionEndDeliveredRef.current = true;
+    onSessionEnd?.(transcriptRef.current);
+  }, [onSessionEnd]);
 
   const updateTranscript = useCallback(
     (role: "user" | "interviewer", rawContent: string, partial: boolean) => {
@@ -221,6 +231,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
 
   const startSession = useCallback(async () => {
     setError(null);
+    sessionEndDeliveredRef.current = false;
     wasConnectedRef.current = false;
     deliveredPromptIdsRef.current.clear();
     deliveredPromptTextsRef.current.clear();
@@ -266,7 +277,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
         } else if (state === SessionState.DISCONNECTED) {
           if (wasConnectedRef.current) {
             updateStatus("ended");
-            onSessionEnd?.(transcriptRef.current);
+            emitSessionEnd();
           } else {
             setError("Session disconnected before connecting. Please try again.");
             updateStatus("idle");
@@ -319,7 +330,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       setError(message);
       updateStatus("idle");
     }
-  }, [flushPartial, updateStatus, updateTranscript, onSessionEnd, startUserCamera]);
+  }, [emitSessionEnd, flushPartial, updateStatus, updateTranscript, startUserCamera]);
 
   const stopSession = useCallback(async () => {
     if (userStreamRef.current) {
@@ -339,8 +350,8 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
     deliveredPromptIdsRef.current.clear();
     deliveredPromptTextsRef.current.clear();
     updateStatus("ended");
-    onSessionEnd?.(transcriptRef.current);
-  }, [flushPartial, updateStatus, onSessionEnd]);
+    emitSessionEnd();
+  }, [emitSessionEnd, flushPartial, updateStatus]);
 
   const toggleMute = useCallback(async () => {
     const session = sessionRef.current;

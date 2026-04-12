@@ -55,6 +55,7 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const lastPromptIdRef = useRef<string | null>(null);
   const deliveredPromptTextsRef = useRef<Set<string>>(new Set());
+  const sessionEndDeliveredRef = useRef(false);
   const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
     user: null,
     interviewer: null,
@@ -72,6 +73,15 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
     },
     [onStateChange],
   );
+
+  const emitSessionEnd = useCallback(() => {
+    if (sessionEndDeliveredRef.current) {
+      return;
+    }
+
+    sessionEndDeliveredRef.current = true;
+    onSessionEnd?.(transcriptRef.current);
+  }, [onSessionEnd]);
 
   const updateTranscript = useCallback(
     (role: "user" | "interviewer", rawContent: string, partial: boolean) => {
@@ -145,6 +155,7 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
 
   const startCall = useCallback(async () => {
     setError(null);
+    sessionEndDeliveredRef.current = false;
     updateStatus("connecting");
 
     try {
@@ -177,7 +188,7 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
         },
         onDisconnect: () => {
           updateStatus("ended");
-          onSessionEnd?.(transcriptRef.current);
+          emitSessionEnd();
         },
         onModeChange: (mode) => {
           setAgentSpeaking(mode.mode === "speaking");
@@ -207,7 +218,7 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
       setError(message);
       updateStatus("idle");
     }
-  }, [updateStatus, updateTranscript, onSessionEnd, tone]);
+  }, [emitSessionEnd, updateStatus, updateTranscript, tone]);
 
   const endCall = useCallback(async () => {
     if (conversationRef.current) {
@@ -215,8 +226,8 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
       conversationRef.current = null;
     }
     updateStatus("ended");
-    onSessionEnd?.(transcriptRef.current);
-  }, [updateStatus, onSessionEnd]);
+    emitSessionEnd();
+  }, [emitSessionEnd, updateStatus]);
 
   const toggleMute = useCallback(() => {
     if (!conversationRef.current) return;
