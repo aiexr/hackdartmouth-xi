@@ -25,10 +25,15 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
   const metrics = await getUserInterviewMetrics(email ?? undefined).catch(
     () => getUserInterviewMetrics(),
   );
+  const safeWeeklyTarget = Math.max(1, metrics.weeklyTarget);
+  const isOverGoal = metrics.weeklyCompleted > metrics.weeklyTarget;
+  const rawLoopProgress = (metrics.weeklyCompleted / safeWeeklyTarget) * 100;
   const loopProgress = Math.min(
     100,
-    (metrics.weeklyCompleted / metrics.weeklyTarget) * 100,
+    rawLoopProgress,
   );
+  const overflowProgress =
+    rawLoopProgress > 100 ? ((rawLoopProgress - 100) % 100 + 100) % 100 : 0;
   const loopCount = `${metrics.weeklyCompleted}/${metrics.weeklyTarget}`;
   const weeklyCopy = !metrics.hasSession
     ? "Sign in to track your practice history and progress."
@@ -56,24 +61,65 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
           <div className="mt-5 flex items-center gap-4">
             <div className="relative flex w-28 h-28 items-center justify-center">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="52"
-                  fill="none"
-                  stroke="#f0effc"
-                  strokeWidth="10"
-                />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="52"
-                  fill="none"
-                  stroke="#4f46e5"
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(loopProgress / 100) * 327} 327`}
-                />
+                {isOverGoal ? (
+                  <>
+                    <defs>
+                      <linearGradient id="overlap-ring-base" x1="8" y1="8" x2="112" y2="112">
+                        <stop offset="0%" stopColor="#ff5b9f" />
+                        <stop offset="100%" stopColor="#ff0066" />
+                      </linearGradient>
+                      <linearGradient id="overlap-ring-top" x1="8" y1="8" x2="112" y2="112">
+                        <stop offset="0%" stopColor="#c2185b" />
+                        <stop offset="100%" stopColor="#7a0030" />
+                      </linearGradient>
+                    </defs>
+
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="#f3f4f6" strokeWidth="10" />
+
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      stroke="url(#overlap-ring-base)"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeDasharray="327 327"
+                    />
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      stroke="url(#overlap-ring-top)"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(overflowProgress / 100) * 327} 327`}
+                      strokeDashoffset="-4"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      stroke="#f0effc"
+                      strokeWidth="10"
+                    />
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      stroke="#4f46e5"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(loopProgress / 100) * 327} 327`}
+                    />
+                  </>
+                )}
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-semibold">{loopCount}</span>
