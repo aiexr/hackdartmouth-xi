@@ -1,9 +1,5 @@
 import * as openAiProvider from "@/lib/integrations/openai";
 import * as geminiProvider from "@/lib/integrations/gemini";
-import {
-  extractDocumentText,
-  formatDocumentContextForPrompt,
-} from "@/lib/document-extract";
 
 export type LlmProviderName = "openai" | "gemini";
 
@@ -15,12 +11,6 @@ type PdfInput = {
 type ImageInput = {
   mimeType: string;
   dataBase64: string;
-};
-
-type DocumentInput = {
-  mimeType: string;
-  filename: string;
-  buffer: Buffer;
 };
 
 type ProviderModule = {
@@ -108,7 +98,6 @@ type LlOptions = {
   temperature?: number;
   maxTokens?: number;
   parseJson?: boolean;
-  document?: DocumentInput;
   image?: ImageInput;
 };
 
@@ -117,17 +106,6 @@ type LlResult = {
   modelUsed: string;
   json?: unknown;
 };
-
-async function appendDocumentContext(prompt: string, document: DocumentInput) {
-  const extracted = await extractDocumentText(document.buffer, document.filename);
-
-  return [
-    prompt,
-    "",
-    "Candidate background document:",
-    formatDocumentContextForPrompt(extracted),
-  ].join("\n");
-}
 
 export async function ll(
   prompt: string,
@@ -139,25 +117,14 @@ export async function ll(
   const temperature = options.temperature ?? 0.2;
   const maxTokens = options.maxTokens ?? 4000;
   const trimmedPrompt = prompt.trim();
-  const document = options.document;
   const image = options.image;
   const hasImage = Boolean(image);
   const responseFormat = options.parseJson ? "json" : "text";
-
-  const shouldUseNativePdf =
-    !hasImage &&
-    document?.mimeType === "application/pdf" &&
-    Boolean(provider.executeWithPdf);
 
   try {
     if (hasImage && !provider.executeWithImage) {
       throw new Error(`Provider ${providerName} does not support image input.`);
     }
-
-    const promptWithDocument =
-      document && !shouldUseNativePdf
-        ? await appendDocumentContext(trimmedPrompt, document)
-        : trimmedPrompt;
 
     let response: { content: string; modelUsed: string };
 
@@ -167,7 +134,7 @@ export async function ll(
       }
 
       response = await provider.executeWithImage(
-        promptWithDocument,
+        trimmedPrompt,
         systemPrompt,
         options.modelOverride,
         temperature,
@@ -176,31 +143,9 @@ export async function ll(
         options.modelFallbacks,
         responseFormat,
       );
-    } else if (shouldUseNativePdf) {
-      if (!document) {
-        throw new Error("Document was not provided.");
-      }
-
-      if (!provider.executeWithPdf) {
-        throw new Error(`Provider ${providerName} does not support native PDF input.`);
-      }
-
-      response = await provider.executeWithPdf(
-        trimmedPrompt,
-        systemPrompt,
-        options.modelOverride,
-        temperature,
-        maxTokens,
-        {
-          mimeType: "application/pdf",
-          dataBase64: document.buffer.toString("base64"),
-        },
-        options.modelFallbacks,
-        responseFormat,
-      );
     } else {
       response = await provider.execute(
-        promptWithDocument,
+        trimmedPrompt,
         systemPrompt,
         options.modelOverride,
         temperature,

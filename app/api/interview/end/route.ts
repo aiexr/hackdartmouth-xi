@@ -35,6 +35,12 @@ type NormalizedGradingResult = {
   generated_at?: string;
 };
 
+type UploadedDocument = {
+  buffer: Buffer;
+  mimeType: string;
+  filename: string;
+};
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -90,6 +96,14 @@ function transcriptToText(transcript: unknown) {
     })
     .filter(Boolean)
     .join("\n");
+}
+
+async function extractUploadedDocumentContext(document: UploadedDocument) {
+  const { extractDocumentText, formatDocumentContextForPrompt } = await import(
+    "@/lib/document-extract"
+  );
+  const extracted = await extractDocumentText(document.buffer, document.filename);
+  return formatDocumentContextForPrompt(extracted);
 }
 
 function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
@@ -275,7 +289,7 @@ export async function POST(req: NextRequest) {
   };
   let diagramSnapshotString: string | null = null;
   let documentError: string | null = null;
-  let uploadedDocument: { buffer: Buffer; mimeType: string; filename: string } | null = null;
+  let uploadedDocument: UploadedDocument | null = null;
 
   // Parse request: support both JSON and FormData
   const contentType = req.headers.get("content-type") || "";
@@ -457,8 +471,6 @@ export async function POST(req: NextRequest) {
       // no-op; keep original promptParts on error
     }
 
-    promptParts.push("Transcript:");
-
     if (resumeContext) {
       promptParts.splice(
         promptParts.length - 1,
@@ -469,6 +481,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (uploadedDocument) {
+      try {
+        promptParts.push("", await extractUploadedDocumentContext(uploadedDocument), "");
+      } catch (error) {
+        documentError =
+          error instanceof Error ? error.message : "Document extraction failed";
+      }
+    }
+
+    promptParts.push("Transcript:");
     promptParts.push(transcriptText);
 
     const userPrompt = promptParts.join("\n");
@@ -481,13 +503,6 @@ export async function POST(req: NextRequest) {
         temperature: 0.2,
         maxTokens: 3000,
         modelOverride: autoSelectVision ? DEFAULT_DARTMOUTH_VISION_MODEL : undefined,
-        document: uploadedDocument
-          ? {
-              mimeType: uploadedDocument.mimeType,
-              filename: uploadedDocument.filename,
-              buffer: uploadedDocument.buffer,
-            }
-          : undefined,
         image,
         providerOverride: autoSelectVision ? "openai" : undefined,
       });
