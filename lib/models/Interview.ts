@@ -39,6 +39,13 @@ export interface Interview {
   completedAt: Date | null;
 }
 
+export type InterviewHistorySummary = Pick<
+  Interview,
+  "_id" | "scenarioId" | "status" | "overallScore" | "letterGrade" | "createdAt" | "completedAt"
+> & {
+  transcriptCount: number;
+};
+
 export class InterviewModel {
   static async createInterview(
     email: string,
@@ -86,6 +93,42 @@ export class InterviewModel {
         $or: [{ email }, { userId: email }],
       })
       .sort({ createdAt: -1 })
+      .toArray();
+  }
+
+  static async getInterviewHistoryByUser(
+    email: string,
+    limit = 50,
+  ): Promise<InterviewHistorySummary[]> {
+    const db = await getMongoDb();
+    if (!db) return [];
+
+    const interviewsCollection = db.collection<Interview>("interviews");
+    const sanitizedLimit = Math.max(1, Math.min(limit, 100));
+
+    return await interviewsCollection
+      .aggregate<InterviewHistorySummary>([
+        {
+          $match: {
+            $or: [{ email }, { userId: email }],
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        { $limit: sanitizedLimit },
+        {
+          $project: {
+            scenarioId: 1,
+            status: 1,
+            overallScore: 1,
+            letterGrade: 1,
+            createdAt: 1,
+            completedAt: 1,
+            transcriptCount: {
+              $cond: [{ $isArray: "$transcript" }, { $size: "$transcript" }, 0],
+            },
+          },
+        },
+      ])
       .toArray();
   }
 

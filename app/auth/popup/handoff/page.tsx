@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AUTH_PREVIEW_GEOMETRY_KEY,
+  PREVIEW_NATURAL_HEIGHT,
+  PREVIEW_NATURAL_WIDTH,
   ScaledDashboardPreview,
 } from "@/components/app/dashboard-preview";
 
@@ -18,23 +20,37 @@ export default function AuthPopupHandoffPage() {
   const router = useRouter();
   const [stage, setStage] = useState<"compact" | "expanded">("compact");
   const [geometry, setGeometry] = useState<PreviewGeometry | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useLayoutEffect(() => {
+    let nextGeometry: PreviewGeometry | null = null;
+
     try {
       const raw = window.sessionStorage.getItem(AUTH_PREVIEW_GEOMETRY_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as PreviewGeometry;
-      if (
-        typeof parsed.top === "number" &&
-        typeof parsed.left === "number" &&
-        typeof parsed.width === "number" &&
-        typeof parsed.height === "number"
-      ) {
-        setGeometry(parsed);
+      if (raw) {
+        const parsed = JSON.parse(raw) as PreviewGeometry;
+        if (
+          typeof parsed.top === "number" &&
+          typeof parsed.left === "number" &&
+          typeof parsed.width === "number" &&
+          typeof parsed.height === "number"
+        ) {
+          nextGeometry = parsed;
+        }
       }
     } catch {
       // Ignore malformed geometry and fall back to computed values.
     }
+
+    if (!nextGeometry) {
+      nextGeometry = getCompactViewportGeometry(
+        window.innerWidth,
+        window.innerHeight,
+      );
+    }
+
+    setGeometry(nextGeometry);
+    setIsHydrated(true);
   }, []);
 
   useLayoutEffect(() => {
@@ -67,7 +83,7 @@ export default function AuthPopupHandoffPage() {
     <div className="fixed inset-0 overflow-hidden bg-background">
       <div
         className="absolute overflow-hidden transition-[top,left,width,height,transform] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={getHandoffStyle(stage, geometry)}
+        style={getHandoffStyle(stage, geometry, isHydrated)}
       >
         <ScaledDashboardPreview className="max-w-none" />
       </div>
@@ -78,6 +94,7 @@ export default function AuthPopupHandoffPage() {
 function getHandoffStyle(
   stage: "compact" | "expanded",
   geometry: PreviewGeometry | null,
+  isHydrated: boolean,
 ) {
   if (stage === "expanded") {
     return {
@@ -89,21 +106,7 @@ function getHandoffStyle(
     };
   }
 
-  if (typeof window === "undefined") {
-    return {
-      top: "12vh",
-      left: "52vw",
-      width: "44vw",
-      height: "auto",
-      aspectRatio: "1460 / 920",
-      transform: "scale(1)",
-    };
-  }
-
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-
-  if (geometry) {
+  if (isHydrated && geometry) {
     return {
       top: geometry.top,
       left: geometry.left,
@@ -113,20 +116,39 @@ function getHandoffStyle(
     };
   }
 
+  return {
+    top: "12vh",
+    left: "52vw",
+    width: "44vw",
+    height: "auto",
+    aspectRatio: `${PREVIEW_NATURAL_WIDTH} / ${PREVIEW_NATURAL_HEIGHT}`,
+    transform: "scale(1)",
+  };
+}
+
+function getCompactViewportGeometry(
+  viewportWidth: number,
+  viewportHeight: number,
+): PreviewGeometry {
   if (viewportWidth < 1024) {
+    const top = Math.max(24, viewportHeight * 0.22);
+
     return {
-      top: Math.max(24, viewportHeight * 0.22),
+      top,
       left: 24,
       width: Math.max(0, viewportWidth - 48),
-      height: Math.max(0, viewportHeight - Math.max(24, viewportHeight * 0.22) - Math.max(24, viewportHeight * 0.24)),
-      transform: "scale(0.98)",
+      height: Math.max(
+        0,
+        viewportHeight - top - Math.max(24, viewportHeight * 0.24),
+      ),
     };
   }
 
   const containerWidth = Math.min(viewportWidth - 64, 1280);
   const previewWidth = Math.min(1120, containerWidth * 0.72);
-  const previewHeight = previewWidth / (1460 / 920);
-  const left = (viewportWidth - containerWidth) / 2 + containerWidth - previewWidth;
+  const previewHeight = previewWidth / (PREVIEW_NATURAL_WIDTH / PREVIEW_NATURAL_HEIGHT);
+  const left =
+    (viewportWidth - containerWidth) / 2 + containerWidth - previewWidth;
   const top = Math.max(40, (viewportHeight - previewHeight) / 2);
 
   return {
@@ -134,6 +156,5 @@ function getHandoffStyle(
     left,
     width: previewWidth,
     height: previewHeight,
-    transform: "scale(1)",
   };
 }

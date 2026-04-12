@@ -332,7 +332,24 @@ export async function getUserInterviewMetrics(
   try {
     const interviewsCursor = db
       .collection("interviews")
-      .find({ userId: userEmail }, { maxTimeMS: 4000 })
+      .find(
+        {
+          $or: [{ email: userEmail }, { userId: userEmail }],
+        },
+        {
+          maxTimeMS: 4000,
+          projection: {
+            scenarioId: 1,
+            status: 1,
+            overallScore: 1,
+            gradingResult: {
+              improvements: 1,
+            },
+            createdAt: 1,
+            completedAt: 1,
+          },
+        },
+      )
       .sort({ createdAt: -1 });
     rawInterviews = await withTimeout(
       interviewsCursor.toArray() as Promise<InterviewRecord[]>,

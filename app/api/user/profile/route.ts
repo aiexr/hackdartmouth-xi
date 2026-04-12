@@ -119,20 +119,28 @@ export async function GET() {
             image: session.user.image,
           }),
         ),
+        {
+          headers: {
+            "Cache-Control": "private, max-age=15, stale-while-revalidate=30",
+          },
+        },
       );
     }
 
     const existingUser = await UserModel.getUserByEmail(session.user.email);
     const user =
       existingUser ??
-      (await UserModel.findOrCreateUser(
-        session.user.email,
-        session.user.name ?? "",
-        session.user.image ?? "",
-        "google",
-      ));
+      buildFallbackUserProfile({
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+      });
 
-    return Response.json(sanitizeUserForClient(user));
+    return Response.json(sanitizeUserForClient(user), {
+      headers: {
+        "Cache-Control": "private, max-age=15, stale-while-revalidate=30",
+      },
+    });
   } catch (error) {
     console.error("Failed to fetch user profile:", error);
     return Response.json(
@@ -143,6 +151,11 @@ export async function GET() {
           image: session.user.image,
         }),
       ),
+      {
+        headers: {
+          "Cache-Control": "private, max-age=15, stale-while-revalidate=30",
+        },
+      },
     );
   }
 }

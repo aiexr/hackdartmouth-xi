@@ -184,19 +184,56 @@ function ProfileEditorSkeleton() {
   );
 }
 
-export function ProfileEditor() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+type ProfileEditorProps = {
+  initialUser?: Record<string, unknown> | null;
+  onProfileUpdated?: (user: Record<string, unknown>) => void;
+};
+
+function toFormData(user: User) {
+  return {
+    name: user.name || "",
+    bio: user.bio || "",
+    focusTrack: user.focusTrack || "",
+    weeklyGoal: user.preferences.weeklyGoal || 4,
+  };
+}
+
+export function ProfileEditor({
+  initialUser = null,
+  onProfileUpdated,
+}: ProfileEditorProps) {
+  const initialParsedUser = initialUser ? toUser(initialUser) : null;
+
+  const [user, setUser] = useState<User | null>(
+    initialParsedUser,
+  );
+  const [loading, setLoading] = useState(!initialParsedUser);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: "",
-    bio: "",
-    focusTrack: "",
-    weeklyGoal: 4,
+    name: initialParsedUser?.name || "",
+    bio: initialParsedUser?.bio || "",
+    focusTrack: initialParsedUser?.focusTrack || "",
+    weeklyGoal: initialParsedUser?.preferences.weeklyGoal || 4,
   });
+
+  const applyUser = useCallback((value: Record<string, unknown>) => {
+    const parsedUser = toUser(value);
+    setUser(parsedUser);
+    setFormData(toFormData(parsedUser));
+    setLoading(false);
+    setError(null);
+  }, []);
+
+  useEffect(() => {
+    if (!initialUser) {
+      return;
+    }
+
+    applyUser(initialUser);
+  }, [applyUser, initialUser]);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -213,29 +250,26 @@ export function ProfileEditor() {
       }
 
       const data = asRecord(await res.json());
-      const parsedUser = toUser(data);
-      setUser(parsedUser);
-      setFormData({
-        name: parsedUser.name || "",
-        bio: parsedUser.bio || "",
-        focusTrack: parsedUser.focusTrack || "",
-        weeklyGoal: parsedUser.preferences.weeklyGoal || 4,
-      });
+      applyUser(data);
     } catch (err) {
       setUser(null);
       setError(
         err instanceof Error
           ? err.message
           : "We couldn't load your profile right now. Please try again.",
-      );
+        );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyUser]);
 
   useEffect(() => {
+    if (initialUser) {
+      return;
+    }
+
     void fetchProfile();
-  }, [fetchProfile]);
+  }, [fetchProfile, initialUser]);
 
   const handleInputChange = (
     field: "name" | "bio" | "focusTrack",
@@ -291,7 +325,8 @@ export function ProfileEditor() {
       }
 
       const data = asRecord(await res.json());
-      setUser(toUser(data));
+      applyUser(data);
+      onProfileUpdated?.(data);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
