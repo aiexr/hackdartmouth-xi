@@ -13,6 +13,7 @@ import remarkGfm from "remark-gfm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ThemeLogo } from "@/components/app/theme-logo";
 
 type Message = {
   role: "user" | "coach";
@@ -168,6 +169,14 @@ function CoachMarkdown({ text }: { text: string }) {
   );
 }
 
+function CoachAvatarIcon() {
+  return (
+    <div className="flex size-9 shrink-0 items-center justify-center rounded-none border border-border/70 bg-base-100">
+      <ThemeLogo alt="LeetSpeak coach" className="size-5 w-auto object-contain" />
+    </div>
+  );
+}
+
 export function CoachConversation() {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -270,15 +279,13 @@ export function CoachConversation() {
                   key={i}
                   className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
                 >
-                  <div
-                    className={`flex size-9 shrink-0 items-center justify-center rounded-none text-xs font-semibold ${
-                      isUser
-                        ? "bg-primary text-primary-content"
-                        : "bg-linear-to-br from-violet-500 to-indigo-500 text-white"
-                    }`}
-                  >
-                    {isUser ? "Y" : "C"}
-                  </div>
+                  {isUser ? (
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-primary text-xs font-semibold text-primary-content">
+                      Y
+                    </div>
+                  ) : (
+                    <CoachAvatarIcon />
+                  )}
                   <div
                     className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
                       isUser
@@ -294,9 +301,7 @@ export function CoachConversation() {
 
             {loading && (
               <div className="flex gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-linear-to-br from-violet-500 to-indigo-500 text-white text-xs font-semibold">
-                  C
-                </div>
+                <CoachAvatarIcon />
                 <div className="flex items-center gap-2 rounded-3xl bg-base-200/75 px-4 py-3 text-sm text-base-content/60">
                   <Loader2 className="size-4 animate-spin" />
                   Thinking...

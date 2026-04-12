@@ -13,6 +13,7 @@ import {
   Sparkles,
   User,
 } from "lucide-react";
+import { ThemeLogo } from "@/components/app/theme-logo";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -50,7 +51,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-transparent">
       <aside className="hidden w-64 shrink-0 border-r border-border bg-base-100 px-4 py-7 md:flex md:flex-col">
         <Link href="/" className="flex items-center gap-3 px-3">
-          <img src="/logo.svg" alt="LeetSpeak logo" className="h-10 w-auto" />
+          <ThemeLogo alt="LeetSpeak logo" className="h-10 w-auto" />
           <span className="text-base font-semibold tracking-tight">LeetSpeak</span>
         </Link>
 
@@ -89,7 +90,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border px-6 py-3">
           <Link href="/" className="flex items-center gap-3 md:hidden">
-            <img src="/logo.svg" alt="LeetSpeak logo" className="h-9 w-auto" />
+              <ThemeLogo alt="LeetSpeak logo" className="h-9 w-auto" />
             <span className="text-sm font-semibold tracking-tight">LeetSpeak</span>
           </Link>
           {session?.user ? (
