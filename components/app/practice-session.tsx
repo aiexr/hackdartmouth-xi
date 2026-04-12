@@ -36,6 +36,7 @@ import { VoiceCall, type VoiceCallHandle } from "@/components/app/voice-call";
 import { CodeRunner } from "@/components/app/code-runner";
 import { Progress } from "@/components/ui/progress";
 import {
+  getDefaultInterviewerForSeed,
   generatedInterviewers,
   getInterviewerById,
   getInterviewerByName,
@@ -379,19 +380,6 @@ function hasInterviewerAskedFinalQuestion(transcript: TranscriptEntry[]) {
   );
 }
 
-function getStableInterviewerIndex(seed: string, count: number) {
-  if (count <= 0) {
-    return 0;
-  }
-
-  let hash = 0;
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
-  }
-
-  return hash % count;
-}
-
 function buildInitialInterviewerPrompt(
   scenario: Scenario,
   interviewer: Pick<InterviewerProfile, "name" | "role" | "liveAvatar">,
@@ -505,10 +493,7 @@ export function PracticeSession({
       : "";
   const availableInterviewers = generatedInterviewers;
   const defaultInterviewer = useMemo(
-    () =>
-      availableInterviewers[
-        getStableInterviewerIndex(scenario.id, availableInterviewers.length)
-      ] ?? availableInterviewers[0]!,
+    () => getDefaultInterviewerForSeed(scenario.id, availableInterviewers) ?? availableInterviewers[0]!,
     [availableInterviewers, scenario.id],
   );
 

@@ -139,6 +139,30 @@ const interviewerById = Object.fromEntries(
   generatedInterviewers.map((interviewer) => [interviewer.id, interviewer]),
 ) as Record<string, InterviewerProfile>;
 
+export function getStableInterviewerIndex(seed: string, count: number) {
+  if (count <= 0) {
+    return 0;
+  }
+
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+
+  return hash % count;
+}
+
+export function getDefaultInterviewerForSeed(
+  seed: string,
+  interviewers: InterviewerProfile[] = generatedInterviewers,
+) {
+  if (interviewers.length === 0) {
+    return null;
+  }
+
+  return interviewers[getStableInterviewerIndex(seed, interviewers.length)] ?? null;
+}
+
 export function getInterviewerById(
   id: string | null | undefined,
   interviewers: InterviewerProfile[] = generatedInterviewers,

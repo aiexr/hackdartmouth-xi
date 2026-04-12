@@ -1,4 +1,5 @@
 import { leetCodeCodingProblems } from "@/data/leetcode-problems";
+import { getDefaultInterviewerForSeed } from "@/lib/interviewers";
 
 export type Scenario = {
   id: string;
@@ -1728,11 +1729,17 @@ const scenarioPatterns: Record<string, Scenario["pattern"]> = {
   "system-resume-ingestion": "resume-ingestion",
 };
 
-export const scenarios: Scenario[] = scenarioBank.map((scenario) => ({
-  ...scenario,
-  category: scenarioCategories[scenario.id] ?? "behavioral",
-  pattern: scenarioPatterns[scenario.id] ?? "general",
-}));
+export const scenarios: Scenario[] = scenarioBank.map((scenario) => {
+  const interviewer = getDefaultInterviewerForSeed(scenario.id);
+
+  return {
+    ...scenario,
+    category: scenarioCategories[scenario.id] ?? "behavioral",
+    pattern: scenarioPatterns[scenario.id] ?? "general",
+    interviewer: interviewer?.name ?? scenario.interviewer,
+    interviewerAvatar: interviewer?.avatar ?? scenario.interviewerAvatar,
+  };
+});
 
 export const featuredScenarios = scenarios.slice(0, 4);
 
