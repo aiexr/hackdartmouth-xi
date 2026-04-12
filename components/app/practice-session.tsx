@@ -21,7 +21,6 @@ import {
   PhoneOff,
   RefreshCcw,
   Smile,
-  Sparkles,
   Video,
   VideoOff,
   X,
@@ -146,24 +145,6 @@ function buildInitialInterviewerPrompt(scenario: Scenario) {
   return sharedContext.join("\n");
 }
 
-function buildCodeReviewPrompt(scenario: Scenario, editorContent: string) {
-  const trimmed = editorContent.trim();
-  const snapshot =
-    trimmed.length > 0
-      ? trimmed.slice(0, 5000)
-      : "The editor is still blank. Ask the candidate to outline the algorithm before coding.";
-
-  return [
-    `Continue the ${scenario.title} technical interview.`,
-    "The candidate has shared their current editor state.",
-    "Use it in your next response to ask a concise, code-aware follow-up about correctness, edge cases, complexity, or implementation tradeoffs.",
-    "Do not give away the full solution.",
-    "",
-    "Current editor content:",
-    snapshot,
-  ].join("\n");
-}
-
 export function PracticeSession({
   scenario,
   displayTitle,
@@ -195,7 +176,6 @@ export function PracticeSession({
   const [hydrated, setHydrated] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [interviewerPrompt, setInterviewerPrompt] = useState<PracticePrompt>(null);
-  const [lastCodeSyncLabel, setLastCodeSyncLabel] = useState<string | null>(null);
   const [isGrading, setIsGrading] = useState(false);
   const [isPortalReady, setIsPortalReady] = useState(false);
   const whiteboardRef = useRef<WhiteboardHandle | null>(null);
@@ -329,7 +309,6 @@ export function PracticeSession({
       initialPromptSentRef.current = false;
       sessionStartRef.current = null;
       setInterviewerPrompt(null);
-      setLastCodeSyncLabel(null);
     }
   }, [sessionState]);
 
@@ -441,18 +420,6 @@ export function PracticeSession({
   }, [seconds]);
 
   const codingProblem = scenario.codingProblem;
-
-  function syncCodeWithInterviewer() {
-    if (!isTechnical || sessionState !== "connected") {
-      return;
-    }
-
-    setInterviewerPrompt({
-      id: `${scenario.id}-code-sync-${Date.now()}`,
-      text: buildCodeReviewPrompt(scenario, editorContent),
-    });
-    setLastCodeSyncLabel("Shared with interviewer just now");
-  }
 
   const mediaSurface =
     interviewMode === "video" ? (
@@ -775,20 +742,6 @@ export function PracticeSession({
                       </details>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={syncCodeWithInterviewer}
-                    disabled={sessionState !== "connected"}
-                    className={cn(
-                      "inline-flex shrink-0 items-center gap-2 rounded-none border px-3 py-1.5 text-xs font-medium transition",
-                      sessionState === "connected"
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400"
-                        : "border-border bg-base-200/40 text-base-content/60",
-                    )}
-                  >
-                    <Sparkles className="size-3.5" />
-                    Share code
-                  </button>
                 </div>
 
                 <div className="min-h-0 flex-1">
