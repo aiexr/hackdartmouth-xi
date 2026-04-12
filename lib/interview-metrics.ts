@@ -1,6 +1,6 @@
 import "server-only";
 
-import { improvementThemes, scenarios } from "@/data/scenarios";
+import { scenarios } from "@/data/scenarios";
 import { env } from "@/lib/env";
 import { getMongoDb } from "@/lib/mongodb";
 
@@ -236,7 +236,7 @@ function buildImprovements(interviews: InterviewRecord[]) {
     }
   }
 
-  return improvementThemes;
+  return [];
 }
 
 export async function getUserInterviewMetrics(
@@ -263,7 +263,7 @@ export async function getUserInterviewMetrics(
         { label: "Complete 4 practice loops this week", current: 0, total: 4 },
         { label: "Hit a 90+ score once", current: 0, total: 90 },
       ],
-      improvements: improvementThemes,
+      improvements: [],
       profileStats: [
         { label: "Sessions", value: "0", accent: "text-primary" },
         { label: "Average Score", value: "--", accent: "text-emerald-500" },
@@ -303,7 +303,7 @@ export async function getUserInterviewMetrics(
         { label: "Complete 4 practice loops this week", current: 0, total: 4 },
         { label: "Hit a 90+ score once", current: 0, total: 90 },
       ],
-      improvements: improvementThemes,
+      improvements: [],
       profileStats: [
         { label: "Sessions", value: "0", accent: "text-primary" },
         { label: "Average Score", value: "--", accent: "text-emerald-500" },

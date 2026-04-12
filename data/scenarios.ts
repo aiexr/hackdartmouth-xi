@@ -930,6 +930,325 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
     },
   },
   {
+    id: "technical-buy-sell-stock",
+    title: "Maximize stock profit in one pass",
+    prompt:
+      "Find the maximum profit you can make from a single buy-sell transaction. Walk me through your approach before you write a line of code.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Foundations",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Senior Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 0,
+    duration: "15 min",
+    focus: ["Arrays", "Greedy", "Single-pass thinking"],
+    hints: [
+      "State what information you need at each step before you code.",
+      "Explain why a brute-force O(n²) scan is correct but too slow.",
+      "Show how tracking one running value collapses it to O(n).",
+      "Call out edge cases: all decreasing, single element, flat prices.",
+    ],
+    rubric: [
+      "Correctness",
+      "Complexity analysis",
+      "Communication",
+      "Edge-case awareness",
+      "Code clarity",
+    ],
+    followUps: [
+      "How would you extend this to allow at most two transactions?",
+      "What changes if you must hold the stock for at least one day before selling?",
+    ],
+    codingProblem: {
+      ...leetCodeCodingProblems.bestTimeToBuyAndSellStock,
+      optimalApproach:
+        "Single pass: track the minimum price seen so far and the maximum profit seen so far. At each step update minPrice = min(minPrice, prices[i]) then maxProfit = max(maxProfit, prices[i] - minPrice). O(n) time, O(1) space.",
+      starterCode:
+        "function maxProfit(prices: number[]): number {\n  // Write your solution here.\n  return 0;\n}",
+      functionName: "maxProfit",
+      testCases: [
+        { args: [[7, 1, 5, 3, 6, 4]], expected: 5 },
+        { args: [[7, 6, 4, 3, 1]], expected: 0 },
+        { args: [[1, 2]], expected: 1 },
+      ],
+    },
+  },
+  {
+    id: "technical-maximum-subarray",
+    title: "Maximum subarray sum (Kadane's)",
+    prompt:
+      "Find the contiguous subarray with the largest sum. I want to see how you reason about the greedy decision at each step.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Foundations",
+    interviewer: "Sarah Chen",
+    interviewerRole: "Engineering Manager",
+    interviewerAvatar: AVATAR_SARAH,
+    mastery: 0,
+    duration: "15 min",
+    focus: ["Dynamic programming", "Greedy", "Invariant reasoning"],
+    hints: [
+      "Ask yourself: when does a prefix hurt rather than help the next element?",
+      "Name the invariant your running sum maintains at each step.",
+      "Show the divide-and-conquer alternative and explain why the greedy is simpler here.",
+      "Test your solution on an all-negative array.",
+    ],
+    rubric: [
+      "Correctness",
+      "Complexity analysis",
+      "Communication",
+      "Edge-case awareness",
+      "Code clarity",
+    ],
+    followUps: [
+      "How would you also return the start and end indices of the subarray?",
+      "How does this change if the array is circular?",
+    ],
+    codingProblem: {
+      ...leetCodeCodingProblems.maximumSubarray,
+      optimalApproach:
+        "Kadane's algorithm: maintain currentSum and maxSum. At each element set currentSum = max(num, currentSum + num), then maxSum = max(maxSum, currentSum). O(n) time, O(1) space.",
+      starterCode:
+        "function maxSubArray(nums: number[]): number {\n  // Write your solution here.\n  return 0;\n}",
+      functionName: "maxSubArray",
+      testCases: [
+        { args: [[-2, 1, -3, 4, -1, 2, 1, -5, 4]], expected: 6 },
+        { args: [[1]], expected: 1 },
+        { args: [[5, 4, -1, 7, 8]], expected: 23 },
+      ],
+    },
+  },
+  {
+    id: "technical-product-except-self",
+    title: "Product of array except self",
+    prompt:
+      "Return an output array where each element is the product of all other elements. Division is off the table — walk me through the approach.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Growth",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Senior Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 0,
+    duration: "20 min",
+    focus: ["Prefix products", "Space optimization", "Two-pass thinking"],
+    hints: [
+      "Name exactly what each output slot needs before you think about how to compute it.",
+      "Show a two-array solution first, then explain how to fold it into one pass.",
+      "Be explicit about why you process left-to-right then right-to-left.",
+      "State the final time and space complexity clearly — O(1) extra is achievable.",
+    ],
+    rubric: [
+      "Correctness",
+      "Space complexity",
+      "Communication",
+      "Code clarity",
+      "Edge-case awareness",
+    ],
+    followUps: [
+      "How would you handle the case where the input contains zeros?",
+      "Can you do this in a single pass? Why or why not?",
+    ],
+    codingProblem: {
+      ...leetCodeCodingProblems.productOfArrayExceptSelf,
+      optimalApproach:
+        "First pass left-to-right: fill output[i] with the product of all elements to the left. Second pass right-to-left: multiply output[i] by a running suffix product. O(n) time, O(1) extra space (output array excluded).",
+      starterCode:
+        "function productExceptSelf(nums: number[]): number[] {\n  // Write your solution here.\n  return [];\n}",
+      functionName: "productExceptSelf",
+      testCases: [
+        { args: [[1, 2, 3, 4]], expected: [24, 12, 8, 6] },
+        { args: [[1, 2]], expected: [2, 1] },
+        { args: [[-1, 1, 0, -3, 3]], expected: [0, 0, 9, 0, 0] },
+      ],
+    },
+  },
+  {
+    id: "technical-number-of-islands",
+    title: "Count islands with flood fill",
+    prompt:
+      "Count the number of islands in a grid. Before you code, explain the graph model you are imposing on the grid.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Growth",
+    interviewer: "Sarah Chen",
+    interviewerRole: "Engineering Manager",
+    interviewerAvatar: AVATAR_SARAH,
+    mastery: 0,
+    duration: "20 min",
+    focus: ["Graph traversal", "DFS/BFS", "In-place marking"],
+    hints: [
+      "Describe the implicit graph before touching any code.",
+      "Explain what 'visited' means here and whether you need extra space for it.",
+      "Articulate the invariant that prevents double-counting an island.",
+      "Compare DFS vs BFS and explain why either works.",
+    ],
+    rubric: [
+      "Correctness",
+      "Graph modeling",
+      "Communication",
+      "Complexity analysis",
+      "Code clarity",
+    ],
+    followUps: [
+      "How does the approach change if diagonal adjacency also connects cells?",
+      "Could you solve this with Union Find instead? What are the tradeoffs?",
+    ],
+    codingProblem: {
+      ...leetCodeCodingProblems.numberOfIslands,
+      optimalApproach:
+        "Iterate over the grid. When you hit an unvisited '1', increment the island count and DFS/BFS to mark all connected '1's as '0'. Total O(m·n) time and O(m·n) space in the worst case due to the call stack.",
+      starterCode:
+        "function numIslands(grid: string[][]): number {\n  // Write your solution here.\n  return 0;\n}",
+      functionName: "numIslands",
+      testCases: [
+        {
+          args: [[["1","1","1","1","0"],["1","1","0","1","0"],["1","1","0","0","0"],["0","0","0","0","0"]]],
+          expected: 1,
+        },
+        {
+          args: [[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]],
+          expected: 3,
+        },
+      ],
+    },
+  },
+  {
+    id: "technical-coin-change",
+    title: "Fewest coins to make change",
+    prompt:
+      "Given coin denominations and a target amount, return the minimum number of coins needed. Walk me through why greedy fails before jumping to DP.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Growth",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Senior Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 0,
+    duration: "22 min",
+    focus: ["Dynamic programming", "Subproblem decomposition", "Bottom-up DP"],
+    hints: [
+      "Show a counterexample where greedy (largest coin first) fails.",
+      "Define the DP state and recurrence precisely before writing any code.",
+      "Explain the initialization choice and why Infinity is the right sentinel.",
+      "Walk through a small example by hand to verify your recurrence.",
+    ],
+    rubric: [
+      "Correctness",
+      "DP reasoning",
+      "Communication",
+      "Complexity analysis",
+      "Edge-case handling",
+    ],
+    followUps: [
+      "How would you reconstruct which coins were actually used?",
+      "How does the complexity change if the coin denominations can be very large?",
+    ],
+    codingProblem: {
+      ...leetCodeCodingProblems.coinChange,
+      optimalApproach:
+        "Bottom-up DP: dp[0] = 0, dp[i] = min over all coins c of dp[i-c] + 1 (when i >= c). Return dp[amount] or -1 if still Infinity. O(amount × coins.length) time, O(amount) space.",
+      starterCode:
+        "function coinChange(coins: number[], amount: number): number {\n  // Write your solution here.\n  return -1;\n}",
+      functionName: "coinChange",
+      testCases: [
+        { args: [[1, 2, 5], 11], expected: 3 },
+        { args: [[2], 3], expected: -1 },
+        { args: [[1], 0], expected: 0 },
+      ],
+    },
+  },
+  {
+    id: "technical-find-min-rotated",
+    title: "Find minimum in rotated sorted array",
+    prompt:
+      "A sorted array has been rotated an unknown number of times. Find the minimum in O(log n). Convince me why binary search still applies here.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Growth",
+    interviewer: "Sarah Chen",
+    interviewerRole: "Engineering Manager",
+    interviewerAvatar: AVATAR_SARAH,
+    mastery: 0,
+    duration: "20 min",
+    focus: ["Binary search", "Loop invariants", "Rotated arrays"],
+    hints: [
+      "Identify which half of the array is guaranteed sorted at each step.",
+      "State your loop invariant: what does the answer range shrink to each iteration?",
+      "Clarify what comparisons you need and why comparing mid to right is cleaner than mid to left.",
+      "Handle the no-rotation case explicitly in your explanation.",
+    ],
+    rubric: [
+      "Correctness",
+      "Binary search reasoning",
+      "Communication",
+      "Complexity analysis",
+      "Edge-case awareness",
+    ],
+    followUps: [
+      "How does the algorithm change if the array can contain duplicates?",
+      "Could you use the same technique to find a target value in the rotated array?",
+    ],
+    codingProblem: {
+      ...leetCodeCodingProblems.findMinimumInRotatedSortedArray,
+      optimalApproach:
+        "Binary search with left and right pointers. If nums[mid] > nums[right], the minimum is in the right half (left = mid + 1). Otherwise the minimum is in the left half including mid (right = mid). Loop exits when left === right. O(log n) time, O(1) space.",
+      starterCode:
+        "function findMin(nums: number[]): number {\n  // Write your solution here.\n  return 0;\n}",
+      functionName: "findMin",
+      testCases: [
+        { args: [[3, 4, 5, 1, 2]], expected: 1 },
+        { args: [[4, 5, 6, 7, 0, 1, 2]], expected: 0 },
+        { args: [[11, 13, 15, 17]], expected: 11 },
+      ],
+    },
+  },
+  {
+    id: "technical-trapping-rain-water",
+    title: "Trap rainwater between bars",
+    prompt:
+      "Compute the total water trapped between bars in an elevation map. This is a classic hard problem — I want to see your reasoning from O(n²) down to O(n) with O(1) space.",
+    trackId: "staff-engineering",
+    trackLabel: "Technical Coding",
+    difficulty: "Stretch",
+    interviewer: "Marcus Rivera",
+    interviewerRole: "Principal Engineer",
+    interviewerAvatar: AVATAR_MARCUS,
+    mastery: 0,
+    duration: "25 min",
+    focus: ["Two pointers", "Prefix/suffix maxes", "Space optimization"],
+    hints: [
+      "Start by nailing the per-cell formula: min(leftMax, rightMax) - height[i].",
+      "Show the O(n) space prefix/suffix-arrays approach first, then optimize.",
+      "Explain why advancing the pointer with the smaller max is safe.",
+      "Walk through the two-pointer loop on a small example before coding.",
+    ],
+    rubric: [
+      "Correctness",
+      "Space optimization reasoning",
+      "Communication",
+      "Complexity analysis",
+      "Code clarity",
+    ],
+    followUps: [
+      "How would you solve this if the input were a 2D matrix (volume of water in a container)?",
+      "Where could overflow occur in an implementation using large heights?",
+    ],
+    codingProblem: {
+      ...leetCodeCodingProblems.trappingRainWater,
+      optimalApproach:
+        "Two-pointer approach: left and right pointers with leftMax and rightMax. Advance the pointer on the side with the smaller max. Water at that position = max - height. O(n) time, O(1) space.",
+      starterCode:
+        "function trap(height: number[]): number {\n  // Write your solution here.\n  return 0;\n}",
+      functionName: "trap",
+      testCases: [
+        { args: [[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]], expected: 6 },
+        { args: [[4, 2, 0, 3, 2, 5]], expected: 9 },
+      ],
+    },
+  },
+  {
     id: "system-url-shortener",
     title: "Design a URL shortener",
     prompt:
@@ -1085,6 +1404,13 @@ const scenarioCategories: Record<string, Scenario["category"]> = {
   "technical-top-k-frequent": "technical",
   "technical-lru-cache": "technical",
   "technical-word-ladder": "technical",
+  "technical-buy-sell-stock": "technical",
+  "technical-maximum-subarray": "technical",
+  "technical-product-except-self": "technical",
+  "technical-number-of-islands": "technical",
+  "technical-coin-change": "technical",
+  "technical-find-min-rotated": "technical",
+  "technical-trapping-rain-water": "technical",
   "system-url-shortener": "system-design",
   "system-feature-flags": "system-design",
   "system-realtime-chat": "system-design",
@@ -1117,6 +1443,13 @@ const scenarioPatterns: Record<string, Scenario["pattern"]> = {
   "technical-top-k-frequent": "top-k-frequency",
   "technical-lru-cache": "lru-cache",
   "technical-word-ladder": "word-ladder",
+  "technical-buy-sell-stock": "buy-sell-stock",
+  "technical-maximum-subarray": "maximum-subarray",
+  "technical-product-except-self": "product-except-self",
+  "technical-number-of-islands": "number-of-islands",
+  "technical-coin-change": "coin-change",
+  "technical-find-min-rotated": "find-min-rotated",
+  "technical-trapping-rain-water": "trapping-rain-water",
   "system-url-shortener": "url-shortener",
   "system-feature-flags": "feature-flag-platform",
   "system-realtime-chat": "realtime-chat",

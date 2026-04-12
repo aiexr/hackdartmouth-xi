@@ -154,30 +154,32 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
         </div>
       </section>
 
-      <section className="col-span-full">
-        <div>
-          <div className="mb-4 flex items-center gap-2">
-            <BookOpen className="size-5 text-amber-500" />
-            <h2>Learn from recent misses</h2>
+      {metrics.improvements.length > 0 && (
+        <section className="col-span-full">
+          <div>
+            <div className="mb-4 flex items-center gap-2">
+              <BookOpen className="size-5 text-amber-500" />
+              <h2>Learn from recent misses</h2>
+            </div>
+            <div className="space-y-3">
+              {metrics.improvements.map((item) => (
+                <Card key={item.id}>
+                  <CardContent className="p-5">
+                    <p className="text-sm leading-6 text-base-content">
+                      {item.description}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-base-content/60">
+                      <span>{item.tag}</span>
+                      <span>-</span>
+                      <span>{item.source}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-          <div className="space-y-3">
-            {metrics.improvements.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-5">
-                  <p className="text-sm leading-6 text-base-content">
-                    {item.description}
-                  </p>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-base-content/60">
-                    <span>{item.tag}</span>
-                    <span>-</span>
-                    <span>{item.source}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </>
   );
 }
