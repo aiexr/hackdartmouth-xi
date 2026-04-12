@@ -3,14 +3,14 @@ import { getMongoDb } from "@/lib/mongodb";
 
 export interface Interview {
   _id?: ObjectId;
-  userId: ObjectId | null;
-  email: string;
+  userId: ObjectId | string | null;
+  email?: string | null;
   scenarioId: string;
-  status: "in-progress" | "completed" | "graded";
+  status: "in-progress" | "in_progress" | "completed" | "graded";
   transcript: Array<{
-    role: "interviewer" | "candidate";
+    role: "interviewer" | "candidate" | "user";
     content: string;
-    timestamp: Date;
+    timestamp: Date | string;
   }>;
   overallScore: number | null;
   letterGrade: string | null;
@@ -81,7 +81,12 @@ export class InterviewModel {
     if (!db) return [];
 
     const interviewsCollection = db.collection<Interview>("interviews");
-    return await interviewsCollection.find({ email }).sort({ createdAt: -1 }).toArray();
+    return await interviewsCollection
+      .find({
+        $or: [{ email }, { userId: email }],
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
   }
 
   static async appendTranscript(

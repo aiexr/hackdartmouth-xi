@@ -77,8 +77,8 @@ export async function generateMetadata(): Promise<Metadata> {
       images: [
         {
           url: socialImageUrl,
-          width: 1200,
-          height: 630,
+          width: 1238,
+          height: 446,
           alt: "LeetSpeak social preview",
           type: "image/png",
         },

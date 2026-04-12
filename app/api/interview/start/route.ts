@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
 
   const interview = {
     userId: session.user.email,
+    email: session.user.email,
     userName: session.user.name ?? "",
     type: type ?? "behavioral",
     difficulty: difficulty ?? "medium",

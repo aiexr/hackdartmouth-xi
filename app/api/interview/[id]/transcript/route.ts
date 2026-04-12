@@ -4,6 +4,7 @@ import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 
 type TranscriptTurn = {
+  id?: string;
   role?: string;
   content?: string;
   timestamp?: string;
@@ -83,7 +84,7 @@ export async function POST(
     {
       _id: objectId,
       userId: session.user.email,
-      status: "in_progress",
+      status: { $in: ["in_progress", "in-progress"] },
     },
     {
       $push: {

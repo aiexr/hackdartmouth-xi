@@ -75,6 +75,8 @@ type PersistedPracticeState = {
   interviewTone?: InterviewTone;
   transcript?: TranscriptEntry[];
   editorContent?: string;
+  interviewId?: string;
+  persistedTranscriptIds?: string[];
   savedAt?: number;
 };
 
@@ -350,6 +352,8 @@ export function PracticeSession({
   const [isInterviewerSpeaking, setIsInterviewerSpeaking] = useState(false);
   const [endingCountdownDeadline, setEndingCountdownDeadline] = useState<number | null>(null);
   const [endingCountdownMsRemaining, setEndingCountdownMsRemaining] = useState<number | null>(null);
+  const [activeInterviewId, setActiveInterviewId] = useState<string | null>(null);
+  const [persistedTranscriptIds, setPersistedTranscriptIds] = useState<string[]>([]);
   const whiteboardRef = useRef<WhiteboardHandle | null>(null);
   const avatarRef = useRef<LiveAvatarHandle | null>(null);
   const voiceCallRef = useRef<VoiceCallHandle | null>(null);
@@ -366,6 +370,8 @@ export function PracticeSession({
   const savedCodeVersionRef = useRef(0);
   const lastInterviewerClosureTurnIdRef = useRef<string | null>(null);
   const sessionEndHandledRef = useRef(false);
+  const interviewStartRequestRef = useRef<Promise<string | null> | null>(null);
+  const transcriptPersistRequestRef = useRef<Promise<void> | null>(null);
 
   const clearEndingCountdown = useCallback(() => {
     endingCountdownDeadlineRef.current = null;
@@ -459,6 +465,16 @@ export function PracticeSession({
           if (typeof saved.editorContent === "string" && isTechnical) {
             setEditorContent(saved.editorContent);
           }
+          if (typeof saved.interviewId === "string" && saved.interviewId.trim()) {
+            setActiveInterviewId(saved.interviewId.trim());
+          }
+          if (Array.isArray(saved.persistedTranscriptIds)) {
+            setPersistedTranscriptIds(
+              saved.persistedTranscriptIds.filter(
+                (entry): entry is string => typeof entry === "string" && entry.length > 0,
+              ),
+            );
+          }
           if (Array.isArray(saved.transcript)) {
             const revived = saved.transcript
               .filter((entry) => entry && !entry.partial)
@@ -486,7 +502,7 @@ export function PracticeSession({
   }, [isTechnical, scenario.id, storageKey]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || isGrading) return;
 
     try {
       const persistableTranscript = transcript.filter((entry) => !entry.partial);
@@ -496,6 +512,8 @@ export function PracticeSession({
         interviewTone,
         transcript: persistableTranscript,
         editorContent: isTechnical ? editorContent : undefined,
+        interviewId: activeInterviewId ?? undefined,
+        persistedTranscriptIds,
         savedAt: Date.now(),
       };
       window.localStorage.setItem(storageKey, JSON.stringify(payload));
@@ -505,13 +523,117 @@ export function PracticeSession({
   }, [
     editorContent,
     hydrated,
+    isGrading,
     interviewMode,
     interviewTone,
     isTechnical,
+    activeInterviewId,
+    persistedTranscriptIds,
     seconds,
     storageKey,
     transcript,
   ]);
+
+  useEffect(() => {
+    if (sessionState !== "connected" || activeInterviewId || isGrading) {
+      return;
+    }
+
+    if (!session?.user?.email || interviewStartRequestRef.current) {
+      return;
+    }
+
+    const request = (async () => {
+      try {
+        const startRes = await fetch("/api/interview/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: scenario.category,
+            difficulty: scenario.difficulty,
+            scenarioId: scenario.id,
+          }),
+        });
+
+        const payload = asRecord(await startRes.json().catch(() => null));
+        if (!startRes.ok) {
+          throw new Error(
+            typeof payload.error === "string" ? payload.error : "Failed to start interview",
+          );
+        }
+
+        const interviewId =
+          typeof payload.id === "string" && payload.id.trim() ? payload.id.trim() : null;
+
+        if (interviewId) {
+          setActiveInterviewId(interviewId);
+        }
+
+        return interviewId;
+      } catch {
+        return null;
+      } finally {
+        interviewStartRequestRef.current = null;
+      }
+    })();
+
+    interviewStartRequestRef.current = request;
+  }, [
+    activeInterviewId,
+    isGrading,
+    scenario.category,
+    scenario.difficulty,
+    scenario.id,
+    session?.user?.email,
+    sessionState,
+  ]);
+
+  useEffect(() => {
+    if (!activeInterviewId || transcriptPersistRequestRef.current) {
+      return;
+    }
+
+    const persistedIds = new Set(persistedTranscriptIds);
+    const turnsToPersist = transcript.filter(
+      (entry) => !entry.partial && !persistedIds.has(entry.id),
+    );
+
+    if (!turnsToPersist.length) {
+      return;
+    }
+
+    const request = (async () => {
+      try {
+        const response = await fetch(`/api/interview/${activeInterviewId}/transcript`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            turns: turnsToPersist.map((entry, index) => ({
+              id: entry.id,
+              role: entry.role,
+              content: entry.content,
+              timestamp: entry.timestamp.toISOString(),
+              step: persistedTranscriptIds.length + index + 1,
+            })),
+          }),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        setPersistedTranscriptIds((current) => {
+          const next = new Set(current);
+          turnsToPersist.forEach((entry) => next.add(entry.id));
+          return [...next];
+        });
+      } finally {
+        transcriptPersistRequestRef.current = null;
+      }
+    })();
+
+    transcriptPersistRequestRef.current = request;
+  }, [activeInterviewId, persistedTranscriptIds, transcript]);
 
   useEffect(() => {
     if (sessionState !== "connected") return;
@@ -756,7 +878,7 @@ export function PracticeSession({
 
       sessionEndHandledRef.current = true;
       setIsGrading(true);
-      let interviewId: string | null = null;
+      let interviewId: string | null = activeInterviewId;
 
       const finalTranscript = rawTranscript.filter((entry) => !entry.partial);
 
@@ -773,20 +895,30 @@ export function PracticeSession({
       }
 
       try {
-        const startRes = await fetch("/api/interview/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: scenario.category,
-            difficulty: scenario.difficulty,
-            scenarioId: scenario.id,
-          }),
-        });
-        const startPayload = asRecord(await startRes.json());
-        interviewId =
-          typeof startPayload.id === "string" && startPayload.id.trim()
-            ? startPayload.id
+        if (!interviewId) {
+          const startedInterviewId = interviewStartRequestRef.current
+            ? await interviewStartRequestRef.current
             : null;
+
+          interviewId = startedInterviewId;
+        }
+
+        if (!interviewId) {
+          const startRes = await fetch("/api/interview/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: scenario.category,
+              difficulty: scenario.difficulty,
+              scenarioId: scenario.id,
+            }),
+          });
+          const startPayload = asRecord(await startRes.json().catch(() => null));
+          interviewId =
+            typeof startPayload.id === "string" && startPayload.id.trim()
+              ? startPayload.id.trim()
+              : null;
+        }
 
         if (!interviewId) {
           throw new Error("Missing interview id");
@@ -832,6 +964,7 @@ export function PracticeSession({
       isGrading,
       isSystemDesign,
       isTechnical,
+      activeInterviewId,
       router,
       scenario.category,
       scenario.difficulty,
