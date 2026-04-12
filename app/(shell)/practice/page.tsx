@@ -9,7 +9,6 @@ import {
   Shuffle,
   Users,
 } from "lucide-react";
-import { MainShell } from "@/components/app/main-shell";
 import { scenarios, type Scenario } from "@/data/scenarios";
 import { cn } from "@/lib/utils";
 
@@ -106,7 +105,6 @@ export default function PracticePage() {
   const activeMeta = roundMeta[activeRound];
 
   return (
-    <MainShell>
       <div className="mx-auto max-w-5xl space-y-6 px-6 py-8 md:px-10 md:py-10">
         {/* Header */}
         <div>
@@ -197,7 +195,7 @@ export default function PracticePage() {
                     type="button"
                     onClick={() => router.push(`/practice/${scenario.id}`)}
                     className={cn(
-                      "grid w-full grid-cols-[2.5rem_minmax(0,1fr)_5rem_5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
+                      "grid w-full cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_5rem_5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
                       idx < rows.length - 1 && "border-b border-base-300/50",
                     )}
                   >
@@ -222,6 +220,5 @@ export default function PracticePage() {
           ))}
         </div>
       </div>
-    </MainShell>
   );
 }

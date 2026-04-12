@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { Bot, FileText, Loader2, Send, X } from "lucide-react";
-import { MainShell } from "@/components/app/main-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -172,7 +171,6 @@ export default function LlmTestPage() {
   }
 
   return (
-    <MainShell>
       <div className="mx-auto max-w-5xl space-y-8 px-6 py-8 md:px-10 md:py-10">
         <div>
           <h1 className="flex items-center gap-3">
@@ -397,6 +395,5 @@ export default function LlmTestPage() {
           </Card>
         )}
       </div>
-    </MainShell>
   );
 }

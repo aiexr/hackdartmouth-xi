@@ -1,10 +1,8 @@
 import { Settings } from "lucide-react";
-import { MainShell } from "@/components/app/main-shell";
 import { SettingsPanel } from "@/components/app/settings-panel";
 
 export default function SettingsPage() {
   return (
-    <MainShell>
       <div className="mx-auto max-w-4xl space-y-8 px-6 py-8 md:px-10 md:py-10">
         <div>
           <h1 className="flex items-center gap-3">
@@ -21,6 +19,5 @@ export default function SettingsPage() {
           <SettingsPanel />
         </div>
       </div>
-    </MainShell>
   );
 }

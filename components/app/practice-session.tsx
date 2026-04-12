@@ -780,7 +780,7 @@ export function PracticeSession({
                     className="flex items-center justify-between rounded-none bg-base-200/60 px-4 py-3"
                   >
                     <span className="text-sm font-medium">{item}</span>
-                    <span className="text-xs font-medium text-base-content/60/85">
+                    <span className="text-xs font-medium text-base-content/60">
                       {index + 1}
                     </span>
                   </div>

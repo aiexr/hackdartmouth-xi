@@ -304,7 +304,7 @@ export default async function ReviewPage({
             <div className="mx-auto mt-6 flex size-40 items-center justify-center rounded-none border-12 border-base-300 bg-base-100 shadow-lg shadow-primary/10">
               <div>
                 <div className="text-5xl font-semibold">{scoreDisplay}</div>
-                <div className="text-xs font-medium text-base-content/60/90">
+                <div className="text-xs font-medium text-base-content/60">
                   {overallScore !== null || !hasPersistedReview ? "out of 100" : "score pending"}
                 </div>
               </div>
@@ -512,11 +512,11 @@ export default async function ReviewPage({
                     }`}
                   >
                     <div className="flex items-start gap-4">
-                      <span className="pt-1 text-xs font-medium text-base-content/60/90">
+                      <span className="pt-1 text-xs font-medium text-base-content/60">
                         {line.time}
                       </span>
                       <div className="flex-1">
-                        <div className="mb-1 text-xs font-medium text-base-content/60/90">
+                        <div className="mb-1 text-xs font-medium text-base-content/60">
                           {line.speaker}
                         </div>
                         <p className="text-sm leading-6">{line.text}</p>
