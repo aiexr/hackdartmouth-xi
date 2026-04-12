@@ -63,10 +63,16 @@ type CachedProfileEntry = {
   value: ProfileSummary;
 };
 
+type CachedProfileRequest = {
+  email: string;
+  promise: Promise<ProfileSummary>;
+};
+
 const PROFILE_CACHE_TTL_MS = 60_000;
 const PROFILE_CACHE_KEY = "leetspeak-profile-summary";
 
 let memoryProfileCache: CachedProfileEntry | null = null;
+let memoryProfileRequest: CachedProfileRequest | null = null;
 
 function getFallbackMetrics(): UserInterviewMetrics {
   return {
@@ -136,6 +142,33 @@ function setCachedSummary(email: string, value: ProfileSummary) {
 
 function isFresh(entry: CachedProfileEntry | null) {
   return Boolean(entry && Date.now() - entry.fetchedAt < PROFILE_CACHE_TTL_MS);
+}
+
+function fetchProfileSummary(email: string) {
+  if (memoryProfileRequest?.email === email) {
+    return memoryProfileRequest.promise;
+  }
+
+  const promise = fetch("/api/profile/summary", { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to load profile summary: ${response.status}`);
+      }
+
+      return (await response.json()) as ProfileSummary;
+    })
+    .finally(() => {
+      if (memoryProfileRequest?.email === email && memoryProfileRequest.promise === promise) {
+        memoryProfileRequest = null;
+      }
+    });
+
+  memoryProfileRequest = {
+    email,
+    promise,
+  };
+
+  return promise;
 }
 
 function ProfileStatsSkeleton() {
@@ -316,14 +349,7 @@ export function ProfilePage() {
     let cancelled = false;
     setIsLoading(true);
 
-    void fetch("/api/profile/summary", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load profile summary: ${response.status}`);
-        }
-
-        return (await response.json()) as ProfileSummary;
-      })
+    void fetchProfileSummary(email)
       .then((nextSummary) => {
         if (cancelled) {
           return;
