@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PracticeSession } from "@/components/app/practice-session";
 import type { Scenario } from "@/data/scenarios";
 
@@ -93,6 +94,8 @@ export default function LcPracticePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = use(params);
+  const searchParams = useSearchParams();
+  const mode = (searchParams.get("mode") ?? "technical") as Scenario["category"];
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [status, setStatus] = useState("Fetching problem…");
   const [error, setError] = useState<string | null>(null);
@@ -134,15 +137,40 @@ export default function LcPracticePage({
         const duration =
           problem.difficulty === "Hard" ? "35 min" : problem.difficulty === "Medium" ? "25 min" : "20 min";
 
-        const built: Scenario = {
-          id: `lc-${slug}`,
-          title: problem.title,
-          prompt:
-            "Solve this problem in the editor. Walk me through your approach before you write any code, then implement it and explain the complexity tradeoffs.",
-          category: "technical",
+        const modeConfig = {
+          technical: {
+            prompt: "Solve this problem in the editor. Walk me through your approach before you write any code, then implement it and explain the complexity tradeoffs.",
+            pattern: "leetcode",
+            trackId: "technical",
+            trackLabel: "Technical Coding",
+          },
+          behavioral: {
+            prompt: "Let's discuss this problem verbally. Walk me through how you'd approach it, what tradeoffs you'd consider, and how you'd communicate your thought process to a team. No coding needed — focus on your reasoning and communication.",
+            pattern: "leetcode-discussion",
+            trackId: "behavioral",
+            trackLabel: "Behavioral Discussion",
+          },
+          "system-design": {
+            prompt: "Use this problem as a starting point to discuss system-level design. How would you architect a system around this? Consider scaling, data flow, storage, and tradeoffs. Use the whiteboard to sketch your design.",
+            pattern: "leetcode-architecture",
+            trackId: "system-design",
+            trackLabel: "System Design",
+          },
+        }[mode] ?? {
+          prompt: "Solve this problem in the editor.",
           pattern: "leetcode",
           trackId: "technical",
           trackLabel: "Technical Coding",
+        };
+
+        const built: Scenario = {
+          id: `lc-${slug}`,
+          title: problem.title,
+          prompt: modeConfig.prompt,
+          category: mode,
+          pattern: modeConfig.pattern,
+          trackId: modeConfig.trackId,
+          trackLabel: modeConfig.trackLabel,
           difficulty: diffToScenarioDiff(problem.difficulty),
           interviewer: interviewer.name,
           interviewerRole: interviewer.role,
@@ -183,7 +211,7 @@ export default function LcPracticePage({
 
     load();
     return () => { cancelled = true; };
-  }, [slug]);
+  }, [slug, mode]);
 
   if (error) {
     return (

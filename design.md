@@ -2,163 +2,155 @@
 
 ## Design Philosophy
 
-LeetSpeak combines the **calm, structured approach of Brilliant** with the **warmth and motivation of Duolingo**. The design should feel like a training gym—clean, bright, and highly structured but approachable rather than intimidating.
+LeetSpeak's design is structured and focused — it should feel like a training gym. Clean, flat, sharp-edged, and highly readable. The interface stays out of the way during practice and surfaces information clearly everywhere else.
 
 ### Core Principles
 
-1. **Instant Clarity**: Every screen must instantly answer three questions:
-   - What scenario am I in?
-   - What do I do next?
-   - How am I improving?
+1. **Instant Clarity** — every screen answers: What am I looking at? What do I do next? How am I improving?
+2. **Immersive Focus** — practice sessions are distraction-free with the interviewer/editor as the center of attention
+3. **Accessible Depth** — secondary elements (transcript, timer, rubric, hints) stay available without cluttering the main view
+4. **Flat & Sharp** — no border radius anywhere, minimal shadows, strong borders for structure
+5. **Intentional Color** — color signals progress, state, and difficulty — not decoration
 
-2. **Immersive Focus**: The core interaction (practice session) should be immersive and focused, with the avatar/interviewer as the center of attention
+---
 
-3. **Accessible Depth**: Secondary elements (transcript, timer, rubric, hints) stay accessible without cluttering the experience
+## Styling Stack
 
-4. **Visual Hierarchy**: Strong hierarchy with generous spacing, sharp-edged containers, and soft contrast
+- **Tailwind CSS v4** with `@theme inline` for custom token mapping
+- **DaisyUI plugin** — themes: `corporate` (light), `dark`
+- **shadcn/ui primitives** in `components/ui/` (Button, Card, Progress, Switch, Badge, Input, Textarea)
+- Theme tokens defined as CSS custom properties in `app/globals.css`
+- Dark mode via `data-theme="dark"` attribute on `<html>`, toggled in settings and persisted to localStorage
 
-5. **Intentional Color**: Color signals progress, feedback, and state—not decoration
+### Class vocabulary
+
+The codebase uses a mix of DaisyUI semantic classes and custom theme tokens:
+
+| DaisyUI class | Usage |
+|---|---|
+| `bg-base-100` | Card/panel backgrounds |
+| `bg-base-200`, `bg-base-200/30` | Subtle fills, hover states, loading placeholders |
+| `border-base-300` | Standard card/section borders |
+| `text-base-content` | Primary text |
+| `text-base-content/60`, `text-base-content/40` | Secondary/muted text |
+| `btn`, `btn-sm`, `btn-ghost` | Buttons |
+| `card`, `card-bordered` | Card containers |
+| `input`, `input-bordered` | Form inputs |
+
+| Custom token class | Usage |
+|---|---|
+| `bg-background` / `bg-foreground` | Page-level background/text (from CSS vars) |
+| `bg-card` / `text-card-foreground` | Some shadcn/ui card surfaces |
+| `text-primary` / `bg-primary` | Indigo accent (#4F46E5) |
+| `border-border` | Default border color (maps to `--border`) |
+| `text-muted-foreground` | Secondary text in shadcn/ui components |
+
+Both vocabularies coexist. For new work, prefer DaisyUI classes for layout elements and theme consistency.
 
 ---
 
 ## Layout & Spacing
 
 ### Container Widths
-- **Main content**: `max-w-5xl` (80rem / 1280px)
-- **Centered**: `mx-auto` for all main containers
+- Main content pages: `max-w-5xl mx-auto`
+- Page padding: `px-6 py-8 md:px-10 md:py-10`
 
 ### Padding Scale
-- **Page/Section padding**: `p-6 md:p-10` (1.5rem mobile, 2.5rem desktop)
-- **Card padding (large)**: `p-6` (1.5rem) - for main cards with substantial content
-- **Card padding (medium)**: `p-5` (1.25rem) - for secondary cards
-- **Card padding (small)**: `p-4` (1rem) - for compact cards and list items
-- **Tight padding**: `p-2` or `p-3` - for buttons, pills, small UI elements
+- Large cards: `p-6`
+- Medium cards / interactive items: `p-5`
+- Compact cards / list items: `p-4`
+- Buttons, pills, small elements: `p-2` or `p-3`
 
 ### Gap Scale
-- **Section gaps**: `space-y-8` (2rem) between major sections
-- **Card groups**: `gap-6` (1.5rem) in grids
-- **Related cards**: `gap-4` (1rem) for tightly related cards
-- **List items**: `space-y-3` (0.75rem) for scenario lists
-- **Inline elements**: `gap-2` (0.5rem) for icons + text
-- **Tight inline**: `gap-1` or `gap-1.5` for labels and small elements
+- Between major sections: `space-y-8` or `space-y-6`
+- Card grids: `gap-6` or `gap-4`
+- Card sub-groups: `gap-3`
+- Inline icon + text: `gap-2`
+- Tight inline: `gap-1` or `gap-1.5`
 
 ---
 
 ## Border Radius
 
-### Card Radius
-- **Primary cards**: `rounded-none` - all major cards, panels, containers
-- **Secondary buttons**: `rounded-none` - buttons, input fields, smaller interactive elements
-- **Pills/badges**: `rounded-none` - difficulty badges, tags, status indicators
-- **Avatars**: `rounded-none` - keep profile and interviewer surfaces square
-- **Progress bars**: `rounded-none` - keep the overall interface geometry consistent
+**Everything is `rounded-none`.** All radii are set to `0px` in the theme:
 
-### Consistency Rule
-Use `rounded-none` as the default for all containers and controls. Do not introduce curved corners unless a future design change explicitly calls for them.
+```css
+--radius: 0px;
+--radius-sm: 0px;
+--radius-md: 0px;
+--radius-lg: 0px;
+--radius-xl: 0px;
+--radius-box: 0px;
+--radius-field: 0px;
+--radius-selector: 0px;
+```
+
+Do not introduce rounded corners. Cards, buttons, badges, inputs, progress bars, avatars — all sharp edges.
 
 ---
 
 ## Shadows & Elevation
 
-### Shadow Scale (Minimal Approach)
-LeetSpeak uses **minimal shadows** to maintain a clean, flat aesthetic with subtle depth:
+Minimal. Almost nothing has a shadow at rest.
 
-- **No shadow (default)**: Most cards have no shadow at rest—rely on borders for definition
-- **Hover shadow**: `hover:shadow-sm` - subtle shadow on hover for interactive cards
-  - Translates to: `0 1px 2px 0 rgb(0 0 0 / 0.05)`
-- **Avatar rings**: `ring-2 ring-white` - creates depth for avatars without heavy shadows
-- **Focus states**: Browser default focus rings (accessible)
-
-### When to Use Shadows
-- **Interactive cards on hover**: Scenario cards, mistake cards, track cards
-- **Floating panels**: Side panels in practice session (if applicable)
-- **Modals/overlays**: Use `shadow-lg` or `shadow-xl` only for elements that truly float above content
-
-### What NOT to Shadow
-- Static content cards
-- Progress indicators
-- Headers and text sections
-- Navigation elements
+- **Default**: No shadow — use borders (`border border-border` or `border border-base-300`) for definition
+- **Hover**: Subtle background change (`hover:bg-base-200/50`) rather than shadow
+- **Floating panels**: Only modals/overlays get `shadow-lg`
 
 ---
 
 ## Colors & Semantic Meaning
 
-### Color Tokens (from theme.css)
-LeetSpeak uses Tailwind v4 CSS variables. Reference `/src/styles/theme.css` for the source of truth.
+### Primary (Indigo — #4F46E5)
+- Main actions, CTA buttons, active tab states, progress ring fills
+- Classes: `bg-indigo-600`, `text-indigo-600`, `hover:bg-indigo-700`, `bg-indigo-100`
 
-### Semantic Color Usage
+### Emerald (Success / Easy)
+- Easy difficulty, positive states, active day indicators
+- Classes: `text-emerald-500`, `bg-emerald-50`, `text-emerald-700`, `border-emerald-200`
 
-#### Primary (Indigo/Purple - #4F46E5)
-- **Usage**: Main actions, primary progress indicators, weekly goals
-- **Classes**: `bg-primary`, `text-primary`, `border-primary`
-- **Where**: CTA buttons, progress ring fills, "Suggested for You" icon
+### Amber / Orange (Streaks / Medium)
+- Medium difficulty, streaks, warmth/motivation
+- Classes: `text-amber-500`, `bg-amber-50`, `text-amber-700`, `bg-orange-50`, `text-orange-500`
 
-#### Emerald (Success/Growth)
-- **Usage**: Beginner difficulty, positive goals, achievements
-- **Classes**: `bg-emerald-50`, `text-emerald-700`, `border-emerald-200`, `text-emerald-500`
-- **Where**: Difficulty badges, "Current Goals" icon, success states
+### Violet (Advanced)
+- Advanced difficulty, leadership scenarios
+- Classes: `text-violet-700`, `bg-violet-50`, `border-violet-200`
 
-#### Amber/Orange (Warmth/Motivation)
-- **Usage**: Streaks, warnings, areas for improvement, intermediate difficulty
-- **Classes**: `bg-amber-50`, `text-amber-700`, `border-amber-200`, `from-amber-500 to-orange-500`
-- **Where**: Mistake cards, streak card background, "Learn from Mistakes" icon
+### Red (Hard / Destructive)
+- Hard difficulty, errors, destructive actions
+- Classes: `text-red-500`, `text-destructive`
 
-#### Violet/Purple (Advanced/Leadership)
-- **Usage**: Advanced difficulty, leadership scenarios, premium features
-- **Classes**: `bg-violet-50`, `text-violet-700`, `border-violet-200`, `from-violet-500 to-purple-500`
-- **Where**: Advanced scenario badges, leadership track
-
-#### Blue/Cyan (Technical/Communication)
-- **Usage**: Technical scenarios, informational elements
-- **Classes**: `from-blue-500 to-cyan-500`
-- **Where**: Technical communication track
-
-#### Background Hierarchy
-- **Page background**: `bg-background` (light neutral)
-- **Card background**: `bg-card` (white or near-white)
-- **Border**: `border-border` (subtle gray)
-- **Muted foreground**: `text-muted-foreground` (secondary text)
-
-### Gradient Backgrounds
-Used sparingly for emphasis:
-- **Streak card**: `bg-gradient-to-br from-amber-50 to-orange-50`
-- **Track icons**: `bg-gradient-to-br from-{color}-500 to-{color}-500`
+### Background Hierarchy
+- Page background: `bg-background` (light: `#fafaf8`, dark: `#13131f`)
+- Card/panel: `bg-base-100` (light: white, dark: `#1c1c2e`)
+- Subtle fill: `bg-base-200/30`
+- Borders: `border-border` (#1a1a2e light, #2e2e4a dark) or `border-base-300`
 
 ---
 
 ## Typography
 
-### Type Scale
-LeetSpeak relies on semantic HTML headings with default styles from `/src/styles/theme.css`. Do NOT override these with Tailwind classes unless specifically needed.
+Headings are styled globally in `app/globals.css` base layer. Do not override with Tailwind size classes unless needed.
 
-- **`<h1>`**: Page titles (e.g., "Good morning, Alex")
-- **`<h2>`**: Section headings (e.g., "Suggested for You", "Weekly Progress")
-- **`<h3>`**: Card titles (e.g., "Weekly Progress" inside card)
-- **`<h4>`**: Item titles (e.g., scenario titles, mistake titles)
-- **`<p>`**: Body text
+- `<h1>`: Page titles — `text-2xl`, weight 500
+- `<h2>`: Section headings — `text-xl`, weight 500
+- `<h3>`: Card titles — `text-lg`, weight 500
+- `<h4>`: Item titles — `text-base`, weight 500
+- `<p>`: Body text — `leading-7`
+- `<button>`: `text-base`, weight 500
 
 ### Font Sizes for UI Elements
-Use these sparingly—only when the semantic heading doesn't fit:
+- `text-sm` / `text-xs`: Secondary text, metadata, descriptions
+- `text-[0.7rem]`: Column headers, table labels
+- `text-[11px]` / `text-[10px]`: Tiny labels, premium badges, scenario counts
+- `text-3xl` / `text-2xl`: Large stat numbers in dashboard cards
 
-- **`text-[1.75rem]`**: Large numbers in progress indicators
-- **`text-[1.5rem]`**: Streak count
-- **`text-[0.875rem]`**: Secondary body text, button text, card descriptions
-- **`text-[0.8125rem]`**: Metadata text (interviewer name, goal labels)
-- **`text-[0.75rem]`**: Small labels, tags, helper text
-- **`text-[0.6875rem]`**: Tiny labels (difficulty pills, progress percentages)
-
-### Font Weight
-Do NOT use Tailwind font weight classes (`font-bold`, `font-semibold`) unless absolutely necessary. Use inline styles for specific emphasis:
-
-- **`style={{ fontWeight: 700 }}`**: Numbers, counts, critical data (e.g., "1/3", "7")
-- **`style={{ fontWeight: 500 }}`**: Badges, pills, emphasized labels
-- Default weight: Inherit from theme
-
-### Text Color Patterns
-- **Primary text**: `text-foreground` (default)
-- **Secondary text**: `text-muted-foreground` (metadata, descriptions, helper text)
-- **Colored text**: Only in badges/pills with matching backgrounds
+### Text Color
+- Primary: `text-base-content` (inherits from theme)
+- Secondary/muted: `text-base-content/60` or `text-base-content/50`
+- Faded: `text-base-content/40` or `text-base-content/30`
+- Colored: Only inside badges or difficulty labels
 
 ---
 
@@ -166,275 +158,188 @@ Do NOT use Tailwind font weight classes (`font-bold`, `font-semibold`) unless ab
 
 ### Cards
 
-#### Standard Card
+Standard card:
 ```tsx
-<div className="bg-card rounded-2xl border border-border p-6">
+<div className="rounded-none border border-border bg-base-100 p-5">
   {/* content */}
 </div>
 ```
 
-#### Interactive Card (Hoverable)
+Interactive card:
 ```tsx
-<div className="bg-card rounded-2xl border border-border p-5 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer">
+<button className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40">
   {/* content */}
+  <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
+</button>
+```
+
+Table/list card:
+```tsx
+<div className="card card-bordered overflow-hidden bg-base-100">
+  <div className="grid ... border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
+    {/* column headers */}
+  </div>
+  {items.map((item, idx) => (
+    <button className={cn(
+      "grid w-full ... px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
+      idx < items.length - 1 && "border-b border-base-300/50",
+    )}>
+      {/* row content */}
+    </button>
+  ))}
 </div>
 ```
-
-#### Card with Gradient Section
-```tsx
-<div className="bg-card rounded-2xl border border-border overflow-hidden">
-  <div className="p-6 border-b border-border">
-    {/* main content */}
-  </div>
-  <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50">
-    {/* highlighted content */}
-  </div>
-</div>
-```
-
-### Badges & Pills
-
-#### Difficulty Badge
-```tsx
-<span className={`text-[0.6875rem] px-2 py-0.5 rounded-full border ${colorClasses}`} style={{ fontWeight: 500 }}>
-  {label}
-</span>
-```
-
-Color mappings:
-- Beginner: `bg-emerald-50 text-emerald-700 border-emerald-200`
-- Intermediate: `bg-amber-50 text-amber-700 border-amber-200`
-- Advanced: `bg-violet-50 text-violet-700 border-violet-200`
 
 ### Buttons
 
-#### Primary CTA
+DaisyUI buttons:
 ```tsx
-<button className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl hover:opacity-90 transition-opacity">
-  <Icon className="w-4 h-4" />
-  Button Text
+<button className="btn btn-sm gap-2 border-0 bg-indigo-600 text-white hover:bg-indigo-700">
+  <Icon className="size-4" />
+  Label
+</button>
+
+<button className="btn btn-sm btn-ghost gap-1.5">
+  <Icon className="size-3.5" />
+  Label
 </button>
 ```
 
-#### Ghost/Text Button
+Filter/tab buttons:
 ```tsx
-<button className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-[0.875rem]">
-  Action <ChevronRight className="w-4 h-4" />
-</button>
+<button className={cn(
+  "btn btn-sm gap-2",
+  isActive
+    ? "border-0 bg-indigo-600 text-white hover:bg-indigo-700"
+    : "border border-base-300 bg-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content",
+)}>
 ```
 
-### Avatars
+### Difficulty Badges
+- Easy: `text-emerald-500`
+- Medium: `text-amber-500`
+- Hard: `text-red-500`
 
-#### Standard Avatar
+### Filter Pills
 ```tsx
-<ImageWithFallback
-  src={avatarUrl}
-  alt={name}
-  className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-sm"
-/>
+<button className={cn(
+  "rounded-none border px-3 py-1.5 text-xs font-medium transition",
+  isActive
+    ? "border-current bg-current/5 text-{color}"
+    : "border-base-300 bg-transparent text-base-content/60 hover:border-base-content/30",
+)}>
 ```
 
-Sizes:
-- Small: `w-10 h-10`
-- Medium: `w-12 h-12` (default for scenario lists)
-- Large: `w-16 h-16` or larger (practice session)
-
-### Progress Indicators
-
-#### Linear Progress Bar
+### Stat Cards (Dashboard)
 ```tsx
-<Progress value={percentage} className="h-2" />
-```
-
-Heights:
-- Thin: `h-1.5` (mastery in scenario cards)
-- Standard: `h-2` (goals, tracks)
-
-#### Circular Progress Ring (SVG)
-```tsx
-<div className="relative w-32 h-32">
-  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-    <circle cx="60" cy="60" r="50" fill="none" stroke="#F0EFFC" strokeWidth="10" />
-    <circle cx="60" cy="60" r="50" fill="none" stroke="#4F46E5" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${progress * 314} 314`} />
-  </svg>
-  <div className="absolute inset-0 flex flex-col items-center justify-center">
-    {/* centered content */}
+<div className="flex flex-col items-center gap-2 rounded-none border border-border bg-base-100 p-4">
+  <div className="flex size-10 items-center justify-center rounded-none bg-{color}-50">
+    <Icon className="size-5 text-{color}-500" />
   </div>
+  <div className="text-2xl font-semibold">{value}</div>
+  <div className="text-xs text-base-content/60">{label}</div>
 </div>
 ```
 
-### Icon Usage
-
-#### Icon Sizes
-- **Section headers**: `w-5 h-5` (20px)
-- **Inline with text**: `w-4 h-4` (16px)
-- **Small metadata**: `w-3.5 h-3.5` (14px)
-- **Large decorative**: `w-10 h-10` or larger
-
-#### Icon + Text Pattern
+### Progress Ring (SVG)
 ```tsx
-<div className="flex items-center gap-2">
-  <Icon className="w-5 h-5 text-primary" />
-  Heading Text
-</div>
+<svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+  <circle cx="60" cy="60" r="52" fill="none" stroke="#f0effc" strokeWidth="10" />
+  <circle cx="60" cy="60" r="52" fill="none" stroke="#4f46e5" strokeWidth="10"
+    strokeLinecap="round" strokeDasharray={`${(progress / 100) * 327} 327`} />
+</svg>
 ```
 
-### Links
-
-#### Scenario Card Link
-```tsx
-<Link
-  to="/path"
-  className="group flex items-center gap-4 bg-card rounded-2xl border border-border p-4 hover:border-primary/30 hover:shadow-sm transition-all"
->
-  {/* Use group-hover for nested hover states */}
-  <ArrowRight className="group-hover:text-primary transition-colors" />
-</Link>
-```
+### Icons (Lucide)
+- Section headers: `size-5`
+- Inline with text: `size-4`
+- Small metadata: `size-3.5`
+- Tiny: `size-3`
 
 ---
 
 ## Grid & Responsive Patterns
 
-### Common Grid Layouts
-
-#### Two-Column Split (Desktop)
+### Common Grids
 ```tsx
+{/* Type/group cards */}
+<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+
+{/* Stat cards */}
+<div className="grid grid-cols-3 gap-3">
+
+{/* Two-column split */}
 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-  <div className="lg:col-span-3">{/* main content */}</div>
+  <div className="lg:col-span-3">{/* main */}</div>
   <div className="lg:col-span-2">{/* sidebar */}</div>
 </div>
 ```
 
-#### Two-Column Cards
-```tsx
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  {/* cards */}
-</div>
-```
-
-#### Three-Column Cards
-```tsx
-<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-  {/* cards */}
-</div>
-```
-
 ### Responsive Visibility
-- **Hide on mobile**: `hidden md:flex` or `hidden md:block`
-- **Hide on desktop**: `md:hidden`
+- Hide on mobile: `hidden md:flex` or `hidden md:block`
+- Hide on desktop: `md:hidden`
 
 ---
 
-## Animation & Transitions
+## Dark Mode
 
-### Transition Classes
-- **All properties**: `transition-all` - for cards with multiple hover changes
-- **Specific properties**: `transition-colors`, `transition-opacity`, `transition-shadow`
-- **Speed**: Use default Tailwind timing (200ms) - do NOT customize
+Controlled via `data-theme` attribute (`corporate` or `dark`). Key token differences:
 
-### Common Patterns
-- **Card hover**: `hover:border-primary/30 hover:shadow-sm transition-all`
-- **Button hover**: `hover:opacity-90 transition-opacity`
-- **Icon hover**: `group-hover:text-primary transition-colors`
-- **Text hover**: `hover:text-foreground transition-colors`
+| Token | Light | Dark |
+|---|---|---|
+| `--background` | `#fafaf8` | `#13131f` |
+| `--card` | `#ffffff` | `#1c1c2e` |
+| `--foreground` | `#1a1a2e` | `#e5e5f0` |
+| `--border` | `#1a1a2e` | `#2e2e4a` |
+| `--muted` | `#f3f3f0` | `#1e1e2e` |
 
-### Animated Elements (Motion)
-For complex animations (feedback scores, entrance animations), use `motion/react`:
-```tsx
-import { motion } from "motion/react";
-
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.4 }}
->
-  {/* content */}
-</motion.div>
-```
+Theme-aware logos use `.theme-logo-light` / `.theme-logo-dark` CSS classes that toggle visibility based on `data-theme`.
 
 ---
 
-## Page-Specific Patterns
+## Navigation
 
-### Dashboard
-- **Max width**: `max-w-5xl mx-auto`
-- **Section spacing**: `space-y-8`
-- **Grid split**: 3-column main content, 2-column sidebar
-- **Card density**: Medium (p-5 or p-6)
+### Desktop
+Left sidebar with icon + label links. Active state uses `bg-base-200/80 text-base-content font-semibold`. Navigation items: Home, Practice, Profile, Coach, LLM, Settings.
 
-### Practice Session
-- **Layout**: Centered avatar, side panels
-- **Avatar size**: Large and prominent
-- **Panel style**: Minimal borders, subtle backgrounds
-- **Focus**: Immersive, distraction-free
-
-### Review Feedback
-- **Score cards**: Large numbers with motion animations
-- **Color coding**: Emerald for good, amber for needs work
-- **Actionable tips**: Clear, concise, bulleted
-
-### Profile & Settings
-- **Form spacing**: Generous vertical rhythm
-- **Input style**: `rounded-xl` borders
-- **Section dividers**: Subtle borders or spacing
+### Mobile
+Bottom tab bar with icons only. Same active state pattern.
 
 ---
 
-## Accessibility Guidelines
+## Transitions
 
-### Color Contrast
-- All text meets WCAG AA standards
-- Never rely on color alone to convey information
-- Use icons + color for status/categories
-
-### Interactive States
-- **Hover**: Visual feedback on all interactive elements
-- **Focus**: Preserve browser default focus rings (do not remove with `outline-none` unless providing custom focus styles)
-- **Active**: Subtle scale or opacity change
-
-### Semantic HTML
-- Use proper heading hierarchy (`<h1>` → `<h2>` → `<h3>`)
-- Use `<button>` for actions, `<Link>` for navigation
-- Include alt text for all images
+- Card hover: `transition hover:border-indigo-400 hover:bg-base-200/40`
+- Button hover: `transition hover:bg-indigo-700` or `hover:opacity-90 transition-opacity`
+- Icon hover (in group): `transition group-hover:translate-x-0.5 group-hover:text-base-content/60`
+- Default Tailwind timing (200ms). Don't customize.
 
 ---
 
 ## Do's and Don'ts
 
-### ✅ Do
-- Use `rounded-2xl` for all card containers
-- Use `bg-card` + `border border-border` for card backgrounds
-- Keep shadows minimal (`hover:shadow-sm`)
-- Use semantic color (primary for actions, emerald for success, amber for warnings)
-- Preserve generous spacing (`gap-6`, `p-6`)
-- Use `text-muted-foreground` for secondary text
-- Default to semantic HTML headings
+### Do
+- Use `rounded-none` on everything
+- Use `bg-base-100` + `border border-base-300` for card surfaces
+- Use DaisyUI `btn` classes for buttons
+- Keep shadows minimal — borders define structure
+- Use `text-base-content/60` for secondary text
+- Use semantic color for state (indigo = active, emerald = success, amber = warning, red = hard/error)
+- Preserve generous spacing
 
-### ❌ Don't
-- Don't use emojis anywhere in the UI
-- Don't use heavy shadows (`shadow-lg`, `shadow-2xl`) on standard cards
-- Don't mix border radius (stick to `rounded-2xl` or `rounded-xl`)
-- Don't use Tailwind font-size classes for headings (e.g., `text-2xl` on `<h1>`)
-- Don't use font-weight classes (`font-bold`, `font-semibold`) unless necessary
-- Don't use color decoratively—every color should signal something
-- Don't create tight, cramped layouts—embrace whitespace
-- Don't override theme.css typography defaults without reason
+### Don't
+- Don't use rounded corners (`rounded-xl`, `rounded-2xl`, `rounded-full`, etc.)
+- Don't use heavy shadows on cards
+- Don't use color decoratively
+- Don't override heading typography from globals.css without reason
+- Don't use emojis in the UI
+- Don't create tight/cramped layouts
 
 ---
 
 ## File References
 
-- **Theme tokens**: `/src/styles/theme.css`
-- **Font imports**: `/src/styles/fonts.css`
-- **Progress component**: `/src/app/components/ui/progress.tsx`
-- **Image component**: `/src/app/components/figma/ImageWithFallback.tsx`
-
----
-
-## Version & Updates
-
-**Last updated**: 2026-04-11  
-**Maintained by**: LeetSpeak design team
-
-When in doubt, refer to existing components in `/src/app/components/` for live examples of these patterns in practice.
+- **Theme tokens**: `app/globals.css`
+- **UI primitives**: `components/ui/` (button, card, progress, switch, badge, input, textarea)
+- **App components**: `components/app/` (main-shell, practice-session, coach-conversation, settings-panel, etc.)
+- **Icon library**: `lucide-react`

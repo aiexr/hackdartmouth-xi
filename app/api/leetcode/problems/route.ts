@@ -31,9 +31,14 @@ export async function GET(request: Request) {
   const skip = Number(searchParams.get("skip") ?? "0");
   const limit = Number(searchParams.get("limit") ?? "50");
 
+  const search = searchParams.get("search") ?? "";
+
   const filters: Record<string, string> = {};
   if (difficulty && difficulty !== "All") {
     filters.difficulty = difficulty.toUpperCase();
+  }
+  if (search) {
+    filters.searchKeywords = search;
   }
 
   try {
