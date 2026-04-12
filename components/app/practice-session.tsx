@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { createPortal } from "react-dom";
 import {
   Braces,
@@ -216,7 +217,7 @@ function getInterviewerClosureDelayMs(text: string) {
   );
 }
 
-function buildInitialInterviewerPrompt(scenario: Scenario) {
+function buildInitialInterviewerPrompt(scenario: Scenario, candidateName?: string | null) {
   const sharedContext = [
     `You are ${scenario.interviewer}, a ${scenario.interviewerRole}, conducting a ${scenario.category} mock interview.`,
     `Scenario title: ${scenario.title}`,
@@ -224,6 +225,9 @@ function buildInitialInterviewerPrompt(scenario: Scenario) {
     `Primary prompt: ${scenario.prompt}`,
     `Focus areas: ${scenario.focus.join(", ")}`,
     `Follow-up probes: ${scenario.followUps.join(" | ") || "Use your judgment."}`,
+    candidateName
+      ? `The candidate's name is ${candidateName}. If you greet or address them by name, use exactly "${candidateName}". Never use placeholder text like [Candidate Name] or [Name].`
+      : "Do not use placeholder text like [Candidate Name] or [Name]. If you do not know the candidate's name, greet them without using a name.",
   ];
 
   if (scenario.category === "behavioral") {
@@ -295,6 +299,7 @@ export function PracticeSession({
   scenario: Scenario;
   displayTitle?: string;
 }) {
+  const { data: session } = useSession();
   const router = useRouter();
   const storageKey = `practice-state:${scenario.id}`;
   const isTechnical = scenario.category === "technical";
@@ -303,6 +308,10 @@ export function PracticeSession({
   const hasSplitView = isTechnical || isSystemDesign;
   const codingProblem = scenario.codingProblem;
   const isQuantProblem = codingProblem?.source === "BrainStellar";
+  const candidateName =
+    typeof session?.user?.name === "string"
+      ? session.user.name.replace(/\s+/g, " ").trim()
+      : "";
 
   const [panel, setPanel] = useState<PracticePanel>(isTechnical ? "hints" : "rubric");
   const [panelOpen, setPanelOpen] = useState(true);
@@ -496,9 +505,9 @@ export function PracticeSession({
     initialPromptSentRef.current = true;
     setInterviewerPrompt({
       id: `${scenario.id}-opening`,
-      text: wrapInternalPrompt(buildInitialInterviewerPrompt(scenario)),
+      text: wrapInternalPrompt(buildInitialInterviewerPrompt(scenario, candidateName)),
     });
-  }, [scenario, sessionState]);
+  }, [candidateName, scenario, sessionState]);
 
   useEffect(() => {
     if (sessionState === "idle") {

@@ -178,6 +178,10 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
         throw new Error("Missing ElevenLabs agent id");
       }
       const resumeContext = typeof data.resumeContext === "string" ? data.resumeContext : "";
+      const candidateName =
+        typeof data.candidateName === "string"
+          ? data.candidateName.replace(/\s+/g, " ").trim()
+          : "";
 
       const conversation = await VoiceConversation.startSession({
         agentId,
@@ -209,9 +213,16 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
 
       // Inject tone modifier into the agent's context
       const tonePrompt = TONE_PROMPTS[tone] ?? TONE_PROMPTS.neutral;
-      const contextualUpdate = resumeContext
-        ? `${tonePrompt}\n\nCandidate resume context:\n${resumeContext}`
-        : tonePrompt;
+      const contextualSections = [tonePrompt];
+      contextualSections.push(
+        candidateName
+          ? `The candidate's name is ${candidateName}. If you address them by name, use exactly "${candidateName}". Never use placeholders like [Candidate Name] or [Name].`
+          : "Do not use placeholders like [Candidate Name] or [Name]. If you do not know the candidate's name, greet them without using a name.",
+      );
+      if (resumeContext) {
+        contextualSections.push(`Candidate resume context:\n${resumeContext}`);
+      }
+      const contextualUpdate = contextualSections.join("\n\n");
       conversation.sendContextualUpdate(contextualUpdate);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start call";

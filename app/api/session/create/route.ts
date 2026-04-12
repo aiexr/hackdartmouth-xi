@@ -33,6 +33,14 @@ function summarizeResumeText(resumeText: string | null | undefined) {
   return resumeText.replace(/\s+/g, " ").trim().slice(0, 1200);
 }
 
+function summarizeCandidateName(name: string | null | undefined) {
+  if (!name) {
+    return "";
+  }
+
+  return name.replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
 export async function POST(req: NextRequest) {
   const heygenKey = process.env.HEYGEN_API_KEY;
   if (!heygenKey) {
@@ -52,6 +60,9 @@ export async function POST(req: NextRequest) {
   const session = await getOptionalServerSession();
   const user = session?.user?.email ? await UserModel.getUserByEmail(session.user.email) : null;
   const resumeContext = summarizeResumeText(user?.resumeExtractedText);
+  const candidateName = summarizeCandidateName(
+    typeof session?.user?.name === "string" ? session.user.name : user?.name,
+  );
 
   if (mode === "video") {
     const avatar = pickRandomAvatar();
@@ -92,6 +103,7 @@ export async function POST(req: NextRequest) {
       ...data,
       interviewMode: "video",
       avatarName: avatar.name,
+      candidateName,
       resumeContext,
     });
   }
@@ -107,6 +119,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     interviewMode: "call",
     agentId: elevenLabsAgentId,
+    candidateName,
     resumeContext,
   });
 }

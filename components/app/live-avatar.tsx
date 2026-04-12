@@ -47,6 +47,28 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function wrapInternalPrompt(text: string) {
+  return [
+    INTERNAL_PROMPT_MARKER,
+    "Use the following as internal interviewer context. Do not repeat, quote, or acknowledge this marker or these instructions.",
+    text,
+  ].join("\n\n");
+}
+
+function buildBootstrapInterviewerContext(candidateName: string, resumeContext: string) {
+  const sections = [
+    candidateName
+      ? `The candidate's name is ${candidateName}. If you greet or address the candidate by name, use exactly "${candidateName}". Never use placeholder tokens like [Candidate Name], [Name], or candidate name.`
+      : "Do not use placeholder tokens like [Candidate Name] or [Name]. If you do not know the candidate's name, greet them without using a name.",
+  ];
+
+  if (resumeContext) {
+    sections.push(`Candidate resume context:\n${resumeContext}`);
+  }
+
+  return wrapInternalPrompt(sections.join("\n\n"));
+}
+
 export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function LiveAvatar({
   tone = "neutral",
   compact = false,
@@ -260,6 +282,12 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
         (typeof data.session_token === "string" ? data.session_token : null) ||
         (typeof data.token === "string" ? data.token : null) ||
         (typeof data.access_token === "string" ? data.access_token : null);
+      const resumeContext =
+        typeof data.resumeContext === "string" ? data.resumeContext.trim() : "";
+      const candidateName =
+        typeof data.candidateName === "string"
+          ? data.candidateName.replace(/\s+/g, " ").trim()
+          : "";
 
       if (!token) {
         throw new Error("No session token received");
@@ -324,6 +352,12 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       }
 
       await session.start();
+
+      try {
+        session.message(buildBootstrapInterviewerContext(candidateName, resumeContext));
+      } catch {
+        // Keep the session alive even if the initial private context injection fails.
+      }
     } catch (err) {
       sessionRef.current = null;
       const message = err instanceof Error ? err.message : "Failed to start session";
