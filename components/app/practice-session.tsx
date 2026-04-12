@@ -310,7 +310,7 @@ export function PracticeSession({
   const isQuantProblem = codingProblem?.source === "BrainStellar";
   const candidateName =
     typeof session?.user?.name === "string"
-      ? session.user.name.replace(/\s+/g, " ").trim()
+      ? session.user.name.replace(/\s+/g, " ").trim().split(" ")[0] ?? ""
       : "";
 
   const [panel, setPanel] = useState<PracticePanel>(isTechnical ? "hints" : "rubric");

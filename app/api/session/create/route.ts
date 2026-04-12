@@ -33,12 +33,17 @@ function summarizeResumeText(resumeText: string | null | undefined) {
   return resumeText.replace(/\s+/g, " ").trim().slice(0, 1200);
 }
 
-function summarizeCandidateName(name: string | null | undefined) {
+function summarizeCandidateFirstName(name: string | null | undefined) {
   if (!name) {
     return "";
   }
 
-  return name.replace(/\s+/g, " ").trim().slice(0, 120);
+  const normalized = name.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized.split(" ")[0]?.slice(0, 80) ?? "";
 }
 
 export async function POST(req: NextRequest) {
@@ -60,7 +65,7 @@ export async function POST(req: NextRequest) {
   const session = await getOptionalServerSession();
   const user = session?.user?.email ? await UserModel.getUserByEmail(session.user.email) : null;
   const resumeContext = summarizeResumeText(user?.resumeExtractedText);
-  const candidateName = summarizeCandidateName(
+  const candidateName = summarizeCandidateFirstName(
     typeof session?.user?.name === "string" ? session.user.name : user?.name,
   );
 
