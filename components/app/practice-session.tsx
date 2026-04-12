@@ -1260,16 +1260,14 @@ export function PracticeSession({
                     className="h-full w-full object-cover"
                   />
 
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
-
-                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 p-5 sm:p-6">
-                    <div className="max-w-xl text-left text-white">
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 border-t border-white/10 bg-black/72 p-5 text-white backdrop-blur-sm sm:p-6">
+                    <div className="max-w-xl text-left">
                       <p className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold leading-[0.95] tracking-[-0.05em]">
                         {getInterviewerDisplayName(interviewer)}
                       </p>
                     </div>
 
-                    <div className="shrink-0 border border-white/20 bg-black/25 px-3 py-2 text-sm font-medium text-white/85">
+                    <div className="shrink-0 border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white/85">
                       {interviewerIndex + 1} of {availableInterviewers.length}
                     </div>
                   </div>
@@ -1294,9 +1292,8 @@ export function PracticeSession({
                   alt={`${interviewer.name} headshot`}
                   className="h-full w-full object-cover"
                 />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-80 transition-opacity group-hover:opacity-95" />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 text-left">
-                  <p className="text-sm font-semibold text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 border-t border-white/10 bg-black/72 p-3 text-left text-white backdrop-blur-sm">
+                  <p className="text-sm font-semibold">
                     {getInterviewerDisplayName(interviewer)}
                   </p>
                 </div>
