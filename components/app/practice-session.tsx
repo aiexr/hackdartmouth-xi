@@ -21,6 +21,7 @@ import {
   PhoneOff,
   RefreshCcw,
   Smile,
+  Sparkles,
   Video,
   VideoOff,
   X,
@@ -150,27 +151,41 @@ function buildInitialInterviewerPrompt(scenario: Scenario) {
   } else if (scenario.category === "technical") {
     const problem = scenario.codingProblem;
     if (problem) {
-      sharedContext.push(
-        "This is a live coding round. The candidate has a code editor open.",
-        `Problem description: ${problem.description}`,
-        `Examples: ${problem.examples
-          .map(
-            (example, index) =>
-              `Example ${index + 1} input: ${example.input}; output: ${example.output}${
-                example.explanation ? `; explanation: ${example.explanation}` : ""
-              }`,
-          )
-          .join(" | ")}`,
-        `Constraints: ${problem.constraints.join(" | ")}`,
-        `Expected optimal approach for grading context: ${problem.optimalApproach}`,
-      );
+      if (problem.source === "BrainStellar") {
+        sharedContext.push(
+          "This is a live quant / puzzle round. The candidate may use a scratchpad editor, but the focus is structured reasoning, assumptions, and clear explanation.",
+          `Problem description: ${problem.description}`,
+          `Hints available for interviewer context: ${(problem.sourceHints ?? []).join(" | ") || "None."}`,
+          `Reference solution / reasoning path for grading context: ${problem.optimalApproach}`,
+        );
+        sharedContext.push(
+          "Probe on setup, assumptions, invariants, and whether the candidate can explain the key insight before computation. Do not jump straight to the final answer.",
+          "Open with a short greeting, restate the puzzle crisply, and ask the candidate to talk through their first instinct and setup.",
+        );
+      } else {
+        sharedContext.push(
+          "This is a live coding round. The candidate has a code editor open.",
+          `Problem description: ${problem.description}`,
+          `Examples: ${problem.examples
+            .map(
+              (example, index) =>
+                `Example ${index + 1} input: ${example.input}; output: ${example.output}${
+                  example.explanation ? `; explanation: ${example.explanation}` : ""
+                }`,
+            )
+            .join(" | ")}`,
+          `Constraints: ${problem.constraints.join(" | ")}`,
+          `Expected optimal approach for grading context: ${problem.optimalApproach}`,
+        );
+        sharedContext.push(
+          "Probe on correctness, edge cases, testing instinct, and time/space complexity. Do not fully solve the problem for the candidate.",
+          "Open with a short greeting, restate the problem crisply, and ask the candidate to talk through their first approach.",
+        );
+      }
     }
-
     sharedContext.push(
-      "The candidate may share code editor snapshots from the app. Treat those snapshots as the current source of truth.",
-      "Never claim you cannot access the candidate's code editor.",
-      "Probe on correctness, edge cases, testing instinct, and time/space complexity. Do not fully solve the problem for the candidate.",
-      "Open with a short greeting, restate the problem crisply, and ask the candidate to talk through their first approach.",
+      "The candidate may share scratchpad or code editor snapshots from the app. Treat those snapshots as the current source of truth.",
+      "Never claim you cannot access the candidate's scratchpad or code editor.",
     );
   } else if (scenario.category === "system-design") {
     sharedContext.push(
@@ -187,6 +202,28 @@ function buildInitialInterviewerPrompt(scenario: Scenario) {
   return sharedContext.join("\n");
 }
 
+function buildCodeReviewPrompt(scenario: Scenario, editorContent: string) {
+  const scratchpadMode = scenario.codingProblem?.source === "BrainStellar";
+  const trimmed = editorContent.trim();
+  const snapshot =
+    trimmed.length > 0
+      ? trimmed.slice(0, 5000)
+      : scratchpadMode
+        ? "The scratchpad is still blank. Ask the candidate to outline the setup before computing."
+        : "The editor is still blank. Ask the candidate to outline the algorithm before coding.";
+
+  return [
+    `Continue the ${scenario.title} technical interview.`,
+    `The candidate has shared their current ${scratchpadMode ? "scratchpad" : "editor"} state.`,
+    scratchpadMode
+      ? "Use it in your next response to ask a concise follow-up about setup, assumptions, edge cases, or the key insight. Do not jump straight to the final answer."
+      : "Use it in your next response to ask a concise, code-aware follow-up about correctness, edge cases, complexity, or implementation tradeoffs.",
+    "Do not give away the full solution.",
+    "",
+    `Current ${scratchpadMode ? "scratchpad" : "editor"} content:`,
+    snapshot,
+  ].join("\n");
+}
 export function PracticeSession({
   scenario,
   displayTitle,
@@ -200,6 +237,8 @@ export function PracticeSession({
   const isSystemDesign = scenario.category === "system-design";
   const isBehavioral = scenario.category === "behavioral";
   const hasSplitView = isTechnical || isSystemDesign;
+  const codingProblem = scenario.codingProblem;
+  const isQuantProblem = codingProblem?.source === "BrainStellar";
 
   const [panel, setPanel] = useState<PracticePanel>(isTechnical ? "hints" : "rubric");
   const [panelOpen, setPanelOpen] = useState(true);
@@ -414,6 +453,7 @@ export function PracticeSession({
         return;
       }
       setIsGrading(true);
+      let interviewId: string | null = null;
 
       const finalTranscript = rawTranscript.filter((entry) => !entry.partial);
 
@@ -440,29 +480,48 @@ export function PracticeSession({
           }),
         });
         const startPayload = asRecord(await startRes.json());
-        const id =
+        interviewId =
           typeof startPayload.id === "string" && startPayload.id.trim()
             ? startPayload.id
             : null;
 
-        if (!id) {
+        if (!interviewId) {
           throw new Error("Missing interview id");
         }
 
-        await fetch("/api/interview/end", {
+        const endRes = await fetch("/api/interview/end", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            interviewId: id,
+            interviewId,
             transcript: finalTranscript,
             editorContent: isTechnical ? editorContent : undefined,
             diagramSnapshot: isSystemDesign ? diagramSnapshot : undefined,
           }),
         });
 
-        router.push(`/review/${scenario.id}?interviewId=${id}`);
+        const endPayload = asRecord(await endRes.json().catch(() => null));
+        if (!endRes.ok) {
+          throw new Error(
+            typeof endPayload.error === "string"
+              ? endPayload.error
+              : "Interview scoring failed",
+          );
+        }
+
+        const reviewParams = new URLSearchParams({ interviewId });
+        if (endPayload.graded !== true) {
+          reviewParams.set("grading", "pending");
+        }
+
+        router.push(`/review/${scenario.id}?${reviewParams.toString()}`);
       } catch {
-        router.push(`/review/${scenario.id}`);
+        if (interviewId) {
+          router.push(`/review/${scenario.id}?interviewId=${interviewId}&grading=failed`);
+          return;
+        }
+
+        router.push(`/practice/${scenario.id}`);
       }
     },
     [
@@ -491,7 +550,16 @@ export function PracticeSession({
     return `${minutes}:${remainder.toString().padStart(2, "0")}`;
   }, [seconds]);
 
-  const codingProblem = scenario.codingProblem;
+  function syncCodeWithInterviewer() {
+    if (!isTechnical || sessionState !== "connected") {
+      return;
+    }
+
+    setInterviewerPrompt({
+      id: `${scenario.id}-code-sync-${Date.now()}`,
+      text: buildCodeReviewPrompt(scenario, editorContent),
+    });
+  }
 
   const mediaSurface =
     interviewMode === "video" ? (
@@ -528,7 +596,9 @@ export function PracticeSession({
           <div className="flex min-w-0 items-center gap-4">
             <div className="text-sm text-base-content/60">
               {scenario.category === "technical"
-                ? "Live coding round"
+                ? isQuantProblem
+                  ? "Live quant round"
+                  : "Live coding round"
                 : `${scenario.category.replace("-", " ")} round`}
             </div>
           </div>
@@ -610,7 +680,7 @@ export function PracticeSession({
                         className="ml-auto flex items-center gap-1 text-[10px] text-base-content/40 transition hover:text-base-content/60"
                       >
                         <Braces className="size-3" />
-                        LeetCode
+                        {codingProblem.source}
                       </a>
                     )}
                   </div>
@@ -783,7 +853,7 @@ export function PracticeSession({
                           className="flex items-center gap-0.5 text-[10px] text-base-content/40 transition hover:text-base-content/60"
                         >
                           <Braces className="size-3" />
-                          LeetCode
+                          {codingProblem.source}
                         </a>
                       )}
                     </div>
@@ -814,6 +884,20 @@ export function PracticeSession({
                       </details>
                     )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={syncCodeWithInterviewer}
+                    disabled={sessionState !== "connected"}
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-2 rounded-none border px-3 py-1.5 text-xs font-medium transition",
+                      sessionState === "connected"
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400"
+                        : "border-border bg-base-200/40 text-base-content/60",
+                    )}
+                  >
+                    <Sparkles className="size-3.5" />
+                    {isQuantProblem ? "Share scratchpad" : "Share code"}
+                  </button>
                 </div>
 
                 <div className="min-h-0 flex-1">

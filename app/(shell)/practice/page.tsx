@@ -13,6 +13,10 @@ import {
   Shuffle,
   Users,
 } from "lucide-react";
+import {
+  quantProblemCategories,
+  quantProblems,
+} from "@/data/quant-problems";
 import { scenarios, type Scenario } from "@/data/scenarios";
 import { cn } from "@/lib/utils";
 
@@ -47,7 +51,7 @@ type LcDifficulty = "Easy" | "Medium" | "Hard";
 
 // ── Static group definitions ──────────────────────────────────────────────────
 
-// Technical: one entry per interview format (only LeetCode for now)
+// Technical: one entry per interview format
 const TECH_TYPES = [
   {
     id: "leetcode",
@@ -55,6 +59,13 @@ const TECH_TYPES = [
     description:
       "Classic coding problems with a live AI interviewer watching your editor in real time.",
     icon: Code2,
+  },
+  {
+    id: "quant",
+    label: "Quant Problems",
+    description:
+      "Probability, strategy, and discrete-math interview puzzles with a live interviewer and scratchpad.",
+    icon: Braces,
   },
 ];
 
@@ -203,6 +214,30 @@ const diffColor: Record<LcDifficulty, string> = {
   Hard: "text-red-500",
 };
 
+function LeetCodeTableSkeleton() {
+  return (
+    <div className="animate-pulse">
+      {Array.from({ length: 6 }).map((_, idx) => (
+        <div
+          key={idx}
+          className={cn(
+            "grid grid-cols-[2.5rem_minmax(0,1fr)_5rem_5.5rem] items-center gap-3 px-4 py-3",
+            idx < 5 && "border-b border-base-300/50",
+          )}
+        >
+          <div className="h-3 rounded-none bg-base-300/60" />
+          <div className="space-y-2">
+            <div className="h-3.5 w-3/4 rounded-none bg-base-300/60" />
+            <div className="h-3 w-1/3 rounded-none bg-base-300/40" />
+          </div>
+          <div className="h-3 rounded-none bg-base-300/50" />
+          <div className="h-3 rounded-none bg-base-300/50" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function PracticePage() {
   const router = useRouter();
@@ -212,6 +247,8 @@ export default function PracticePage() {
   const [activeDiff, setActiveDiff] = useState<LcDifficulty | "All">("All");
   const [lcSearch, setLcSearch] = useState("");
   const [lcSearchDebounced, setLcSearchDebounced] = useState("");
+  const [activeQuantCategory, setActiveQuantCategory] = useState<string>("All");
+  const [quantSearch, setQuantSearch] = useState("");
 
   // Debounce search input
   useEffect(() => {
@@ -224,6 +261,7 @@ export default function PracticePage() {
     selectedType === "leetcode" ||
     selectedType === "lc-behavioral" ||
     selectedType === "lc-system-design";
+  const isQuantDrillDown = selectedType === "quant";
 
   // LeetCode API state
   const [lcProblems, setLcProblems] = useState<LcProblem[]>([]);
@@ -239,6 +277,8 @@ export default function PracticePage() {
     setLcSearch("");
     setLcSearchDebounced("");
     setLcProblems([]);
+    setActiveQuantCategory("All");
+    setQuantSearch("");
   }
 
   function selectType(id: string) {
@@ -248,6 +288,8 @@ export default function PracticePage() {
     setLcSearch("");
     setLcSearchDebounced("");
     setLcProblems([]);
+    setActiveQuantCategory("All");
+    setQuantSearch("");
   }
 
   function selectSubGroup(id: string) {
@@ -261,6 +303,8 @@ export default function PracticePage() {
       setSelectedType(null);
       setActiveDiff("All");
       setLcProblems([]);
+      setActiveQuantCategory("All");
+      setQuantSearch("");
     }
   }
 
@@ -319,6 +363,33 @@ export default function PracticePage() {
     openLcProblem(pick.titleSlug);
   }
 
+  const filteredQuantProblems = useMemo(() => {
+    const normalizedSearch = quantSearch.trim().toLowerCase();
+    return quantProblems.filter((problem) => {
+      const matchesCategory =
+        activeQuantCategory === "All" || problem.categoryLabel === activeQuantCategory;
+      if (!matchesCategory) return false;
+      if (!normalizedSearch) return true;
+
+      return (
+        problem.title.toLowerCase().includes(normalizedSearch) ||
+        problem.categoryLabel.toLowerCase().includes(normalizedSearch) ||
+        problem.prompt.toLowerCase().includes(normalizedSearch)
+      );
+    });
+  }, [activeQuantCategory, quantSearch]);
+
+  function openQuantProblem(slug: string) {
+    router.push(`/practice/quant/${slug}`);
+  }
+
+  function pickRandomQuant() {
+    if (filteredQuantProblems.length === 0) return;
+    const pick =
+      filteredQuantProblems[Math.floor(Math.random() * filteredQuantProblems.length)]!;
+    openQuantProblem(pick.slug);
+  }
+
   // Scenarios in the selected sub-group (for STAR / Architecture drill-down)
   const filteredSubGroup = useMemo(() => {
     if (!selectedSubGroup) return [];
@@ -359,7 +430,7 @@ export default function PracticePage() {
 
   // ── Determine what the current "level" is ─────────────────────────────────
   // Level 1: no selectedType — show type cards
-  // Level 2: selectedType set, no selectedSubGroup — show either LC list or sub-group cards
+  // Level 2: selectedType set, no selectedSubGroup — show either problem list or sub-group cards
   // Level 3: selectedSubGroup set — show scenario list (STAR / Architecture only)
   const level = !selectedType ? 1 : selectedSubGroup ? 3 : 2;
 
@@ -492,6 +563,93 @@ export default function PracticePage() {
             ))}
           </div>
 
+          {/* ── Quant problem list */}
+          {isQuantDrillDown && (
+            <>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  placeholder="Search quant problems…"
+                  value={quantSearch}
+                  onChange={(e) => setQuantSearch(e.target.value)}
+                  className="input input-bordered w-full pl-9 text-sm"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {quantProblemCategories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setActiveQuantCategory(category)}
+                    className={cn(
+                      "rounded-none border px-3 py-1.5 text-xs font-medium transition",
+                      activeQuantCategory === category
+                        ? "border-base-content/40 bg-base-200 text-base-content"
+                        : "border-base-300 bg-transparent text-base-content/60 hover:border-base-content/30 hover:text-base-content",
+                    )}
+                  >
+                    {category}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={pickRandomQuant}
+                  disabled={filteredQuantProblems.length === 0}
+                  className="btn btn-sm btn-ghost ml-auto gap-1.5"
+                >
+                  <Shuffle className="size-3.5" />
+                  Random
+                </button>
+              </div>
+
+              <div className="card card-bordered overflow-hidden bg-base-100">
+                <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_7rem_5.5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
+                  <span>#</span>
+                  <span>Problem</span>
+                  <span>Category</span>
+                  <span>Duration</span>
+                </div>
+                {filteredQuantProblems.length === 0 ? (
+                  <div className="px-4 py-10 text-center text-sm text-base-content/50">
+                    No quant problems found.
+                  </div>
+                ) : (
+                  filteredQuantProblems.map((problem, idx) => (
+                    <button
+                      key={problem.slug}
+                      type="button"
+                      onClick={() => openQuantProblem(problem.slug)}
+                      className={cn(
+                        "grid w-full cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_7rem_5.5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
+                        idx < filteredQuantProblems.length - 1 &&
+                          "border-b border-base-300/50",
+                      )}
+                    >
+                      <span className="text-center text-xs text-base-content/40">
+                        {problem.order}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-base-content">
+                          {problem.title}
+                        </p>
+                        <p className="truncate text-[11px] text-base-content/50">
+                          BrainStellar
+                        </p>
+                      </div>
+                      <span className="truncate text-xs text-base-content/60">
+                        {problem.categoryLabel}
+                      </span>
+                      <span className="text-xs text-base-content/50">
+                        {problem.duration}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
           {/* ── LeetCode problem list (used by technical, behavioral, system-design) */}
           {isLcDrillDown && (
             <>
@@ -523,6 +681,12 @@ export default function PracticePage() {
                     {d}
                   </button>
                 ))}
+                {lcLoading && (
+                  <div className="inline-flex items-center gap-1.5 text-xs text-base-content/50">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Loading
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={pickRandomLc}
@@ -545,10 +709,7 @@ export default function PracticePage() {
                   <div className="px-4 py-6 text-center text-sm text-red-500">{lcError}</div>
                 )}
                 {lcLoading && lcProblems.length === 0 && (
-                  <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-base-content/50">
-                    <Loader2 className="size-4 animate-spin" />
-                    Loading problems…
-                  </div>
+                  <LeetCodeTableSkeleton />
                 )}
                 {!lcLoading && !lcError && lcProblems.length === 0 && (
                   <div className="px-4 py-10 text-center text-sm text-base-content/50">
@@ -603,7 +764,7 @@ export default function PracticePage() {
           )}
 
           {/* ── Sub-group cards (STAR Interview / Architecture Challenges) ─────── */}
-          {!isLcDrillDown && !selectedSubGroup && (
+          {!isLcDrillDown && !isQuantDrillDown && !selectedSubGroup && (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(selectedType === "star-interview"
                 ? STAR_GROUPS

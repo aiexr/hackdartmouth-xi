@@ -33,7 +33,7 @@ export type Scenario = {
       args: unknown[];
       expected: unknown;
     }>;
-    source?: "LeetCode";
+    source?: "LeetCode" | "BrainStellar";
     sourceId?: string;
     sourceTitle?: string;
     sourceSlug?: string;

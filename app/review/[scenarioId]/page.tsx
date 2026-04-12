@@ -195,6 +195,8 @@ export default async function ReviewPage({
   const scenario = getScenarioById(scenarioId);
   const staticReview = getReviewByScenarioId(scenarioId);
   const session = await getOptionalServerSession();
+  const gradingPending = grading === "pending";
+  const gradingFailed = grading === "failed";
 
   const persistedReview =
     interviewId && session?.user?.email
@@ -261,8 +263,10 @@ export default async function ReviewPage({
 
   const reviewNotice =
     persistedReview?.notice ??
-    (grading === "pending"
-      ? "Transcript saved, but AI scoring was unavailable for this attempt."
+    (gradingPending
+      ? "Interview completed, but AI scoring was unavailable for this attempt."
+      : gradingFailed
+        ? "Interview ended, but review generation did not complete. No fallback score is shown for this attempt."
       : null);
 
   return (
@@ -388,7 +392,11 @@ export default async function ReviewPage({
                 ) : overallScore !== null ? (
                   <>First scored attempt for this scenario</>
                 ) : (
-                  <>Transcript saved successfully, but scoring is still pending</>
+                  <>
+                    {gradingFailed
+                      ? "Interview finished, but scoring did not complete"
+                      : "Transcript saved successfully, but scoring is still pending"}
+                  </>
                 )
               ) : (
                 <>
@@ -404,7 +412,11 @@ export default async function ReviewPage({
                 ) : overallScore !== null ? (
                   <>This scorecard is generated from your saved transcript and rubric evaluation.</>
                 ) : (
-                  <>This attempt saved the transcript, but the grading model did not return a score.</>
+                  <>
+                    {gradingFailed
+                      ? "This attempt did not receive a completed score, and the UI intentionally avoids showing a fallback value."
+                      : "This attempt saved the transcript, but the grading model did not return a score."}
+                  </>
                 )
               ) : (
                 <>

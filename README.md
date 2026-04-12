@@ -14,7 +14,7 @@ LeetSpeak gives you realistic behavioral, technical, and system design interview
 
 **Practice interviews across three categories:**
 - **Behavioral** — "Tell me about yourself," leadership stories, conflict resolution
-- **Technical** — Coding problems with a live Monaco editor, LeetCode integration, diagram whiteboard (tldraw)
+- **Technical** — Coding problems with a live Monaco editor, LeetCode integration, BrainStellar-backed quant problems, diagram whiteboard (tldraw)
 - **System design** — Architecture discussions with follow-up questions
 
 **AI grading and coaching:**
@@ -94,3 +94,7 @@ All LLM calls route through `lib/integrations/llm.ts` for centralized provider s
 ## Team
 
 Built at HackDartmouth XI.
+
+## Content Credit
+
+Quant problem prompts in the practice flow are sourced from the [BrainStellar](https://github.com/rudradesai200/BrainStellar) repository by GitHub user [`rudradesai200`](https://github.com/rudradesai200).

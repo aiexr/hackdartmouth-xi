@@ -1,10 +1,6 @@
-import { writeFile, unlink } from "fs/promises";
-import { join } from "path";
-import { tmpdir } from "os";
+import "server-only";
 
 import mammoth from "mammoth";
-// @ts-ignore - pdf-text-extract doesn't have @types package
-import extract from "pdf-text-extract";
 
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -17,36 +13,54 @@ export type ExtractedDocument = {
 };
 
 async function extractPdf(buffer: Buffer): Promise<string> {
-  // pdf-text-extract requires a file path, not a Buffer
-  // Write buffer to temporary file, extract, then clean up
-  const tempPath = join(tmpdir(), `pdf-extract-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    disableFontFace: true,
+    useSystemFonts: true,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    stopAtErrors: false,
+  });
+
+  const document = await loadingTask.promise;
 
   try {
-    // Write buffer to temporary file
-    await writeFile(tempPath, buffer);
+    const pages: string[] = [];
 
-    // Extract PDF using pdf-text-extract
-    const text = await new Promise<string>((resolve, reject) => {
-      extract(tempPath, { splitPages: false }, (err: Error | null, pages: string[]) => {
-        if (err) {
-          reject(new Error(`PDF extraction error: ${err.message}`));
-          return;
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+
+      const chunks: string[] = [];
+      for (const item of textContent.items) {
+        if ("str" in item && typeof item.str === "string" && item.str.trim()) {
+          chunks.push(item.str);
         }
 
-        const text = (pages || []).join("\n");
-        resolve(text);
-      });
-    });
+        if ("hasEOL" in item && item.hasEOL) {
+          chunks.push("\n");
+        }
+      }
 
-    return text;
-  } finally {
-    // Clean up temporary file
-    try {
-      await unlink(tempPath);
-    } catch (e) {
-      // Ignore cleanup errors
+      pages.push(chunks.join(" "));
+      await page.cleanup();
     }
+
+    return pages.join("\n");
+  } finally {
+    await document.destroy();
   }
+}
+
+function normalizeExtractedText(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+
+  if (normalized.length <= MAX_EXTRACTED_LENGTH) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, MAX_EXTRACTED_LENGTH)}\n[... document truncated for context length ...]`;
 }
 
 export async function extractDocumentText(
@@ -72,7 +86,7 @@ export async function extractDocumentText(
     let text = "";
 
     if (ext === ".pdf") {
-      // Extract PDF using pdf-text-extract (via temp file path)
+      // Extract PDF directly from the uploaded bytes to avoid external binaries.
       text = await extractPdf(buffer);
     } else if (ext === ".docx") {
       // Extract Word doc using mammoth
@@ -84,16 +98,7 @@ export async function extractDocumentText(
       throw new Error("No text extracted from document");
     }
 
-    // Normalize whitespace and truncate
-    text = text
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, MAX_EXTRACTED_LENGTH);
-
-    // If truncated, add indicator
-    if (text.length >= MAX_EXTRACTED_LENGTH) {
-      text += "\n[... document truncated for context length ...]";
-    }
+    text = normalizeExtractedText(text);
 
     return {
       text,

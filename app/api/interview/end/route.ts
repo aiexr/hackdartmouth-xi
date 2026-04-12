@@ -100,7 +100,11 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
       ? payload.overall_score
       : typeof payload.overallScore === "number"
         ? payload.overallScore
-        : 70;
+        : null;
+
+  if (typeof overallRaw !== "number" || !Number.isFinite(overallRaw)) {
+    throw new Error("Grading model returned no overall score.");
+  }
 
   const overallScore = clamp(Math.round(overallRaw), 1, 100);
 
@@ -119,10 +123,10 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
           }
           const dimension = item as Record<string, unknown>;
           const name = typeof dimension.name === "string" ? dimension.name : "Dimension";
-          const score =
-            typeof dimension.score === "number"
-              ? clamp(Math.round(dimension.score), 1, 100)
-              : 70;
+          if (typeof dimension.score !== "number" || !Number.isFinite(dimension.score)) {
+            return null;
+          }
+          const score = clamp(Math.round(dimension.score), 1, 100);
           const feedback =
             typeof dimension.feedback === "string" ? dimension.feedback : "No feedback provided.";
           return { name, score, feedback };
@@ -139,6 +143,9 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
             return null;
           }
           const question = item as Record<string, unknown>;
+          if (typeof question.score !== "number" || !Number.isFinite(question.score)) {
+            return null;
+          }
           return {
             question:
               typeof question.question === "string"
@@ -148,10 +155,7 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
               typeof question.answer_summary === "string"
                 ? question.answer_summary
                 : "Summary unavailable.",
-            score:
-              typeof question.score === "number"
-                ? clamp(Math.round(question.score), 1, 100)
-                : 70,
+            score: clamp(Math.round(question.score), 1, 100),
             feedback:
               typeof question.feedback === "string"
                 ? question.feedback
@@ -389,7 +393,7 @@ export async function POST(req: NextRequest) {
   let gradingResult: NormalizedGradingResult | null = null;
   let gradingError: string | null = null;
 
-    if (transcriptText) {
+  if (transcriptText) {
     const systemPrompt =
       "You are a senior interview coach. Grade interview performance with strict, constructive, and fair feedback. Return only valid JSON.";
 
@@ -469,68 +473,48 @@ export async function POST(req: NextRequest) {
 
     const userPrompt = promptParts.join("\n");
 
-      // Declare modelOverride here so it's visible in the catch block below.
-      let modelOverride: string | undefined = undefined;
+    const gradeInterview = async (image?: { mimeType: string; dataBase64: string }) => {
+      const autoSelectVision = Boolean(image);
+      const llmResponse = await ll(userPrompt, {
+        systemPrompt: autoSelectVision ? effectiveSystemPrompt : systemPrompt,
+        parseJson: true,
+        temperature: 0.2,
+        maxTokens: 3000,
+        modelOverride: autoSelectVision ? DEFAULT_DARTMOUTH_VISION_MODEL : undefined,
+        document: uploadedDocument
+          ? {
+              mimeType: uploadedDocument.mimeType,
+              filename: uploadedDocument.filename,
+              buffer: uploadedDocument.buffer,
+            }
+          : undefined,
+        image,
+        providerOverride: autoSelectVision ? "openai" : undefined,
+      });
 
-      try {
-        // Prefer a vision-capable model/provider when an image is attached.
-        const autoSelectVision = Boolean(diagramImage);
-        const providerOverride = autoSelectVision ? ("openai" as const) : undefined;
-        // When an image is present, force the Dartmouth vision model as the first try
-        // so a multimodal model is used instead of a text-only default.
-        modelOverride = autoSelectVision ? DEFAULT_DARTMOUTH_VISION_MODEL : undefined;
-        const modelFallbacks = autoSelectVision ? undefined : undefined;
+      const result = normalizeGradingResult(llmResponse.json);
+      result.model_used = llmResponse.modelUsed;
+      result.generated_at = new Date().toISOString();
+      return result;
+    };
 
-        const llmResponse = await ll(userPrompt, {
-          systemPrompt: effectiveSystemPrompt,
-          parseJson: true,
-          temperature: 0.2,
-          maxTokens: 3000,
-          modelOverride,
-          document: uploadedDocument
-            ? {
-                mimeType: uploadedDocument.mimeType,
-                filename: uploadedDocument.filename,
-                buffer: uploadedDocument.buffer,
-              }
-            : undefined,
-          image: diagramImage,
-          providerOverride,
-          modelFallbacks,
-        });
+    try {
+      gradingResult = await gradeInterview(diagramImage);
+    } catch (error) {
+      const primaryError = error instanceof Error ? error.message : String(error);
 
-        gradingResult = normalizeGradingResult(llmResponse.json);
-        gradingResult.model_used = llmResponse.modelUsed;
-        gradingResult.generated_at = new Date().toISOString();
-      } catch (error) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-
-        // If the model returned the literal IMAGE_UNREADABLE (which breaks JSON parsing),
-        // synthesize a safe grading result marking the diagram as unreadable so the UI can render.
-        if (errMsg.includes("IMAGE_UNREADABLE") || errMsg.includes('"IMAGE_UNREADABLE"')) {
-          gradingResult = {
-            overall_score: 70,
-            letter_grade: toLetterGrade(70),
-            dimensions: [],
-            per_question: [],
-            strengths: [],
-            improvements: [],
-            key_moments: [],
-            diagram_analysis: {
-              description:
-                "IMAGE_UNREADABLE: the model reported the diagram image as unreadable.",
-              strengths: [],
-              improvements: [],
-              key_points: [],
-            },
-          };
-          gradingResult.model_used = modelOverride ?? undefined;
-          gradingResult.generated_at = new Date().toISOString();
-          gradingError = null;
-        } else {
-          gradingError = errMsg;
+      if (diagramImage) {
+        try {
+          gradingResult = await gradeInterview();
+        } catch (retryError) {
+          const retryMessage =
+            retryError instanceof Error ? retryError.message : String(retryError);
+          gradingError = `${primaryError} Retry without diagram also failed: ${retryMessage}`;
         }
+      } else {
+        gradingError = primaryError;
       }
+    }
   }
 
   await db.collection("interviews").updateOne(

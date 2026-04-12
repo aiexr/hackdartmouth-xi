@@ -73,6 +73,39 @@ function toUser(value: Record<string, unknown>): User {
   };
 }
 
+function ProfileEditorSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="h-6 w-32 animate-pulse rounded-none bg-base-300/55" />
+        <div className="h-4 w-72 animate-pulse rounded-none bg-base-300/40" />
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <div className="h-4 w-24 animate-pulse rounded-none bg-base-300/40" />
+          <div className="h-10 animate-pulse rounded-none border border-border bg-base-200/40" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-16 animate-pulse rounded-none bg-base-300/40" />
+          <div className="h-24 animate-pulse rounded-none border border-border bg-base-200/40" />
+          <div className="h-3 w-28 animate-pulse rounded-none bg-base-300/35" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-4 w-44 animate-pulse rounded-none bg-base-300/40" />
+          <div className="h-10 animate-pulse rounded-none border border-border bg-base-200/40" />
+          <div className="h-3 w-52 animate-pulse rounded-none bg-base-300/35" />
+        </div>
+        <div className="flex items-center gap-3 pt-4">
+          <div className="inline-flex items-center gap-2 text-sm text-base-content/60">
+            <Loader2 className="size-4 animate-spin" />
+            Loading profile...
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ProfileEditor() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,13 +194,7 @@ export function ProfileEditor() {
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="size-5 animate-spin text-base-content/60" />
-        </CardContent>
-      </Card>
-    );
+    return <ProfileEditorSkeleton />;
   }
 
   return (

@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { PracticeSession } from "@/components/app/practice-session";
 import type { Scenario } from "@/data/scenarios";
 
@@ -86,6 +87,51 @@ function diffToScenarioDiff(d: string): Scenario["difficulty"] {
   if (d === "Easy") return "Foundations";
   if (d === "Medium") return "Growth";
   return "Stretch";
+}
+
+function ScenarioSetupSkeleton({ status }: { status: string }) {
+  return (
+    <div className="min-h-screen bg-base-200 px-6 py-10">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-none border border-border bg-base-100 px-3 py-2 text-sm text-base-content/70">
+            <Loader2 className="size-4 animate-spin" />
+            {status}
+          </div>
+          <div className="h-10 w-2/3 animate-pulse rounded-none bg-base-300/55" />
+          <div className="h-4 w-1/2 animate-pulse rounded-none bg-base-300/40" />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
+          <div className="space-y-4 rounded-none border border-border bg-base-100 p-6">
+            <div className="h-4 w-32 animate-pulse rounded-none bg-base-300/40" />
+            <div className="space-y-3">
+              <div className="h-4 w-full animate-pulse rounded-none bg-base-300/45" />
+              <div className="h-4 w-11/12 animate-pulse rounded-none bg-base-300/45" />
+              <div className="h-4 w-4/5 animate-pulse rounded-none bg-base-300/45" />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="space-y-2 rounded-none border border-base-300 p-4">
+                  <div className="h-3 w-16 animate-pulse rounded-none bg-base-300/40" />
+                  <div className="h-6 w-20 animate-pulse rounded-none bg-base-300/55" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-none border border-border bg-base-100 p-6">
+            <div className="h-4 w-24 animate-pulse rounded-none bg-base-300/40" />
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <div key={idx} className="h-10 animate-pulse rounded-none bg-base-300/45" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function LcPracticePage({
@@ -225,14 +271,7 @@ export default function LcPracticePage({
   }
 
   if (!scenario) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-base-200 px-6 text-center">
-        <div className="max-w-sm space-y-2">
-          <p className="font-medium text-base-content">{status}</p>
-          <p className="text-sm text-base-content/60">Setting up your interview session.</p>
-        </div>
-      </div>
-    );
+    return <ScenarioSetupSkeleton status={status} />;
   }
 
   return <PracticeSession scenario={scenario} />;

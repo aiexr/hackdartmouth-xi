@@ -111,6 +111,12 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error(`Failed to upload resume at stage '${uploadStage}':`, error);
     const message = error instanceof Error ? error.message : "Failed to upload resume";
-    return Response.json({ error: message }, { status: 500 });
+    return Response.json(
+      {
+        error: "Could not process this resume file",
+        details: `Upload failed while ${uploadStage}: ${message}`,
+      },
+      { status: 500 },
+    );
   }
 }

@@ -95,9 +95,11 @@ export function ResumeUploadProvider({ children }: { children: React.ReactNode }
         if (!res.ok) {
           const payload = await res.json().catch(() => null);
           const msg = asRecord(payload);
+          const details =
+            typeof msg.details === "string" && msg.details.trim() ? ` ${msg.details}` : "";
           throw new Error(
             typeof msg.error === "string" && msg.error.trim()
-              ? msg.error
+              ? `${msg.error}${details}`
               : "Failed to upload resume"
           );
         }
