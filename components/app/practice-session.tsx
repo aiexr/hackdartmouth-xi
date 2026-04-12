@@ -10,6 +10,7 @@ import {
   Braces,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Clock3,
   FileText,
   Lightbulb,
@@ -393,6 +394,7 @@ export function PracticeSession({
     "idle" | "connecting" | "connected" | "ended"
   >("idle");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [isProblemCollapsed, setIsProblemCollapsed] = useState(false);
 
   const [editorContent, setEditorContent] = useState(() =>
     buildDefaultEditorContent(scenario),
@@ -497,6 +499,7 @@ export function PracticeSession({
 
     setSelectedInterviewerId(availableInterviewers[nextIndex]!.id);
   }, [availableInterviewers, selectedInterviewerIndex]);
+  const shouldRedirectAfterSessionEndRef = useRef(true);
 
   const clearEndingCountdown = useCallback(() => {
     endingCountdownDeadlineRef.current = null;
@@ -555,6 +558,12 @@ export function PracticeSession({
 
   useEffect(() => {
     setIsPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      shouldRedirectAfterSessionEndRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1119,8 +1128,16 @@ export function PracticeSession({
           reviewParams.set("grading", "pending");
         }
 
+        if (!shouldRedirectAfterSessionEndRef.current) {
+          return;
+        }
+
         router.push(`/review/${scenario.id}?${reviewParams.toString()}`);
       } catch {
+        if (!shouldRedirectAfterSessionEndRef.current) {
+          return;
+        }
+
         if (interviewId) {
           router.push(`/review/${scenario.id}?interviewId=${interviewId}&grading=failed`);
           return;
@@ -1304,11 +1321,57 @@ export function PracticeSession({
     </div>
   );
 
+  const activeVideoControls =
+    hasSplitView && sessionState === "connected" && interviewMode === "video" ? (
+      <div className="flex items-center justify-center gap-2 border-t border-base-300 bg-base-100 px-3 py-3">
+        <button
+          type="button"
+          onClick={() => avatarRef.current?.toggleMute()}
+          className={cn(
+            "flex size-9 items-center justify-center rounded-none border transition hover:scale-105",
+            avatarControls.isMuted
+              ? "border-red-500 bg-red-500 text-white"
+              : "border-base-300 bg-base-100 text-base-content hover:bg-base-200",
+          )}
+          title={avatarControls.isMuted ? "Unmute" : "Mute"}
+        >
+          {avatarControls.isMuted ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => avatarRef.current?.toggleCamera()}
+          className={cn(
+            "flex size-9 items-center justify-center rounded-none border transition hover:scale-105",
+            !avatarControls.isCameraOn
+              ? "border-red-500 bg-red-500 text-white"
+              : "border-base-300 bg-base-100 text-base-content hover:bg-base-200",
+          )}
+          title={avatarControls.isCameraOn ? "Turn off camera" : "Turn on camera"}
+        >
+          {avatarControls.isCameraOn ? <Video className="size-4" /> : <VideoOff className="size-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={() => avatarRef.current?.stop()}
+          className="flex items-center gap-1.5 rounded-none bg-red-500 px-3 py-2 text-xs font-medium text-white transition hover:bg-red-600"
+        >
+          <PhoneOff className="size-3.5" />
+          End
+        </button>
+      </div>
+    ) : null;
+
   return (
     <div className="flex min-h-screen flex-col bg-base-200">
       <header className="border-b border-border bg-base-100/75 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
-          <Link href="/" className="text-base-content/60 transition hover:text-base-content">
+          <Link
+            href="/"
+            onClick={() => {
+              shouldRedirectAfterSessionEndRef.current = false;
+            }}
+            className="text-base-content/60 transition hover:text-base-content"
+          >
             <X className="size-5" />
           </Link>
 
@@ -1321,45 +1384,6 @@ export function PracticeSession({
                 : `${scenario.category.replace("-", " ")} round`}
             </div>
           </div>
-
-          {hasSplitView && sessionState === "connected" && interviewMode === "video" && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => avatarRef.current?.toggleMute()}
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-none border transition hover:scale-105",
-                  avatarControls.isMuted
-                    ? "border-red-500 bg-red-500 text-white"
-                    : "border-base-300 bg-base-100 text-base-content hover:bg-base-200",
-                )}
-                title={avatarControls.isMuted ? "Unmute" : "Mute"}
-              >
-                {avatarControls.isMuted ? <MicOff className="size-4" /> : <Mic className="size-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => avatarRef.current?.toggleCamera()}
-                className={cn(
-                  "flex size-8 items-center justify-center rounded-none border transition hover:scale-105",
-                  !avatarControls.isCameraOn
-                    ? "border-red-500 bg-red-500 text-white"
-                    : "border-base-300 bg-base-100 text-base-content hover:bg-base-200",
-                )}
-                title={avatarControls.isCameraOn ? "Turn off camera" : "Turn on camera"}
-              >
-                {avatarControls.isCameraOn ? <Video className="size-4" /> : <VideoOff className="size-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => avatarRef.current?.stop()}
-                className="flex items-center gap-1.5 rounded-none bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-600"
-              >
-                <PhoneOff className="size-3.5" />
-                End
-              </button>
-            </div>
-          )}
 
           <div className="flex items-center gap-2 text-sm font-semibold text-base-content/60">
             <Clock3 className="size-4" />
@@ -1567,6 +1591,7 @@ export function PracticeSession({
               {interviewerCarousel}
             </div>
           )}
+          {activeVideoControls}
         </div>
 
         {/* Active session layout — only once connected */}
@@ -1602,48 +1627,51 @@ export function PracticeSession({
                           {codingProblem.source}
                         </a>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => setIsProblemCollapsed((current) => !current)}
+                        className="ml-auto inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-base-content/45 transition hover:text-base-content/70"
+                      >
+                        {isProblemCollapsed ? "Show problem" : "Hide problem"}
+                        <ChevronDown
+                          className={cn(
+                            "size-3 transition-transform",
+                            isProblemCollapsed && "-rotate-90",
+                          )}
+                        />
+                      </button>
                     </div>
-                    <p className="text-sm leading-6 text-base-content/70">{codingProblem.description}</p>
-                    {codingProblem.examples.length > 0 && (
-                      <div className="mt-2 space-y-1.5">
-                        {codingProblem.examples.map((ex, i) => (
-                          <div key={i} className="rounded-none bg-base-200/60 px-3 py-2 font-mono text-xs leading-5">
-                            <div><span className="font-semibold text-base-content/60">Input:</span> {ex.input}</div>
-                            <div><span className="font-semibold text-base-content/60">Output:</span> {ex.output}</div>
-                            {ex.explanation && (
-                              <div className="mt-0.5 text-base-content/50"><span className="font-semibold">Explanation:</span> {ex.explanation}</div>
-                            )}
+                    {!isProblemCollapsed && (
+                      <>
+                        <p className="text-sm leading-6 text-base-content/70">{codingProblem.description}</p>
+                        {codingProblem.examples.length > 0 && (
+                          <div className="mt-2 space-y-1.5">
+                            {codingProblem.examples.map((ex, i) => (
+                              <div key={i} className="rounded-none bg-base-200/60 px-3 py-2 font-mono text-xs leading-5">
+                                <div><span className="font-semibold text-base-content/60">Input:</span> {ex.input}</div>
+                                <div><span className="font-semibold text-base-content/60">Output:</span> {ex.output}</div>
+                                {ex.explanation && (
+                                  <div className="mt-0.5 text-base-content/50"><span className="font-semibold">Explanation:</span> {ex.explanation}</div>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                    {codingProblem.constraints.length > 0 && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-[10px] font-medium uppercase tracking-wider text-base-content/40 hover:text-base-content/60">
-                          Constraints
-                        </summary>
-                        <ul className="mt-1 space-y-0.5 pl-3">
-                          {codingProblem.constraints.map((c) => (
-                            <li key={c} className="text-[10px] text-base-content/50 before:mr-1 before:content-['·']">{c}</li>
-                          ))}
-                        </ul>
-                      </details>
+                        )}
+                        {codingProblem.constraints.length > 0 && (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-[10px] font-medium uppercase tracking-wider text-base-content/40 hover:text-base-content/60">
+                              Constraints
+                            </summary>
+                            <ul className="mt-1 space-y-0.5 pl-3">
+                              {codingProblem.constraints.map((c) => (
+                                <li key={c} className="text-[10px] text-base-content/50 before:mr-1 before:content-['·']">{c}</li>
+                              ))}
+                            </ul>
+                          </details>
+                        )}
+                      </>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleShareCodeWithInterviewer}
-                    disabled={sessionState !== "connected"}
-                    className={cn(
-                      "inline-flex shrink-0 items-center gap-2 rounded-none border px-3 py-1.5 text-xs font-medium transition",
-                      sessionState === "connected"
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400"
-                        : "border-border bg-base-200/40 text-base-content/60",
-                    )}
-                  >
-                    <Sparkles className="size-3.5" />
-                    {isQuantProblem ? "Save scratchpad" : "Save code"}
-                  </button>
                 </div>
 
                 <div className="min-h-0 flex-1">

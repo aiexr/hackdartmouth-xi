@@ -425,7 +425,7 @@ export default async function ReviewPage({
 
         <Card className="bg-base-100/85 text-center">
           <CardContent className="p-8">
-            <div className="inline-flex items-center gap-2 rounded-none bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+            <div className="inline-flex items-center gap-2 rounded-none border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">
               <Award className="size-4" />
               Session complete
             </div>
@@ -446,7 +446,7 @@ export default async function ReviewPage({
             </div>
 
             <div
-              className={`mt-5 inline-flex items-center gap-2 text-sm font-semibold ${
+              className={`mt-5 flex w-full items-center justify-center gap-2 text-center text-sm font-semibold ${
                 visibleScoreDelta === null
                   ? "text-base-content/70"
                   : isNegativeScoreDelta

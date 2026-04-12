@@ -164,7 +164,7 @@ export function SettingsPanel() {
           <CardContent className="py-5 pr-5 pl-8">
             <div className="flex w-full items-start gap-4">
               <div className="flex min-w-0 flex-1 items-start gap-4 text-left">
-                <div className="flex size-11 items-center justify-center rounded-none bg-destructive/10 text-destructive">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-none bg-destructive/10 text-destructive">
                   <Trash2 className="size-5" />
                 </div>
                 <div>

@@ -31,12 +31,22 @@ const monthLabels = [
 
 type ActivityCalendarProps = {
   activityDays: ActivityDay[];
-  totalSessions: number;
 };
+
+type CalendarView =
+  | { kind: "rolling" }
+  | { kind: "year"; year: number };
 
 type CalendarCell =
   | { kind: "day"; date: string; count: number }
   | { kind: "pad"; key: string };
+
+function toDayKey(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function buildWeeks(days: CalendarCell[]) {
   const weeks: CalendarCell[][] = [];
@@ -88,27 +98,24 @@ function getMonthPositions(weeks: CalendarCell[][]) {
 function getAvailableYears(days: ActivityDay[]) {
   const years = new Set<number>();
   for (const day of days) {
-    years.add(new Date(day.date).getFullYear());
+    years.add(Number(day.date.slice(0, 4)));
   }
   return [...years].sort((a, b) => b - a);
 }
 
-function buildYearDays(activityDays: ActivityDay[], year: number) {
+function buildRangeDays(activityDays: ActivityDay[], start: Date, end: Date) {
   const countsByDate = new Map<string, number>();
 
   for (const day of activityDays) {
-    const date = new Date(day.date);
-    if (date.getFullYear() !== year) continue;
     const normalized = day.date.slice(0, 10);
     countsByDate.set(normalized, day.count);
   }
 
-  const cursor = new Date(year, 0, 1);
-  const end = new Date(year, 11, 31);
+  const cursor = new Date(start);
   const days: CalendarCell[] = [];
 
   while (cursor <= end) {
-    const iso = cursor.toISOString().slice(0, 10);
+    const iso = toDayKey(cursor);
     days.push({
       kind: "day",
       date: iso,
@@ -120,24 +127,39 @@ function buildYearDays(activityDays: ActivityDay[], year: number) {
   return days;
 }
 
-export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalendarProps) {
-  const availableYears = useMemo(() => getAvailableYears(activityDays), [activityDays]);
-  const [selectedYear, setSelectedYear] = useState<number>(
-    availableYears[0] ?? new Date().getFullYear(),
-  );
+function buildRollingYearDays(activityDays: ActivityDay[]) {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
 
-  const selectedYearDays = useMemo(
-    () => buildYearDays(activityDays, selectedYear),
-    [activityDays, selectedYear],
-  );
-  const weeks = useMemo(() => buildWeeks(selectedYearDays), [selectedYearDays]);
-  const months = useMemo(() => getMonthPositions(weeks), [weeks]);
-  const selectedYearSessions = useMemo(
+  const start = new Date(end);
+  start.setDate(start.getDate() - 364);
+
+  return buildRangeDays(activityDays, start, end);
+}
+
+function buildYearDays(activityDays: ActivityDay[], year: number) {
+  return buildRangeDays(activityDays, new Date(year, 0, 1), new Date(year, 11, 31));
+}
+
+export function ActivityCalendar({ activityDays }: ActivityCalendarProps) {
+  const availableYears = useMemo(() => getAvailableYears(activityDays), [activityDays]);
+  const [selectedView, setSelectedView] = useState<CalendarView>({ kind: "rolling" });
+
+  const visibleDays = useMemo(
     () =>
-      selectedYearDays.reduce((sum, day) => (
+      selectedView.kind === "year"
+        ? buildYearDays(activityDays, selectedView.year)
+        : buildRollingYearDays(activityDays),
+    [activityDays, selectedView],
+  );
+  const weeks = useMemo(() => buildWeeks(visibleDays), [visibleDays]);
+  const months = useMemo(() => getMonthPositions(weeks), [weeks]);
+  const visibleSessions = useMemo(
+    () =>
+      visibleDays.reduce((sum, day) => (
         day.kind === "day" ? sum + day.count : sum
       ), 0),
-    [selectedYearDays],
+    [visibleDays],
   );
   const gridWidth = weeks.length > 0 ? weeks.length * CELL + (weeks.length - 1) * GAP : 0;
 
@@ -145,21 +167,32 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
     <div>
       <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-base-content">
-          {availableYears.length > 0
-            ? `${selectedYearSessions} interview session${selectedYearSessions !== 1 ? "s" : ""} in ${selectedYear}`
-            : `${totalSessions} interview session${totalSessions !== 1 ? "s" : ""} in the last year`}
+          {selectedView.kind === "year"
+            ? `${visibleSessions} interview session${visibleSessions !== 1 ? "s" : ""} in ${selectedView.year}`
+            : `${visibleSessions} interview session${visibleSessions !== 1 ? "s" : ""} in the last 12 months`}
         </p>
         {availableYears.length > 0 && (
           <div className="flex items-center gap-2 text-xs text-base-content/60">
-            <span>Year</span>
+            <span>View</span>
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setSelectedView({ kind: "rolling" })}
+                className={
+                  selectedView.kind === "rolling"
+                    ? "rounded-none border border-primary/60 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                    : "rounded-none border border-base-300 px-2 py-0.5 text-[11px] font-medium text-base-content/60 transition hover:border-base-content/30 hover:text-base-content"
+                }
+              >
+                Last 12 mo
+              </button>
               {availableYears.map((year) => (
                 <button
                   key={year}
                   type="button"
-                  onClick={() => setSelectedYear(year)}
+                  onClick={() => setSelectedView({ kind: "year", year })}
                   className={
-                    year === selectedYear
+                    selectedView.kind === "year" && year === selectedView.year
                       ? "rounded-none border border-primary/60 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
                       : "rounded-none border border-base-300 px-2 py-0.5 text-[11px] font-medium text-base-content/60 transition hover:border-base-content/30 hover:text-base-content"
                   }
@@ -172,11 +205,11 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-none border border-border px-3 py-2">
+      <div className="overflow-x-auto overflow-y-visible rounded-none border border-border px-3 py-2">
         <div className="min-w-max">
           <div
             className="relative"
-            style={{ marginLeft: DAY_LABEL_WIDTH, width: gridWidth, height: 16 }}
+            style={{ marginLeft: DAY_LABEL_WIDTH, width: gridWidth, height: 40 }}
           >
             {months.map((month, i) => {
               const nextX = months[i + 1]?.x ?? weeks.length;
@@ -189,7 +222,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
               return (
                 <span
                   key={`${month.label}-${month.x}`}
-                  className="absolute top-0 text-xs text-base-content/60"
+                  className="absolute bottom-0 text-xs text-base-content/60"
                   style={{ left: month.x * STEP }}
                 >
                   {month.label}

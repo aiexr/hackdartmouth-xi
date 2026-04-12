@@ -1756,7 +1756,7 @@ export const improvementThemes = [
 ];
 
 export const weeklyGoals = [
-  { label: "Complete 4 practice loops this week", current: 2, total: 4 },
+  { label: "Complete 4 interviews this week", current: 2, total: 4 },
   { label: "Raise staff intro mastery to 80%", current: 68, total: 80 },
   { label: "Hit a 90+ clarity score once", current: 83, total: 90 },
 ];

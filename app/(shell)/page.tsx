@@ -21,6 +21,22 @@ import { LandingPage } from "@/components/app/landing-page";
 export const dynamic = "force-dynamic";
 export const maxDuration = 25;
 
+function getRollingActiveDays(activityDays: { date: string; count: number }[]) {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+
+  const start = new Date(end);
+  start.setDate(start.getDate() - 364);
+
+  const startKey = [
+    start.getFullYear(),
+    `${start.getMonth() + 1}`.padStart(2, "0"),
+    `${start.getDate()}`.padStart(2, "0"),
+  ].join("-");
+
+  return activityDays.filter((day) => day.date >= startKey && day.count > 0).length;
+}
+
 async function DashboardMetrics({ email }: { email?: string | null }) {
   const metrics = await getUserInterviewMetrics(email ?? undefined).catch(
     () => getUserInterviewMetrics(),
@@ -49,6 +65,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
   const streakLabel = metrics.streakDays
     ? `${metrics.streakDays}-day streak active`
     : "No active streak";
+  const rollingActiveDays = getRollingActiveDays(metrics.activityDays);
 
   return (
     <>
@@ -167,7 +184,6 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
         <div className="min-w-0">
           <ActivityCalendar
             activityDays={metrics.activityDays}
-            totalSessions={metrics.completedSessions}
           />
         </div>
         <div className="flex flex-col divide-y divide-base-300/70 border border-border bg-base-100">
@@ -194,7 +210,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
               <Calendar className="size-[18px]" />
             </div>
             <div className="min-w-0">
-              <div className="text-2xl font-semibold leading-none">{metrics.activityDays.filter((d) => d.count > 0).length}</div>
+              <div className="text-2xl font-semibold leading-none">{rollingActiveDays}</div>
               <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Active days</div>
             </div>
           </div>

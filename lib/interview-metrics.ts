@@ -192,16 +192,23 @@ function getActivityDays(interviews: InterviewRecord[]): ActivityDay[] {
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
 
-  // Build a full grid of the last 365 days
+  // Keep the full recorded span so the calendar can render whole Jan-Dec years on demand.
   const days: ActivityDay[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  for (let i = 364; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = toDayKey(d);
+  const earliestInterviewDate = interviews
+    .map((interview) => toDate(interview.completedAt ?? interview.createdAt))
+    .filter((date): date is Date => Boolean(date))
+    .sort((left, right) => left.getTime() - right.getTime())[0] ?? null;
+
+  const start = earliestInterviewDate ? new Date(earliestInterviewDate) : new Date(today);
+  start.setHours(0, 0, 0, 0);
+
+  while (start <= today) {
+    const key = toDayKey(start);
     days.push({ date: key, count: counts.get(key) ?? 0 });
+    start.setDate(start.getDate() + 1);
   }
 
   return days;
@@ -263,7 +270,7 @@ export async function getUserInterviewMetrics(
       activityDays: getActivityDays([]),
       goals: [
         {
-          label: `Complete ${DEFAULT_WEEKLY_TARGET} practice loops this week`,
+          label: `Complete ${DEFAULT_WEEKLY_TARGET} interviews this week`,
           current: 0,
           total: DEFAULT_WEEKLY_TARGET,
         },
@@ -307,7 +314,7 @@ export async function getUserInterviewMetrics(
       activityDays: getActivityDays([]),
       goals: [
         {
-          label: `Complete ${DEFAULT_WEEKLY_TARGET} practice loops this week`,
+          label: `Complete ${DEFAULT_WEEKLY_TARGET} interviews this week`,
           current: 0,
           total: DEFAULT_WEEKLY_TARGET,
         },
@@ -389,7 +396,7 @@ export async function getUserInterviewMetrics(
     activityDays,
     goals: [
       {
-        label: `Complete ${weeklyTarget} practice loops this week`,
+        label: `Complete ${weeklyTarget} interviews this week`,
         current: weeklyCompleted,
         total: weeklyTarget,
       },

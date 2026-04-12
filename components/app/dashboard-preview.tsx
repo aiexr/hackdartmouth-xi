@@ -196,7 +196,6 @@ export function DashboardPreview({ className, avatarUrl }: DashboardPreviewProps
           <div className="min-w-0">
             <ActivityCalendar
               activityDays={activityDays}
-              totalSessions={0}
             />
           </div>
           <div className="flex flex-col divide-y divide-base-300/70 border border-border bg-base-100">

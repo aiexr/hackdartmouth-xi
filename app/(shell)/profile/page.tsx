@@ -157,6 +157,10 @@ async function ProfileHistorySection({ email }: { email?: string | null }) {
         interview._id
           ? String(interview._id)
           : `${interview.createdAt?.toISOString?.() ?? "session"}-${scenarioId ?? "unknown"}`;
+      const gradingError =
+        typeof (interview as { gradingError?: unknown }).gradingError === "string"
+          ? (interview as { gradingError?: string }).gradingError ?? null
+          : null;
 
       return {
         id: interviewId,
@@ -171,6 +175,7 @@ async function ProfileHistorySection({ email }: { email?: string | null }) {
         letterGrade,
         transcriptCount,
         reviewHref: `/review/${scenarioId ?? "interview"}?interviewId=${interviewId}`,
+        gradingError,
       };
     });
 
@@ -198,8 +203,8 @@ async function ProfileHistorySection({ email }: { email?: string | null }) {
   const descendingSessions = sessionsWithDelta
     .slice()
     .sort((left, right) => {
-      const leftTime = new Date(left.completedAt ?? left.createdAt).getTime();
-      const rightTime = new Date(right.completedAt ?? right.createdAt).getTime();
+      const leftTime = new Date(left.completedAt ?? left.createdAt ?? 0).getTime();
+      const rightTime = new Date(right.completedAt ?? right.createdAt ?? 0).getTime();
       return rightTime - leftTime;
     });
 
