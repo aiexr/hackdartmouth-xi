@@ -606,28 +606,25 @@ export function PracticeSession({
             </div>
 
           </section>
-
-          {/* Media surface — inline in pre-session flow, centered */}
-          <div className="mx-auto w-full max-w-2xl px-6 pb-6">
-            {mediaSurface}
-          </div>
           </div>
         )}
 
-        {/* Media surface — absolute positioned for connected/ended states */}
-        {(sessionState === "connected" || sessionState === "ended") && (
-          <div
-            className={cn(
-              "z-20 overflow-hidden",
+        {/* Media surface — keep mounted across state changes to avoid teardown/reconnect loops */}
+        <div
+          className={cn(
+            "z-20 overflow-hidden",
+            (sessionState === "idle" || sessionState === "connecting") &&
+              "mx-auto w-full max-w-2xl px-6 pb-6",
+            (sessionState === "connected" || sessionState === "ended") &&
               hasSplitView &&
-                "absolute left-4 top-4 w-56 border border-base-300 bg-base-100 shadow-lg xl:w-64",
+              "absolute left-4 top-4 w-56 border border-base-300 bg-base-100 shadow-lg xl:w-64",
+            (sessionState === "connected" || sessionState === "ended") &&
               !hasSplitView &&
-                "absolute inset-x-0 top-0 mx-auto w-full max-w-3xl p-6",
-            )}
-          >
-            {mediaSurface}
-          </div>
-        )}
+              "absolute inset-x-0 top-0 mx-auto w-full max-w-3xl p-6",
+          )}
+        >
+          {mediaSurface}
+        </div>
 
         {/* Active session layout — only once connected */}
         {(sessionState === "connected" || sessionState === "ended") && (
