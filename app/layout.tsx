@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { RootProvider } from "@/app/root-provider";
 import { getSiteUrl } from "@/lib/site-url";
@@ -15,89 +14,70 @@ const displayFont = Fraunces({
   variable: "--font-display",
 });
 
-async function getMetadataBase() {
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+const metadataBase = new URL(getSiteUrl());
+const socialImageUrl = new URL("/social-preview.png", metadataBase);
 
-  if (host) {
-    const protocol =
-      requestHeaders.get("x-forwarded-proto") ??
-      (host.includes("localhost") ? "http" : "https");
-
-    return new URL(`${protocol}://${host}`);
-  }
-
-  return new URL(getSiteUrl());
-}
-
-export async function generateMetadata(): Promise<Metadata> {
-  const metadataBase = await getMetadataBase();
-  const socialImageUrl = new URL("/social-preview.png", metadataBase);
-  const twitterImageUrl = socialImageUrl;
-
-  return {
-    metadataBase,
+export const metadata: Metadata = {
+  metadataBase,
+  title: "LeetSpeak",
+  description: "Speak your way through interviews.",
+  alternates: {
+    canonical: "/",
+  },
+  icons: {
+    icon: [
+      {
+        url: "/logo.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/logo-dark.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+    shortcut: [
+      {
+        url: "/logo.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/logo-dark.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+  },
+  openGraph: {
     title: "LeetSpeak",
     description: "Speak your way through interviews.",
-    alternates: {
-      canonical: "/",
-    },
-    icons: {
-      icon: [
-        {
-          url: "/logo.svg",
-          type: "image/svg+xml",
-          media: "(prefers-color-scheme: light)",
-        },
-        {
-          url: "/logo-dark.svg",
-          type: "image/svg+xml",
-          media: "(prefers-color-scheme: dark)",
-        },
-      ],
-      shortcut: [
-        {
-          url: "/logo.svg",
-          type: "image/svg+xml",
-          media: "(prefers-color-scheme: light)",
-        },
-        {
-          url: "/logo-dark.svg",
-          type: "image/svg+xml",
-          media: "(prefers-color-scheme: dark)",
-        },
-      ],
-    },
-    openGraph: {
-      title: "LeetSpeak",
-      description: "Speak your way through interviews.",
-      url: "/",
-      siteName: "LeetSpeak",
-      images: [
-        {
-          url: socialImageUrl,
-          width: 1238,
-          height: 446,
-          alt: "LeetSpeak social preview",
-          type: "image/png",
-        },
-      ],
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: "LeetSpeak",
-      description: "Speak your way through interviews.",
-      images: [
-        {
-          url: twitterImageUrl,
-          alt: "LeetSpeak social preview",
-        },
-      ],
-    },
-  };
-}
+    url: "/",
+    siteName: "LeetSpeak",
+    images: [
+      {
+        url: socialImageUrl,
+        width: 1238,
+        height: 446,
+        alt: "LeetSpeak social preview",
+        type: "image/png",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LeetSpeak",
+    description: "Speak your way through interviews.",
+    images: [
+      {
+        url: socialImageUrl,
+        alt: "LeetSpeak social preview",
+      },
+    ],
+  },
+};
 
 export default function RootLayout({
   children,
