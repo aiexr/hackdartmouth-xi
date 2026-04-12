@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { RootProvider } from "@/app/root-provider";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 const bodyFont = Plus_Jakarta_Sans({
@@ -14,9 +15,12 @@ const displayFont = Fraunces({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteUrl()),
   title: "LeetSpeak",
-  description:
-    "A polished MVP for role-specific interview practice with realistic mock sessions, feedback, and progress tracking.",
+  description: "Speak your way through interviews.",
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: [
       {
@@ -42,6 +46,27 @@ export const metadata: Metadata = {
         media: "(prefers-color-scheme: dark)",
       },
     ],
+  },
+  openGraph: {
+    title: "LeetSpeak",
+    description: "Speak your way through interviews.",
+    url: "/",
+    siteName: "LeetSpeak",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "LeetSpeak social preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LeetSpeak",
+    description: "Speak your way through interviews.",
+    images: ["/opengraph-image"],
   },
 };
 
