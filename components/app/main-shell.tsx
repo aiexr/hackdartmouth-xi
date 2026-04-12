@@ -107,10 +107,10 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                     src={session.user.image}
                     alt=""
                     referrerPolicy="no-referrer"
-                    className="size-9 rounded-none ring-2 ring-border"
+                    className="size-9 rounded-full ring-2 ring-border"
                   />
                 ) : (
-                  <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-content ring-2 ring-primary/20">
+                  <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-content ring-2 ring-primary/20">
                     <User className="size-4" />
                   </div>
                 )}
@@ -121,7 +121,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
               onClick={() => signIn("google")}
               className="ml-auto cursor-pointer transition-opacity hover:opacity-80"
             >
-              <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-content ring-2 ring-primary/20">
+              <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-content ring-2 ring-primary/20">
                 <User className="size-4" />
               </div>
             </button>

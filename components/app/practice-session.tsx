@@ -186,7 +186,7 @@ export function PracticeSession({
     "idle" | "connecting" | "connected" | "ended"
   >("idle");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<File | null>(null);
+
   const [editorContent, setEditorContent] = useState(() =>
     buildDefaultEditorContent(scenario),
   );
@@ -348,34 +348,16 @@ export function PracticeSession({
           throw new Error("Missing interview id");
         }
 
-        if (selectedDocument) {
-          const formData = new FormData();
-          formData.append("interviewId", id);
-          formData.append("transcript", JSON.stringify(finalTranscript));
-          formData.append("document", selectedDocument);
-          if (isTechnical) {
-            formData.append("editorContent", editorContent);
-          }
-          if (isSystemDesign && diagramSnapshot) {
-            formData.append("diagramSnapshot", diagramSnapshot);
-          }
-
-          await fetch("/api/interview/end", {
-            method: "POST",
-            body: formData,
-          });
-        } else {
-          await fetch("/api/interview/end", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              interviewId: id,
-              transcript: finalTranscript,
-              editorContent: isTechnical ? editorContent : undefined,
-              diagramSnapshot: isSystemDesign ? diagramSnapshot : undefined,
-            }),
-          });
-        }
+        await fetch("/api/interview/end", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            interviewId: id,
+            transcript: finalTranscript,
+            editorContent: isTechnical ? editorContent : undefined,
+            diagramSnapshot: isSystemDesign ? diagramSnapshot : undefined,
+          }),
+        });
 
         router.push(`/review/${scenario.id}?interviewId=${id}`);
       } catch {
@@ -390,7 +372,6 @@ export function PracticeSession({
       scenario.category,
       scenario.difficulty,
       scenario.id,
-      selectedDocument,
       storageKey,
     ],
   );
@@ -610,38 +591,6 @@ export function PracticeSession({
                     {tone.label}
                   </button>
                 ))}
-              </div>
-
-              <div className="flex max-w-sm items-center gap-3 rounded-lg border border-border bg-base-200/40 px-4 py-3">
-                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-base-content/60 hover:text-base-content">
-                  <FileText className="size-4" />
-                  <input
-                    type="file"
-                    accept=".pdf,.docx"
-                    onChange={(event) => {
-                      const file = event.currentTarget.files?.[0];
-                      if (file) {
-                        setSelectedDocument(file);
-                      }
-                    }}
-                    className="hidden"
-                  />
-                  <span>{selectedDocument ? "Change" : "Upload"} resume</span>
-                </label>
-                {selectedDocument && (
-                  <>
-                    <span className="truncate text-xs text-base-content/60">
-                      {selectedDocument.name}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDocument(null)}
-                      className="ml-auto text-base-content/60 hover:text-base-content"
-                    >
-                      <X className="size-4" />
-                    </button>
-                  </>
-                )}
               </div>
 
               <div className="flex flex-wrap gap-2">

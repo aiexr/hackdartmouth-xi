@@ -58,6 +58,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   const sessionRef = useRef<LiveAvatarSession | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const lastPromptIdRef = useRef<string | null>(null);
+  const wasConnectedRef = useRef(false);
   const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
     user: null,
     interviewer: null,
@@ -205,6 +206,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
 
   const startSession = useCallback(async () => {
     setError(null);
+    wasConnectedRef.current = false;
     updateStatus("connecting");
 
     await startUserCamera();
@@ -241,11 +243,17 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
 
       session.on(SessionEvent.SESSION_STATE_CHANGED, (state: SessionState) => {
         if (state === SessionState.CONNECTED) {
+          wasConnectedRef.current = true;
           lastPromptIdRef.current = null;
           updateStatus("connected");
         } else if (state === SessionState.DISCONNECTED) {
-          updateStatus("ended");
-          onSessionEnd?.(transcriptRef.current);
+          if (wasConnectedRef.current) {
+            updateStatus("ended");
+            onSessionEnd?.(transcriptRef.current);
+          } else {
+            setError("Session disconnected before connecting. Please try again.");
+            updateStatus("idle");
+          }
         }
       });
 
