@@ -2,14 +2,17 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  Calendar,
   Play,
   Target,
   TrendingUp,
   Trophy,
   Zap,
+  Flame,
 } from "lucide-react";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
+import { ActivityCalendar } from "@/components/app/activity-calendar";
 import { MainShell } from "@/components/app/main-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -169,6 +172,48 @@ export default async function DashboardPage() {
                     <Progress value={(goal.current / goal.total) * 100} />
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(220px,1fr)]">
+          <div className="min-w-0">
+            <ActivityCalendar
+              activityDays={metrics.activityDays}
+              totalSessions={metrics.completedSessions}
+            />
+          </div>
+          <div className="flex flex-col justify-around rounded-none border border-border bg-card p-5">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-none bg-orange-50">
+                <Flame className="size-5 text-orange-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-semibold leading-tight">{metrics.streakDays}</div>
+                <div className="text-xs text-muted-foreground">Current streak</div>
+              </div>
+            </div>
+            <div className="h-px bg-border" />
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-none bg-amber-50">
+                <Trophy className="size-5 text-amber-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-semibold leading-tight">{metrics.longestStreak}</div>
+                <div className="text-xs text-muted-foreground">Longest streak</div>
+              </div>
+            </div>
+            <div className="h-px bg-border" />
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-none bg-emerald-50">
+                <Calendar className="size-5 text-emerald-500" />
+              </div>
+              <div>
+                <div className="text-2xl font-semibold leading-tight">
+                  {metrics.activityDays.filter((day) => day.count > 0).length}
+                </div>
+                <div className="text-xs text-muted-foreground">Active days</div>
               </div>
             </div>
           </div>
