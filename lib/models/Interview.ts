@@ -169,7 +169,8 @@ export class InterviewModel {
     if (!db) return;
 
     const interviewsCollection = db.collection<Interview>("interviews");
-    await interviewsCollection.createIndex({ email: 1 });
+    await interviewsCollection.createIndex({ userId: 1, createdAt: -1 });
+    await interviewsCollection.createIndex({ email: 1, createdAt: -1 });
     await interviewsCollection.createIndex({ scenarioId: 1 });
     await interviewsCollection.createIndex({ createdAt: 1 });
     await interviewsCollection.createIndex({ status: 1 });

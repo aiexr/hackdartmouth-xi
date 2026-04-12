@@ -22,16 +22,12 @@ export async function GET() {
   }
 
   try {
-    let user = await UserModel.getUserByEmail(session.user.email);
-
-    if (!user) {
-      user = await UserModel.findOrCreateUser(
-        session.user.email,
-        session.user.name ?? "",
-        session.user.image ?? "",
-        "google",
-      );
-    }
+    const user = await UserModel.findOrCreateUser(
+      session.user.email,
+      session.user.name ?? "",
+      session.user.image ?? "",
+      "google",
+    );
 
     return Response.json(sanitizeUserForClient(user));
   } catch (error) {
@@ -67,15 +63,12 @@ export async function PATCH(request: Request) {
     }
 
     if (preferences !== undefined || parsedWeeklyGoal !== undefined) {
-      let user = await UserModel.getUserByEmail(session.user.email);
-      if (!user) {
-        user = await UserModel.findOrCreateUser(
-          session.user.email,
-          session.user.name ?? "",
-          session.user.image ?? "",
-          "google",
-        );
-      }
+      const user = await UserModel.findOrCreateUser(
+        session.user.email,
+        session.user.name ?? "",
+        session.user.image ?? "",
+        "google",
+      );
 
       const basePreferences =
         user.preferences ?? {

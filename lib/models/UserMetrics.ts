@@ -39,41 +39,46 @@ export interface UserMetrics {
 }
 
 export class UserMetricsModel {
+  private static indexesPromise: Promise<void> | null = null;
+
   static async initializeMetrics(email: string, userId?: ObjectId): Promise<UserMetrics> {
+    await this.ensureIndexes();
+
     const db = await getMongoDb();
     if (!db) throw new Error("MongoDB not connected");
 
     const metricsCollection = db.collection<UserMetrics>("userMetrics");
+    const now = new Date();
+    const metrics = await metricsCollection.findOneAndUpdate(
+      { email },
+      {
+        $setOnInsert: {
+          userId: userId || null,
+          email,
+          totalSessions: 0,
+          completedSessions: 0,
+          gradedSessions: 0,
+          averageScore: null,
+          bestScore: null,
+          weeklyCompleted: 0,
+          weeklyTarget: 4,
+          lastWeekReset: now,
+          streakDays: 0,
+          lastSessionDate: null,
+          byTrack: [],
+          improvements: [],
+          achievements: [],
+          lastUpdated: now,
+        },
+      },
+      { upsert: true, returnDocument: "after" },
+    );
 
-    // Create index if it doesn't exist
-    await metricsCollection.createIndex({ email: 1 }, { unique: true });
-
-    const existingMetrics = await metricsCollection.findOne({ email });
-    if (existingMetrics) {
-      return existingMetrics;
+    if (!metrics) {
+      throw new Error(`Failed to initialize metrics for ${email}`);
     }
 
-    const newMetrics: UserMetrics = {
-      userId: userId || null,
-      email,
-      totalSessions: 0,
-      completedSessions: 0,
-      gradedSessions: 0,
-      averageScore: null,
-      bestScore: null,
-      weeklyCompleted: 0,
-      weeklyTarget: 4,
-      lastWeekReset: new Date(),
-      streakDays: 0,
-      lastSessionDate: null,
-      byTrack: [],
-      improvements: [],
-      achievements: [],
-      lastUpdated: new Date(),
-    };
-
-    const result = await metricsCollection.insertOne(newMetrics);
-    return { ...newMetrics, _id: result.insertedId };
+    return metrics;
   }
 
   static async getMetricsByEmail(email: string): Promise<UserMetrics | null> {
@@ -85,10 +90,19 @@ export class UserMetricsModel {
   }
 
   static async ensureIndexes(): Promise<void> {
-    const db = await getMongoDb();
-    if (!db) return;
+    if (!this.indexesPromise) {
+      this.indexesPromise = (async () => {
+        const db = await getMongoDb();
+        if (!db) return;
 
-    const metricsCollection = db.collection<UserMetrics>("userMetrics");
-    await metricsCollection.createIndex({ email: 1 }, { unique: true });
+        const metricsCollection = db.collection<UserMetrics>("userMetrics");
+        await metricsCollection.createIndex({ email: 1 }, { unique: true });
+      })().catch((error) => {
+        this.indexesPromise = null;
+        throw error;
+      });
+    }
+
+    await this.indexesPromise;
   }
 }

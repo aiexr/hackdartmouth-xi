@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Briefcase, Edit3, User } from "lucide-react";
+import { scenarios } from "@/data/scenarios";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
 import { InterviewModel, UserModel } from "@/lib/models";
@@ -11,6 +12,52 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
+
+const scenarioById = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
+
+function formatScenarioTitleFromId(scenarioId: string) {
+  const normalized = scenarioId
+    .replace(/^lc-/, "")
+    .replace(/^quant-/, "")
+    .split("-")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+  return normalized || "Practice session";
+}
+
+function getHistoryScenarioMeta(scenarioId: string | null) {
+  if (!scenarioId) {
+    return {
+      title: "Practice session",
+      categoryLabel: "Interview",
+      trackLabel: null,
+      difficultyLabel: null,
+    };
+  }
+
+  const scenario = scenarioById.get(scenarioId);
+  if (scenario) {
+    return {
+      title: scenario.title,
+      categoryLabel: scenario.category.replace(/-/g, " "),
+      trackLabel: scenario.trackLabel,
+      difficultyLabel: scenario.difficulty,
+    };
+  }
+
+  return {
+    title: formatScenarioTitleFromId(scenarioId),
+    categoryLabel: scenarioId.startsWith("lc-")
+      ? "LeetCode"
+      : scenarioId.startsWith("quant-")
+        ? "Quant"
+        : "Interview",
+    trackLabel: null,
+    difficultyLabel: null,
+  };
+}
 
 async function ProfileStats({ email }: { email?: string | null }) {
   const [metrics, dbUser] = await Promise.all([
@@ -97,33 +144,66 @@ async function ProfileHistorySection({ email }: { email?: string | null }) {
     .sort((left, right) => {
       const leftTime = new Date(left.completedAt ?? left.createdAt).getTime();
       const rightTime = new Date(right.completedAt ?? right.createdAt).getTime();
-      return rightTime - leftTime;
+      return leftTime - rightTime;
     })
-    .map((interview) => ({
-      id:
+    .map((interview) => {
+      const scenarioId = interview.scenarioId ?? null;
+      const scenarioMeta = getHistoryScenarioMeta(scenarioId);
+      const transcriptCount = Array.isArray(interview.transcript) ? interview.transcript.length : 0;
+      const overallScore =
+        typeof interview.overallScore === "number" ? Math.max(0, Math.min(100, Math.round(interview.overallScore))) : null;
+      const letterGrade = typeof interview.letterGrade === "string" ? interview.letterGrade : null;
+      const interviewId =
         interview._id
           ? String(interview._id)
-          : `${interview.createdAt?.toISOString?.() ?? "session"}-${interview.scenarioId ?? "unknown"}`,
-      scenarioId: interview.scenarioId ?? null,
-      completedAt: interview.completedAt ? interview.completedAt.toISOString() : null,
-      createdAt: interview.createdAt ? interview.createdAt.toISOString() : null,
-      overallScore: typeof interview.overallScore === "number" ? interview.overallScore : null,
-      transcript: Array.isArray(interview.transcript)
-        ? interview.transcript.map((entry, index) => ({
-            id: `${interview._id ? String(interview._id) : "session"}-${index}`,
-            role: typeof entry.role === "string" ? entry.role : "interviewer",
-            content: typeof entry.content === "string" ? entry.content : "",
-            timestamp:
-              typeof entry.timestamp === "string"
-                ? entry.timestamp
-                : entry.timestamp instanceof Date
-                  ? entry.timestamp.toISOString()
-                  : null,
-          }))
-        : [],
-    }));
+          : `${interview.createdAt?.toISOString?.() ?? "session"}-${scenarioId ?? "unknown"}`;
 
-  return <ProfileHistory signedIn sessions={sessions} />;
+      return {
+        id: interviewId,
+        scenarioId,
+        title: scenarioMeta.title,
+        categoryLabel: scenarioMeta.categoryLabel,
+        trackLabel: scenarioMeta.trackLabel,
+        difficultyLabel: scenarioMeta.difficultyLabel,
+        completedAt: interview.completedAt ? interview.completedAt.toISOString() : null,
+        createdAt: interview.createdAt ? interview.createdAt.toISOString() : null,
+        overallScore,
+        letterGrade,
+        transcriptCount,
+        reviewHref: `/review/${scenarioId ?? "interview"}?interviewId=${interviewId}`,
+      };
+    });
+
+  const previousScoreByScenario = new Map<string, number>();
+  const sessionsWithDelta = sessions.map((session) => {
+    const previousScore =
+      session.scenarioId && typeof session.overallScore === "number"
+        ? previousScoreByScenario.get(session.scenarioId) ?? null
+        : null;
+    const scoreDelta =
+      typeof session.overallScore === "number" && previousScore !== null
+        ? session.overallScore - previousScore
+        : null;
+
+    if (session.scenarioId && typeof session.overallScore === "number") {
+      previousScoreByScenario.set(session.scenarioId, session.overallScore);
+    }
+
+    return {
+      ...session,
+      scoreDelta,
+    };
+  });
+
+  const descendingSessions = sessionsWithDelta
+    .slice()
+    .sort((left, right) => {
+      const leftTime = new Date(left.completedAt ?? left.createdAt).getTime();
+      const rightTime = new Date(right.completedAt ?? right.createdAt).getTime();
+      return rightTime - leftTime;
+    });
+
+  return <ProfileHistory signedIn sessions={descendingSessions} />;
 }
 
 function ProfileHistorySkeleton() {

@@ -23,41 +23,46 @@ export interface User {
 }
 
 export class UserModel {
+  private static indexesPromise: Promise<void> | null = null;
+
   static async findOrCreateUser(email: string, name: string, image: string, provider: string): Promise<User> {
+    await this.ensureIndexes();
+
     const db = await getMongoDb();
     if (!db) throw new Error("MongoDB not connected");
 
     const usersCollection = db.collection<User>("users");
+    const now = new Date();
+    const user = await usersCollection.findOneAndUpdate(
+      { email },
+      {
+        $setOnInsert: {
+          email,
+          name,
+          image,
+          provider,
+          focusTrack: null,
+          bio: null,
+          resumeExtractedText: null,
+          preferences: {
+            voiceId: null,
+            feedbackStyle: "structured",
+            practiceReminders: true,
+            weeklyGoal: 4,
+          },
+          favorites: [],
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+      { upsert: true, returnDocument: "after" },
+    );
 
-    // Create index if it doesn't exist
-    await usersCollection.createIndex({ email: 1 }, { unique: true });
-
-    const existingUser = await usersCollection.findOne({ email });
-    if (existingUser) {
-      return existingUser;
+    if (!user) {
+      throw new Error(`Failed to upsert user for ${email}`);
     }
 
-    const newUser: User = {
-      email,
-      name,
-      image,
-      provider,
-      focusTrack: null,
-      bio: null,
-      resumeExtractedText: null,
-      preferences: {
-        voiceId: null,
-        feedbackStyle: "structured",
-        practiceReminders: true,
-        weeklyGoal: 4,
-      },
-      favorites: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const result = await usersCollection.insertOne(newUser);
-    return { ...newUser, _id: result.insertedId };
+    return user;
   }
 
   static async getUserByEmail(email: string): Promise<User | null> {
@@ -91,10 +96,19 @@ export class UserModel {
   }
 
   static async ensureIndexes(): Promise<void> {
-    const db = await getMongoDb();
-    if (!db) return;
+    if (!this.indexesPromise) {
+      this.indexesPromise = (async () => {
+        const db = await getMongoDb();
+        if (!db) return;
 
-    const usersCollection = db.collection<User>("users");
-    await usersCollection.createIndex({ email: 1 }, { unique: true });
+        const usersCollection = db.collection<User>("users");
+        await usersCollection.createIndex({ email: 1 }, { unique: true });
+      })().catch((error) => {
+        this.indexesPromise = null;
+        throw error;
+      });
+    }
+
+    await this.indexesPromise;
   }
 }
