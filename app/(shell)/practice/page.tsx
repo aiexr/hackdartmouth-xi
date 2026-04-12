@@ -610,11 +610,10 @@ export default function PracticePage() {
                   onClick={() => selectType(type.id)}
                   className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start">
                     <div className="flex size-9 items-center justify-center rounded-none bg-indigo-100 text-indigo-600">
                       <Icon className="size-5" />
                     </div>
-                    <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
                   </div>
                   <div>
                     <p className="font-semibold text-base-content">{type.label}</p>
@@ -636,11 +635,10 @@ export default function PracticePage() {
                   onClick={() => selectType(type.id)}
                   className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start">
                     <div className="flex size-9 items-center justify-center rounded-none bg-indigo-100 text-indigo-600">
                       <Icon className="size-5" />
                     </div>
-                    <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
                   </div>
                   <div>
                     <p className="font-semibold text-base-content">{type.label}</p>
@@ -662,11 +660,10 @@ export default function PracticePage() {
                   onClick={() => selectType(type.id)}
                   className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start">
                     <div className="flex size-9 items-center justify-center rounded-none bg-indigo-100 text-indigo-600">
                       <Icon className="size-5" />
                     </div>
-                    <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
                   </div>
                   <div>
                     <p className="font-semibold text-base-content">{type.label}</p>
