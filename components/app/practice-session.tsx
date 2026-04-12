@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   Braces,
   Clock3,
@@ -13,6 +14,7 @@ import {
   Mic,
   MicOff,
   Minus,
+  Loader2,
   PanelRightClose,
   PanelRightOpen,
   Phone,
@@ -194,6 +196,8 @@ export function PracticeSession({
   const [resumed, setResumed] = useState(false);
   const [interviewerPrompt, setInterviewerPrompt] = useState<PracticePrompt>(null);
   const [lastCodeSyncLabel, setLastCodeSyncLabel] = useState<string | null>(null);
+  const [isGrading, setIsGrading] = useState(false);
+  const [isPortalReady, setIsPortalReady] = useState(false);
   const whiteboardRef = useRef<WhiteboardHandle | null>(null);
   const avatarRef = useRef<LiveAvatarHandle | null>(null);
   const [avatarControls, setAvatarControls] = useState({ isMuted: false, isCameraOn: true });
@@ -208,6 +212,10 @@ export function PracticeSession({
 
     setInterviewMode("video");
   }, [isTechnical]);
+
+  useEffect(() => {
+    setIsPortalReady(true);
+  }, []);
 
   useEffect(() => {
     try {
@@ -314,6 +322,11 @@ export function PracticeSession({
 
   const handleSessionEnd = useCallback(
     async (rawTranscript: TranscriptEntry[]) => {
+      if (isGrading) {
+        return;
+      }
+      setIsGrading(true);
+
       const finalTranscript = rawTranscript.filter((entry) => !entry.partial);
 
       // Capture whiteboard screenshot before submitting
@@ -366,6 +379,7 @@ export function PracticeSession({
     },
     [
       editorContent,
+      isGrading,
       isSystemDesign,
       isTechnical,
       router,
@@ -913,6 +927,30 @@ export function PracticeSession({
           )}
         </aside>
       </div>
+
+      {isGrading && isPortalReady &&
+        createPortal(
+          <div className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-base-100/85 backdrop-blur-sm">
+            <div className="flex w-[22rem] max-w-[90vw] flex-col items-center gap-4 rounded-none border border-border bg-base-100 p-6 text-center shadow-xl">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute size-16 animate-ping rounded-full bg-primary/20" />
+                <Loader2 className="relative size-9 animate-spin text-primary" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-base font-semibold text-base-content">Grading your interview</p>
+                <p className="text-sm text-base-content/60">
+                  Generating feedback and preparing your review page.
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5" aria-hidden="true">
+                <span className="size-1.5 animate-bounce rounded-full bg-primary/70 [animation-delay:-0.2s]" />
+                <span className="size-1.5 animate-bounce rounded-full bg-primary/70 [animation-delay:-0.1s]" />
+                <span className="size-1.5 animate-bounce rounded-full bg-primary/70" />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
