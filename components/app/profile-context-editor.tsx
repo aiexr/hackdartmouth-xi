@@ -77,7 +77,7 @@ export function ProfileContextEditor(props: Props) {
     <Card>
       <CardContent className="p-6">
         <h2>Your Context</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-base-content/60">
           Add your background so the AI can personalize interview feedback.
           Leave any section empty to use the default rubric.
         </p>
@@ -88,9 +88,9 @@ export function ProfileContextEditor(props: Props) {
             return (
               <div key={section.key}>
                 <div className="mb-2 flex items-center gap-2">
-                  <section.icon className="size-4 text-muted-foreground" />
+                  <section.icon className="size-4 text-base-content/60" />
                   <span className="text-sm font-medium">{section.label}</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-base-content/60">
                     {section.description}
                   </span>
                 </div>
@@ -109,7 +109,7 @@ export function ProfileContextEditor(props: Props) {
                 />
 
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-base-content/60">
                     {values[section.key].length.toLocaleString()} characters
                   </span>
 

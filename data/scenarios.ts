@@ -1,12 +1,3 @@
-export type RoleTrack = {
-  id: string;
-  name: string;
-  description: string;
-  gradient: string;
-  completed: number;
-  total: number;
-};
-
 export type Scenario = {
   id: string;
   title: string;
@@ -43,32 +34,6 @@ export type Scenario = {
   };
 };
 
-export const roleTracks: RoleTrack[] = [
-  {
-    id: "staff-engineering",
-    name: "Staff Software Engineer",
-    description: "Behavioral, leadership, and technical communication loops.",
-    gradient: "from-blue-500 via-indigo-500 to-violet-500",
-    completed: 3,
-    total: 7,
-  },
-  {
-    id: "product-management",
-    name: "Product Manager",
-    description: "Prioritization, strategy, and stakeholder scenarios.",
-    gradient: "from-emerald-500 via-teal-500 to-cyan-500",
-    completed: 2,
-    total: 7,
-  },
-  {
-    id: "consulting",
-    name: "Consulting",
-    description: "Structured thinking, synthesis, and executive communication.",
-    gradient: "from-amber-500 via-orange-500 to-rose-500",
-    completed: 1,
-    total: 7,
-  },
-];
 
 const AVATAR_SARAH =
   "https://images.unsplash.com/photo-1770058428154-9eee8a6a1fbb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600";

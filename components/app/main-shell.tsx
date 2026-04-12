@@ -28,7 +28,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-transparent">
-      <aside className="hidden w-72 shrink-0 border-r border-border bg-card px-6 py-7 md:flex md:flex-col">
+      <aside className="hidden w-72 shrink-0 border-r border-base-300 bg-base-100 px-6 py-7 md:flex md:flex-col">
         <Link href="/" className="flex items-center gap-3 px-2">
           <img
             src="/logo.svg"
@@ -54,8 +54,8 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "flex items-center gap-3 rounded-none px-4 py-3 text-sm font-medium transition-all",
                   active
-                    ? "bg-secondary text-secondary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "bg-neutral/10 text-base-content"
+                    : "text-base-content/60 hover:bg-base-200 hover:text-base-content",
                 )}
               >
                 <item.icon className="size-5" />
@@ -68,7 +68,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border px-6 py-3">
+        <header className="flex items-center justify-between border-b border-base-300 px-6 py-3">
           <Link href="/" className="flex items-center gap-3 md:hidden">
             <img
               src="/logo.svg"
@@ -80,10 +80,10 @@ export function MainShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
           {session?.user ? (
-            <div className="flex items-center gap-3">
+            <div className="ml-auto flex items-center gap-3">
               <button
                 onClick={() => signOut()}
-                className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
+                className="text-sm font-medium text-base-content/60 transition hover:text-base-content"
                 title="Sign out"
               >
                 Sign out
@@ -101,7 +101,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                     className="size-9 rounded-none ring-2 ring-border"
                   />
                 ) : (
-                  <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-foreground ring-2 ring-primary/20">
+                  <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-content ring-2 ring-primary/20">
                     <User className="size-4" />
                   </div>
                 )}
@@ -110,10 +110,10 @@ export function MainShell({ children }: { children: React.ReactNode }) {
           ) : (
             <button
               onClick={() => signIn("google")}
-              className="cursor-pointer rounded-none transition-opacity hover:opacity-80"
+              className="ml-auto cursor-pointer rounded-none transition-opacity hover:opacity-80"
               title="Sign in with Google"
             >
-              <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-foreground ring-2 ring-primary/20">
+              <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-content ring-2 ring-primary/20">
                 <User className="size-4" />
               </div>
             </button>
@@ -122,7 +122,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 pb-20 md:pb-0">{children}</main>
 
-        <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-none border border-border bg-card p-2 md:hidden">
+        <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-none border border-base-300 bg-base-100 p-2 md:hidden">
           {navigation.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -133,7 +133,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 className={cn(
                   "flex min-w-16 flex-col items-center gap-1 rounded-none px-3 py-2 text-[0.72rem] font-medium",
-                  active ? "text-primary" : "text-muted-foreground",
+                  active ? "text-primary" : "text-base-content/60",
                 )}
               >
                 <item.icon className="size-5" />

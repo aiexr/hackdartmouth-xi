@@ -36,7 +36,7 @@ export function StatusGrid() {
         <Card key={item.title}>
           <CardContent className="space-y-3 p-5">
             <div className="flex items-start justify-between gap-4">
-              <div className="flex size-11 items-center justify-center rounded-none bg-secondary text-secondary-foreground">
+              <div className="flex size-11 items-center justify-center rounded-none bg-neutral/10 text-base-content">
                 <item.icon className="size-5" />
               </div>
               <span

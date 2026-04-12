@@ -83,12 +83,12 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-sm font-medium text-foreground">
+        <p className="text-sm font-medium text-base-content">
           {totalSessions} interview session{totalSessions !== 1 ? "s" : ""} in the last year
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-none border border-border px-3 py-2">
+      <div className="overflow-x-auto rounded-none border border-base-300 px-3 py-2">
         <div className="min-w-max">
           {/* Month labels */}
           <div className="flex" style={{ paddingLeft: 26 }}>
@@ -99,7 +99,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
               return (
                 <span
                   key={`${m.label}-${m.x}`}
-                  className="text-xs text-muted-foreground"
+                  className="text-xs text-base-content/60"
                   style={{ width: `${pct}%` }}
                 >
                   {span >= 3 ? m.label : ""}
@@ -115,7 +115,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label, i) => (
                 <div
                   key={label}
-                  className="flex items-center text-[9px] text-muted-foreground"
+                  className="flex items-center text-[9px] text-base-content/60"
                   style={{ height: CELL }}
                 >
                   {i % 2 === 1 ? label : ""}
@@ -164,7 +164,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
           </div>
 
           {/* Legend */}
-          <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+          <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-base-content/60">
             <span>Less</span>
             {fills.map((color, i) => (
               <div

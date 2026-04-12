@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  ArrowRight,
+
   BookOpen,
   Calendar,
   Flame,
@@ -84,20 +84,14 @@ export default async function DashboardPage() {
                 <h1 className="max-w-2xl">
                   Practice interviewing the LeetSpeak way with canonical round types and repeatable loops.
                 </h1>
-                <p className="mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
+                <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
                   Switch between behavioral, technical coding, and system design rounds, then review visible progress over time. Weekly goals, streaks, and saved interview history flow through MongoDB-backed scoring.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <Button asChild size="lg">
+                  <Button asChild size="lg" className="text-white">
                     <Link href="/practice">
                       <Play className="size-4" />
                       Start quick practice
-                    </Link>
-                  </Button>
-                  <Button asChild size="lg" variant="outline">
-                    <Link href="/auth/sign-in">
-                      Open auth shell
-                      <ArrowRight className="size-4" />
                     </Link>
                   </Button>
                 </div>
@@ -106,10 +100,10 @@ export default async function DashboardPage() {
           </Card>
 
           <div className="grid gap-4">
-            <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="rounded-none border border-base-300 bg-base-100 p-5">
               <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <Target className="size-4" />
-                Weekly progress
+                Today's progress
               </div>
               <div className="mt-5 flex items-center gap-4">
                 <div className="relative flex size-28 items-center justify-center">
@@ -135,16 +129,16 @@ export default async function DashboardPage() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-3xl font-semibold">{loopCount}</span>
-                    <span className="text-xs font-medium text-muted-foreground/90">
+                    <span className="text-xs font-medium text-base-content/60/90">
                       loops
                     </span>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm leading-6 text-muted-foreground">
+                  <p className="text-sm leading-6 text-base-content/60">
                     {weeklyCopy}
                   </p>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
+                  <div className="inline-flex items-center gap-2 rounded-none bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
                     <Zap className="size-4" />
                     {streakLabel}
                   </div>
@@ -152,8 +146,8 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-card p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-secondary-foreground">
+            <div className="rounded-none border border-base-300 bg-base-100 p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-base-content">
                 <TrendingUp className="size-4" />
                 Current goals
               </div>
@@ -162,7 +156,7 @@ export default async function DashboardPage() {
                   <div key={goal.label}>
                     <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
                       <span>{goal.label}</span>
-                      <span className="text-muted-foreground">
+                      <span className="text-base-content/60">
                         {goal.current}/{goal.total}
                       </span>
                     </div>
@@ -181,14 +175,14 @@ export default async function DashboardPage() {
               totalSessions={metrics.completedSessions}
             />
           </div>
-          <div className="flex flex-col justify-around rounded-xl border border-border bg-card p-5">
+          <div className="flex flex-col justify-around rounded-xl border border-base-300 bg-base-100 p-5">
             <div className="flex items-center gap-3">
               <div className="flex size-9 items-center justify-center rounded-lg bg-orange-50">
                 <Flame className="size-5 text-orange-500" />
               </div>
               <div>
                 <div className="text-2xl font-semibold leading-tight">{metrics.streakDays}</div>
-                <div className="text-xs text-muted-foreground">Current streak</div>
+                <div className="text-xs text-base-content/60">Current streak</div>
               </div>
             </div>
             <div className="h-px bg-border" />
@@ -198,7 +192,7 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <div className="text-2xl font-semibold leading-tight">{metrics.longestStreak}</div>
-                <div className="text-xs text-muted-foreground">Longest streak</div>
+                <div className="text-xs text-base-content/60">Longest streak</div>
               </div>
             </div>
             <div className="h-px bg-border" />
@@ -208,49 +202,13 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <div className="text-2xl font-semibold leading-tight">{metrics.activityDays.filter((d) => d.count > 0).length}</div>
-                <div className="text-xs text-muted-foreground">Active days</div>
+                <div className="text-xs text-base-content/60">Active days</div>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <div className="mb-4 flex items-center gap-2">
-              <Trophy className="size-5 text-primary" />
-              <h2>Role tracks</h2>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              {metrics.tracks.map((track) => (
-                <Card key={track.id}>
-                  <CardContent className="p-5">
-                    <div
-                      className={`flex size-12 items-center justify-center rounded-2xl bg-linear-to-br ${track.gradient} text-white shadow-lg`}
-                    >
-                      <Trophy className="size-5" />
-                    </div>
-                    <h3 className="mt-4 text-lg">{track.name}</h3>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      {track.description}
-                    </p>
-                    <div className="mt-4 flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {track.completed} of {track.total} completed
-                      </span>
-                      <span className="font-semibold text-foreground">
-                        {Math.round((track.completed / track.total) * 100)}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={(track.completed / track.total) * 100}
-                      className="mt-2"
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
+        <section>
           <div>
             <div className="mb-4 flex items-center gap-2">
               <BookOpen className="size-5 text-amber-500" />
@@ -260,10 +218,10 @@ export default async function DashboardPage() {
               {metrics.improvements.map((item) => (
                 <Card key={item.id}>
                   <CardContent className="p-5">
-                    <p className="text-sm leading-6 text-foreground">
+                    <p className="text-sm leading-6 text-base-content">
                       {item.description}
                     </p>
-                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="mt-2 flex items-center gap-2 text-xs text-base-content/60">
                       <span>{item.tag}</span>
                       <span>-</span>
                       <span>{item.source}</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import {
   LiveAvatarSession,
   AgentEventsEnum,
@@ -20,12 +20,21 @@ export type TranscriptEntry = {
 
 type TranscriptRole = TranscriptEntry["role"];
 
+export type LiveAvatarHandle = {
+  start: () => void;
+  stop: () => void;
+  toggleMute: () => void;
+  toggleCamera: () => void;
+};
+
 type LiveAvatarProps = {
   tone?: string;
+  compact?: boolean;
   promptRequest?: { id: string; text: string } | null;
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
+  onControlsChange?: (controls: { isMuted: boolean; isCameraOn: boolean }) => void;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -34,13 +43,15 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-export function LiveAvatar({
+export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function LiveAvatar({
   tone = "neutral",
+  compact = false,
   promptRequest,
   onTranscriptUpdate,
   onSessionEnd,
   onStateChange,
-}: LiveAvatarProps) {
+  onControlsChange,
+}, ref) {
   const avatarVideoRef = useRef<HTMLVideoElement>(null);
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const userStreamRef = useRef<MediaStream | null>(null);
@@ -327,6 +338,17 @@ export function LiveAvatar({
     }
   }, []);
 
+  useImperativeHandle(ref, () => ({
+    start: startSession,
+    stop: stopSession,
+    toggleMute,
+    toggleCamera,
+  }), [startSession, stopSession, toggleMute, toggleCamera]);
+
+  useEffect(() => {
+    onControlsChange?.({ isMuted, isCameraOn });
+  }, [isMuted, isCameraOn, onControlsChange]);
+
   useEffect(() => {
     return () => {
       if (userStreamRef.current) {
@@ -345,8 +367,8 @@ export function LiveAvatar({
 
   return (
     <div className="flex w-full flex-col gap-4">
-      {/* Video grid -- always rendered, always 2 columns so refs stay stable */}
-      <div className="grid w-full grid-cols-2 gap-3">
+      {/* Video grid -- always rendered so refs stay stable */}
+      <div className={cn("w-full gap-3", compact ? "flex flex-col" : "grid grid-cols-2")}>
         {/* Interviewer (avatar) tile */}
         <div className="relative overflow-hidden rounded-none bg-black shadow-lg">
           <video
@@ -409,8 +431,8 @@ export function LiveAvatar({
             )}
           />
           {!isCameraOn && (
-            <div className="flex aspect-video size-full items-center justify-center bg-muted">
-              <VideoOff className="size-8 text-muted-foreground" />
+            <div className="flex aspect-video size-full items-center justify-center bg-base-200">
+              <VideoOff className="size-8 text-base-content/60" />
             </div>
           )}
 
@@ -456,20 +478,20 @@ export function LiveAvatar({
         {status === "idle" && (
           <button
             onClick={startSession}
-            className="flex items-center gap-2 rounded-none bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90"
+            className="flex items-center gap-2 rounded-none bg-primary px-6 py-3 text-sm font-medium text-primary-content shadow-lg shadow-primary/25 transition hover:bg-primary/90"
           >
             <Phone className="size-4" />
             Start Interview
           </button>
         )}
 
-        {isActive && (
+        {isActive && !compact && (
           <>
             <button
               onClick={toggleMute}
               className={cn(
                 "flex size-12 items-center justify-center rounded-none shadow-md transition hover:scale-105",
-                isMuted ? "bg-red-500 text-white" : "bg-white text-foreground",
+                isMuted ? "bg-red-500 text-white" : "bg-white text-base-content",
               )}
               title={isMuted ? "Unmute" : "Mute"}
             >
@@ -480,7 +502,7 @@ export function LiveAvatar({
               onClick={toggleCamera}
               className={cn(
                 "flex size-12 items-center justify-center rounded-none shadow-md transition hover:scale-105",
-                !isCameraOn ? "bg-red-500 text-white" : "bg-white text-foreground",
+                !isCameraOn ? "bg-red-500 text-white" : "bg-white text-base-content",
               )}
               title={isCameraOn ? "Turn off camera" : "Turn on camera"}
             >
@@ -500,7 +522,7 @@ export function LiveAvatar({
         {status === "connecting" && (
           <button
             disabled
-            className="flex items-center gap-2 rounded-none bg-muted px-6 py-3 text-sm font-medium text-muted-foreground"
+            className="flex items-center gap-2 rounded-none bg-base-200 px-6 py-3 text-sm font-medium text-base-content/60"
           >
             <Loader2 className="size-4 animate-spin" />
             Connecting...
@@ -509,4 +531,4 @@ export function LiveAvatar({
       </div>
     </div>
   );
-}
+});

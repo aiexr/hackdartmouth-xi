@@ -11,7 +11,7 @@ export default function CoachPage() {
             <Sparkles className="size-7 text-primary" />
             AI Coach
           </h1>
-          <p className="mt-3 max-w-3xl text-base text-muted-foreground">
+          <p className="mt-3 max-w-3xl text-base text-base-content/60">
             This is the coaching surface from the design translated into the app router. It is ready for Gemini-backed feedback flows once real auth and attempt data are connected.
           </p>
         </div>

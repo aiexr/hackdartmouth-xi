@@ -256,12 +256,12 @@ export default async function ReviewPage({
       : null);
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-white/80 px-6 py-4 backdrop-blur">
+    <div className="min-h-screen bg-base-200">
+      <header className="border-b border-base-300 bg-base-100/80 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground transition hover:text-foreground"
+            className="inline-flex items-center gap-2 text-sm text-base-content/60 transition hover:text-base-content"
           >
             <ArrowLeft className="size-4" />
             Dashboard
@@ -294,17 +294,17 @@ export default async function ReviewPage({
           </Card>
         ) : null}
 
-        <Card className="bg-white/85 text-center">
+        <Card className="bg-base-100/85 text-center">
           <CardContent className="p-8">
-            <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+            <div className="inline-flex items-center gap-2 rounded-none bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
               <Award className="size-4" />
               Session complete
             </div>
 
-            <div className="mx-auto mt-6 flex size-40 items-center justify-center rounded-full border-12 border-secondary bg-white shadow-lg shadow-primary/10">
+            <div className="mx-auto mt-6 flex size-40 items-center justify-center rounded-none border-12 border-base-300 bg-base-100 shadow-lg shadow-primary/10">
               <div>
                 <div className="text-5xl font-semibold">{scoreDisplay}</div>
-                <div className="text-xs font-medium text-muted-foreground/90">
+                <div className="text-xs font-medium text-base-content/60/90">
                   {overallScore !== null || !hasPersistedReview ? "out of 100" : "score pending"}
                 </div>
               </div>
@@ -327,7 +327,7 @@ export default async function ReviewPage({
                 <>{staticReview.overallScore - staticReview.previousScore} points from the last attempt</>
               )}
             </div>
-            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-base-content/60">
               {hasPersistedReview ? (
                 interview?.gradingError ? (
                   <>Your transcript was saved, but AI scoring failed: {interview.gradingError}</>
@@ -345,14 +345,14 @@ export default async function ReviewPage({
           </CardContent>
         </Card>
 
-        <Card className="bg-white/85">
+        <Card className="bg-base-100/85">
           <CardContent className="p-6">
             <h2 className="flex items-center gap-2">
               <Star className="size-5 text-primary" />
               Score breakdown
             </h2>
             {hasPersistedReview && !dimensions.length ? (
-              <p className="mt-5 text-sm leading-6 text-muted-foreground">
+              <p className="mt-5 text-sm leading-6 text-base-content/60">
                 Dimension-level feedback is unavailable for this attempt because the scoring model did not return a rubric breakdown.
               </p>
             ) : (
@@ -382,14 +382,14 @@ export default async function ReviewPage({
                         ) : null}
                       </span>
                     </div>
-                    <div className="h-2.5 rounded-full bg-primary/12">
+                    <div className="h-2.5 rounded-none bg-primary/12">
                       <div
-                        className="h-full rounded-full bg-primary"
+                        className="h-full rounded-none bg-primary"
                         style={{ width: `${dimension.score}%` }}
                       />
                     </div>
                     {"feedback" in dimension && dimension.feedback ? (
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      <p className="mt-2 text-sm leading-6 text-base-content/60">
                         {dimension.feedback}
                       </p>
                     ) : null}
@@ -401,7 +401,7 @@ export default async function ReviewPage({
         </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="bg-white/80">
+          <Card className="bg-base-100/80">
             <CardContent className="p-6">
               <h2 className="flex items-center gap-2 text-emerald-700">
                 <CheckCircle2 className="size-5 text-emerald-500" />
@@ -411,12 +411,12 @@ export default async function ReviewPage({
                 {strengths.length ? (
                   strengths.map((item) => (
                     <p key={item} className="flex gap-3 text-sm leading-6">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-emerald-400" />
+                      <span className="mt-2 size-1.5 shrink-0 rounded-none bg-emerald-400" />
                       <span>{item}</span>
                     </p>
                   ))
                 ) : (
-                  <p className="text-sm leading-6 text-muted-foreground">
+                  <p className="text-sm leading-6 text-base-content/60">
                     No strengths were returned for this attempt.
                   </p>
                 )}
@@ -424,7 +424,7 @@ export default async function ReviewPage({
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80">
+          <Card className="bg-base-100/80">
             <CardContent className="p-6">
               <h2 className="flex items-center gap-2 text-amber-700">
                 <AlertCircle className="size-5 text-amber-500" />
@@ -434,12 +434,12 @@ export default async function ReviewPage({
                 {improvements.length ? (
                   improvements.map((item) => (
                     <p key={item} className="flex gap-3 text-sm leading-6">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-full bg-amber-400" />
+                      <span className="mt-2 size-1.5 shrink-0 rounded-none bg-amber-400" />
                       <span>{item}</span>
                     </p>
                   ))
                 ) : (
-                  <p className="text-sm leading-6 text-muted-foreground">
+                  <p className="text-sm leading-6 text-base-content/60">
                     No improvement areas were returned for this attempt.
                   </p>
                 )}
@@ -456,7 +456,7 @@ export default async function ReviewPage({
             </h2>
             <div className="mt-4 space-y-3">
               {tips.map((item) => (
-                <div key={item} className="rounded-[1.35rem] bg-white/70 px-4 py-3 text-sm leading-6">
+                <div key={item} className="rounded-none bg-base-100/70 px-4 py-3 text-sm leading-6">
                   {item}
                 </div>
               ))}
@@ -465,12 +465,12 @@ export default async function ReviewPage({
         </Card>
 
         {hasPersistedReview && interview?.codeSnapshot ? (
-          <Card className="bg-white/85">
+          <Card className="bg-base-100/85">
             <CardContent className="p-6">
               <h2 className="flex items-center gap-2">
                 Your Code
               </h2>
-              <pre className="mt-4 overflow-x-auto rounded-2xl bg-muted/60 p-4 font-mono text-sm leading-6">
+              <pre className="mt-4 overflow-x-auto rounded-none bg-base-200/60 p-4 font-mono text-sm leading-6">
                 {interview.codeSnapshot}
               </pre>
             </CardContent>
@@ -478,12 +478,12 @@ export default async function ReviewPage({
         ) : null}
 
         {hasPersistedReview && interview?.diagramSnapshot ? (
-          <Card className="bg-white/85">
+          <Card className="bg-base-100/85">
             <CardContent className="p-6">
               <h2 className="flex items-center gap-2">
                 Your System Design
               </h2>
-              <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+              <div className="mt-4 overflow-hidden rounded-none border border-base-300">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={interview.diagramSnapshot}
@@ -495,7 +495,7 @@ export default async function ReviewPage({
           </Card>
         ) : null}
 
-        <Card className="bg-white/85">
+        <Card className="bg-base-100/85">
           <CardContent className="p-6">
             <h2>Annotated transcript</h2>
             <div className="mt-5 space-y-3">
@@ -503,25 +503,25 @@ export default async function ReviewPage({
                 transcript.map((line) => (
                   <div
                     key={`${line.time}-${line.speaker}-${line.text}`}
-                    className={`rounded-[1.35rem] border px-4 py-3 ${
+                    className={`rounded-none border px-4 py-3 ${
                       line.highlight === "strength"
                         ? "border-emerald-200/70 bg-emerald-50"
                         : line.highlight === "improve"
                           ? "border-amber-200/70 bg-amber-50"
-                          : "border-border bg-muted/45"
+                          : "border-base-300 bg-base-200/45"
                     }`}
                   >
                     <div className="flex items-start gap-4">
-                      <span className="pt-1 text-xs font-medium text-muted-foreground/90">
+                      <span className="pt-1 text-xs font-medium text-base-content/60/90">
                         {line.time}
                       </span>
                       <div className="flex-1">
-                        <div className="mb-1 text-xs font-medium text-muted-foreground/90">
+                        <div className="mb-1 text-xs font-medium text-base-content/60/90">
                           {line.speaker}
                         </div>
                         <p className="text-sm leading-6">{line.text}</p>
                         {line.note ? (
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          <p className="mt-2 text-sm leading-6 text-base-content/60">
                             {line.note}
                           </p>
                         ) : null}
@@ -530,7 +530,7 @@ export default async function ReviewPage({
                   </div>
                 ))
               ) : (
-                <div className="rounded-[1.35rem] border border-dashed border-border px-4 py-6 text-sm leading-6 text-muted-foreground">
+                <div className="rounded-none border border-dashed border-base-300 px-4 py-6 text-sm leading-6 text-base-content/60">
                   This attempt did not save any transcript lines.
                 </div>
               )}

@@ -39,15 +39,15 @@ export function CoachConversation() {
         {quickActions.map((item) => (
           <Card
             key={item.title}
-            className={`bg-white/80 ${item.href ? "cursor-pointer transition hover:ring-2 hover:ring-primary/20" : ""}`}
+            className={`bg-base-100/80 ${item.href ? "cursor-pointer transition hover:ring-2 hover:ring-primary/20" : ""}`}
             onClick={item.href ? () => router.push(item.href) : undefined}
           >
             <CardContent className="p-5">
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
+              <div className="flex size-11 items-center justify-center rounded-none bg-neutral/10 text-base-content">
                 <item.icon className="size-5" />
               </div>
               <h3 className="mt-4 text-base">{item.title}</h3>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              <p className="mt-1 text-sm leading-6 text-base-content/60">
                 {item.description}
               </p>
             </CardContent>
@@ -55,8 +55,8 @@ export function CoachConversation() {
         ))}
       </div>
 
-      <Card className="overflow-hidden bg-white/85">
-        <div className="flex items-center gap-2 border-b border-border px-5 py-4 text-sm font-semibold">
+      <Card className="overflow-hidden bg-base-100/85">
+        <div className="flex items-center gap-2 border-b border-base-300 px-5 py-4 text-sm font-semibold">
           <MessageCircleMore className="size-4 text-primary" />
           Coaching Chat
         </div>
@@ -71,9 +71,9 @@ export function CoachConversation() {
                 className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
               >
                 <div
-                  className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                  className={`flex size-9 shrink-0 items-center justify-center rounded-none text-xs font-semibold ${
                     isUser
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-content"
                       : "bg-linear-to-br from-violet-500 to-indigo-500 text-white"
                   }`}
                 >
@@ -81,7 +81,7 @@ export function CoachConversation() {
                 </div>
                 <div
                   className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
-                    isUser ? "bg-primary text-primary-foreground" : "bg-muted/75"
+                    isUser ? "bg-primary text-primary-content" : "bg-base-200/75"
                   }`}
                 >
                   {message.text}
@@ -91,7 +91,7 @@ export function CoachConversation() {
           })}
         </CardContent>
 
-        <div className="flex gap-3 border-t border-border px-5 py-4">
+        <div className="flex gap-3 border-t border-base-300 px-5 py-4">
           <Input
             value={message}
             onChange={(event) => setMessage(event.target.value)}
@@ -102,7 +102,7 @@ export function CoachConversation() {
           </Button>
         </div>
 
-        <div className="border-t border-border/70 bg-linear-to-r from-violet-50 to-indigo-50 px-5 py-3 text-sm text-violet-900/80">
+        <div className="border-t border-base-300/70 bg-linear-to-r from-violet-50 to-indigo-50 px-5 py-3 text-sm text-violet-900/80">
           <span className="inline-flex items-center gap-2 font-medium">
             <Sparkles className="size-4 text-violet-500" />
             Coach note

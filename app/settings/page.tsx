@@ -11,7 +11,7 @@ export default function SettingsPage() {
             <Settings className="size-7 text-primary" />
             Settings
           </h1>
-          <p className="mt-3 max-w-2xl text-base text-muted-foreground">
+          <p className="mt-3 max-w-2xl text-base text-base-content/60">
             Light mode only, clean defaults, and a minimal set of controls that match the generated design language.
           </p>
         </div>

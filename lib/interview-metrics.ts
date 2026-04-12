@@ -1,6 +1,6 @@
 import "server-only";
 
-import { improvementThemes, roleTracks, scenarios } from "@/data/scenarios";
+import { improvementThemes, scenarios } from "@/data/scenarios";
 import { env } from "@/lib/env";
 import { getMongoDb } from "@/lib/mongodb";
 
@@ -19,17 +19,6 @@ type GoalMetric = {
   label: string;
   current: number;
   total: number;
-};
-
-type TrackMetric = {
-  id: string;
-  name: string;
-  description: string;
-  gradient: string;
-  completed: number;
-  total: number;
-  sessions: number;
-  averageScore: number | null;
 };
 
 type ImprovementMetric = {
@@ -52,13 +41,6 @@ type ProfileStat = {
   accent: string;
 };
 
-type MasteryMetric = {
-  name: string;
-  level: number;
-  sessions: number;
-  label: string;
-};
-
 export type ActivityDay = {
   date: string; // YYYY-MM-DD
   count: number;
@@ -77,14 +59,10 @@ export type UserInterviewMetrics = {
   remainingLoops: number;
   streakDays: number;
   longestStreak: number;
-  activeTrackCount: number;
-  topTrackName: string | null;
   activityDays: ActivityDay[];
   goals: GoalMetric[];
-  tracks: TrackMetric[];
   improvements: ImprovementMetric[];
   profileStats: ProfileStat[];
-  mastery: MasteryMetric[];
   achievements: AchievementMetric[];
 };
 
@@ -227,14 +205,6 @@ function getActivityDays(interviews: InterviewRecord[]): ActivityDay[] {
   return days;
 }
 
-function getTrackId(interview: InterviewRecord) {
-  if (!interview.scenarioId) {
-    return null;
-  }
-
-  return scenarioById.get(interview.scenarioId)?.trackId ?? null;
-}
-
 function buildImprovements(interviews: InterviewRecord[]) {
   const items: ImprovementMetric[] = [];
 
@@ -288,38 +258,21 @@ export async function getUserInterviewMetrics(
       remainingLoops: 4,
       streakDays: 0,
       longestStreak: 0,
-      activeTrackCount: 0,
-      topTrackName: null,
       activityDays: getActivityDays([]),
       goals: [
         { label: "Complete 4 practice loops this week", current: 0, total: 4 },
-        { label: "Practice all role tracks", current: 0, total: roleTracks.length },
         { label: "Hit a 90+ score once", current: 0, total: 90 },
       ],
-      tracks: roleTracks.map((track) => ({
-        ...track,
-        completed: 0,
-        sessions: 0,
-        averageScore: null,
-      })),
       improvements: improvementThemes,
       profileStats: [
         { label: "Sessions", value: "0", accent: "text-primary" },
         { label: "Average Score", value: "--", accent: "text-emerald-500" },
-        { label: "Tracks Active", value: "0", accent: "text-sky-500" },
         { label: "Best Attempt", value: "--", accent: "text-amber-500" },
       ],
-      mastery: roleTracks.map((track) => ({
-        name: track.name,
-        level: 0,
-        sessions: 0,
-        label: "No scored sessions yet",
-      })),
       achievements: [
         { icon: "flame", title: "No streak yet", description: "Complete a practice loop to start building momentum." },
         { icon: "target", title: "First score pending", description: "Finish one graded interview to unlock score tracking." },
         { icon: "trending-up", title: "Progress starts here", description: "Dashboard goals will fill in as interview history lands in MongoDB." },
-        { icon: "brain", title: "Explore every track", description: "Practice across each role track to unlock broader feedback patterns." },
       ],
     };
   }
@@ -345,38 +298,21 @@ export async function getUserInterviewMetrics(
       remainingLoops: 4,
       streakDays: 0,
       longestStreak: 0,
-      activeTrackCount: 0,
-      topTrackName: null,
       activityDays: getActivityDays([]),
       goals: [
         { label: "Complete 4 practice loops this week", current: 0, total: 4 },
-        { label: "Practice all role tracks", current: 0, total: roleTracks.length },
         { label: "Hit a 90+ score once", current: 0, total: 90 },
       ],
-      tracks: roleTracks.map((track) => ({
-        ...track,
-        completed: 0,
-        sessions: 0,
-        averageScore: null,
-      })),
       improvements: improvementThemes,
       profileStats: [
         { label: "Sessions", value: "0", accent: "text-primary" },
         { label: "Average Score", value: "--", accent: "text-emerald-500" },
-        { label: "Tracks Active", value: "0", accent: "text-sky-500" },
         { label: "Best Attempt", value: "--", accent: "text-amber-500" },
       ],
-      mastery: roleTracks.map((track) => ({
-        name: track.name,
-        level: 0,
-        sessions: 0,
-        label: "No scored sessions yet",
-      })),
       achievements: [
         { icon: "flame", title: "No streak yet", description: "Complete a practice loop to start building momentum." },
         { icon: "target", title: "First score pending", description: "Finish one graded interview to unlock score tracking." },
         { icon: "trending-up", title: "Progress starts here", description: "Dashboard goals will fill in as interview history lands in MongoDB." },
-        { icon: "brain", title: "Explore every track", description: "Practice across each role track to unlock broader feedback patterns." },
       ],
     };
   }
@@ -415,31 +351,6 @@ export async function getUserInterviewMetrics(
     : null;
   const averageScore = average(gradedSessions.map((interview) => interview.overallScore));
 
-  const trackSummaries = roleTracks.map((track) => {
-    const trackInterviews = rawInterviews.filter(
-      (interview) => getTrackId(interview) === track.id,
-    );
-    const completedScenarioIds = new Set(
-      trackInterviews
-        .filter((interview) => interview.status === "completed" && interview.scenarioId)
-        .map((interview) => interview.scenarioId as string),
-    );
-    const scoredInterviews = trackInterviews.filter(
-      (interview): interview is InterviewRecord & { overallScore: number } =>
-        typeof interview.overallScore === "number",
-    );
-
-    return {
-      ...track,
-      completed: Math.min(completedScenarioIds.size, track.total),
-      sessions: trackInterviews.length,
-      averageScore: average(scoredInterviews.map((interview) => interview.overallScore)),
-    };
-  });
-
-  const topTrack = [...trackSummaries]
-    .sort((left, right) => right.sessions - left.sessions)[0];
-  const activeTrackCount = trackSummaries.filter((track) => track.sessions > 0).length;
   const streakDays = getCurrentStreak(completedSessions);
   const longestStreak = getLongestStreak(completedSessions);
   const activityDays = getActivityDays(completedSessions);
@@ -457,15 +368,11 @@ export async function getUserInterviewMetrics(
     remainingLoops: Math.max(weeklyTarget - weeklyCompleted, 0),
     streakDays,
     longestStreak,
-    activeTrackCount,
-    topTrackName: topTrack?.sessions ? topTrack.name : null,
     activityDays,
     goals: [
       { label: "Complete 4 practice loops this week", current: weeklyCompleted, total: weeklyTarget },
-      { label: "Practice all role tracks", current: activeTrackCount, total: roleTracks.length },
       { label: "Hit a 90+ score once", current: Math.min(bestScore ?? 0, 90), total: 90 },
     ],
-    tracks: trackSummaries,
     improvements: buildImprovements(gradedSessions),
     profileStats: [
       { label: "Sessions", value: `${rawInterviews.length}`, accent: "text-primary" },
@@ -474,24 +381,12 @@ export async function getUserInterviewMetrics(
         value: averageScore === null ? "--" : `${averageScore}`,
         accent: "text-emerald-500",
       },
-      { label: "Tracks Active", value: `${activeTrackCount}`, accent: "text-sky-500" },
       {
         label: "Best Attempt",
         value: bestScore === null ? "--" : `${bestScore}`,
         accent: "text-amber-500",
       },
     ],
-    mastery: trackSummaries.map((track) => ({
-      name: track.name,
-      level: track.averageScore ?? 0,
-      sessions: track.sessions,
-      label:
-        track.averageScore === null
-          ? track.sessions
-            ? "Awaiting score"
-            : "No sessions yet"
-          : `${track.averageScore}% average`,
-    })),
     achievements: [
       {
         icon: "flame",
@@ -517,17 +412,6 @@ export async function getUserInterviewMetrics(
           averageScore === null
             ? "Average score will appear after your first graded session."
             : `${gradedSessions.length} graded interview${gradedSessions.length === 1 ? "" : "s"} contributing to the running average.`,
-      },
-      {
-        icon: "brain",
-        title:
-          activeTrackCount === 0
-            ? "Track explorer"
-            : `${activeTrackCount}/${roleTracks.length} tracks active`,
-        description:
-          activeTrackCount === 0
-            ? "Practice across different tracks to diversify the feedback model."
-            : `Most active track: ${topTrack?.name ?? "None yet"}.`,
       },
     ],
   };

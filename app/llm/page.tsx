@@ -139,7 +139,7 @@ export default function LlmTestPage() {
             <Bot className="size-7 text-primary" />
             LLM Sandbox
           </h1>
-          <p className="mt-3 max-w-3xl text-base text-muted-foreground">
+          <p className="mt-3 max-w-3xl text-base text-base-content/60">
             Quick internal surface for validating the LLM integration wiring, prompt behavior, and document extraction.
           </p>
         </div>
@@ -177,9 +177,9 @@ export default function LlmTestPage() {
                 </div>
 
                 {useProviderOverride ? (
-                  <div className="flex items-center gap-3 rounded-none border border-border px-3 py-2">
+                  <div className="flex items-center gap-3 rounded-none border border-base-300 px-3 py-2">
                     <span
-                      className={providerOverride === "openai" ? "text-sm font-medium text-foreground" : "text-sm text-muted-foreground"}
+                      className={providerOverride === "openai" ? "text-sm font-medium text-base-content" : "text-sm text-base-content/60"}
                     >
                       OpenAI
                     </span>
@@ -191,7 +191,7 @@ export default function LlmTestPage() {
                       aria-label="Toggle provider between OpenAI and Gemini"
                     />
                     <span
-                      className={providerOverride === "gemini" ? "text-sm font-medium text-foreground" : "text-sm text-muted-foreground"}
+                      className={providerOverride === "gemini" ? "text-sm font-medium text-base-content" : "text-sm text-base-content/60"}
                     >
                       Gemini
                     </span>
@@ -213,8 +213,8 @@ export default function LlmTestPage() {
               <h2 className="text-xl">Response</h2>
               {result ? (
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-secondary text-secondary-foreground">provider: {result.provider}</Badge>
-                  <Badge className="bg-secondary text-secondary-foreground">model: {result.modelUsed}</Badge>
+                  <Badge className="bg-neutral/10 text-base-content">provider: {result.provider}</Badge>
+                  <Badge className="bg-neutral/10 text-base-content">model: {result.modelUsed}</Badge>
                 </div>
               ) : null}
             </div>
@@ -225,7 +225,7 @@ export default function LlmTestPage() {
               </div>
             ) : null}
 
-            <div className="min-h-28 whitespace-pre-wrap rounded-none border border-border bg-muted/40 p-4 text-sm leading-6">
+            <div className="min-h-28 whitespace-pre-wrap rounded-none border border-base-300 bg-base-200/40 p-4 text-sm leading-6">
               {result?.content || "Run a test prompt to see model output here."}
             </div>
           </CardContent>
@@ -237,11 +237,11 @@ export default function LlmTestPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">Document Extraction Test</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                  <p className="mt-1 text-sm text-base-content/60">
                     Upload a PDF or Word document to test extraction.
                   </p>
                 </div>
-                <FileText className="size-6 text-muted-foreground" />
+                <FileText className="size-6 text-base-content/60" />
               </div>
 
               <div className="space-y-2">
@@ -266,14 +266,14 @@ export default function LlmTestPage() {
                         setDocumentFile(null);
                         setDocumentResult(null);
                       }}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="text-base-content/60 hover:text-base-content"
                     >
                       <X className="size-4" />
                     </button>
                   )}
                 </div>
                 {documentFile && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-base-content/60">
                     Selected: {documentFile.name} ({(documentFile.size / 1024).toFixed(1)}KB)
                   </p>
                 )}
@@ -298,10 +298,10 @@ export default function LlmTestPage() {
                 <h2 className="text-xl">Extracted Text</h2>
                 {documentResult ? (
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-secondary text-secondary-foreground">
+                    <Badge className="bg-neutral/10 text-base-content">
                       {documentResult.filename}
                     </Badge>
-                    <Badge className="bg-secondary text-secondary-foreground">
+                    <Badge className="bg-neutral/10 text-base-content">
                       {documentResult.extracted_length} chars
                     </Badge>
                   </div>
@@ -315,7 +315,7 @@ export default function LlmTestPage() {
               ) : null}
 
               {documentResult && (
-                <div className="max-h-72 overflow-y-auto rounded-none border border-border bg-muted/40 p-4 text-sm leading-6 whitespace-pre-wrap">
+                <div className="max-h-72 overflow-y-auto rounded-none border border-base-300 bg-base-200/40 p-4 text-sm leading-6 whitespace-pre-wrap">
                   {documentResult.text}
                 </div>
               )}

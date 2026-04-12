@@ -139,10 +139,10 @@ export function CodeRunner({
           onClick={handleRun}
           disabled={running}
           className={cn(
-            "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition",
+            "btn btn-sm gap-2",
             allPassed
-              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-              : "border-border bg-foreground text-background hover:opacity-90",
+              ? "btn-success"
+              : "btn-primary",
           )}
         >
           {running ? (
@@ -157,7 +157,7 @@ export function CodeRunner({
           <span
             className={cn(
               "text-sm font-medium",
-              allPassed ? "text-emerald-600" : "text-rose-500",
+              allPassed ? "text-success" : "text-error",
             )}
           >
             {passCount}/{totalCount} passed
@@ -171,17 +171,17 @@ export function CodeRunner({
             <div
               key={i}
               className={cn(
-                "rounded-xl border px-3 py-2.5 text-sm",
+                "border px-3 py-2.5 text-sm",
                 r.passed
-                  ? "border-emerald-200 bg-emerald-50/50"
-                  : "border-rose-200 bg-rose-50/50",
+                  ? "border-success/30 bg-success/10"
+                  : "border-error/30 bg-error/10",
               )}
             >
               <div className="flex items-center gap-2">
                 {r.passed ? (
-                  <Check className="size-3.5 text-emerald-600" />
+                  <Check className="size-3.5 text-success" />
                 ) : (
-                  <X className="size-3.5 text-rose-500" />
+                  <X className="size-3.5 text-error" />
                 )}
                 <span className="font-medium">
                   Test {i + 1}: {r.passed ? "Passed" : "Failed"}
@@ -191,15 +191,15 @@ export function CodeRunner({
               {!r.passed && (
                 <div className="mt-2 space-y-1 pl-5.5 font-mono text-xs">
                   <p>
-                    <span className="text-muted-foreground">Input: </span>
+                    <span className="text-base-content/60">Input: </span>
                     {formatValue(r.args)}
                   </p>
                   <p>
-                    <span className="text-muted-foreground">Expected: </span>
+                    <span className="text-base-content/60">Expected: </span>
                     {formatValue(r.expected)}
                   </p>
                   <p>
-                    <span className="text-muted-foreground">Got: </span>
+                    <span className="text-base-content/60">Got: </span>
                     <span className={r.error ? "text-rose-600" : ""}>
                       {r.error ?? formatValue(r.actual)}
                     </span>

@@ -44,10 +44,10 @@ export function RandomPracticeSession() {
 
   if (!scenario) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-base-200 px-6 text-center">
         <div>
           <p>Preparing a random scenario.</p>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm text-base-content/60">
             We&apos;re picking a prompt without showing the title first.
           </p>
         </div>

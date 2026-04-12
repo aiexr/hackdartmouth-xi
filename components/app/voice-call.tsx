@@ -243,7 +243,7 @@ export function VoiceCall({
       {/* Audio visualization area */}
       <div className="flex aspect-video w-full max-w-2xl items-center justify-center rounded-none bg-black/5 shadow-lg">
         {status === "idle" && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-base-content/60">
             Start a voice call with your interviewer
           </p>
         )}
@@ -251,7 +251,7 @@ export function VoiceCall({
         {status === "connecting" && (
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="size-10 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Connecting...</p>
+            <p className="text-sm text-base-content/60">Connecting...</p>
           </div>
         )}
 
@@ -263,19 +263,19 @@ export function VoiceCall({
                 "flex size-24 items-center justify-center rounded-none transition-all duration-300",
                 agentSpeaking
                   ? "bg-primary/20 ring-4 ring-primary/30 scale-110"
-                  : "bg-muted",
+                  : "bg-base-200",
               )}
             >
               <div
                 className={cn(
                   "flex size-16 items-center justify-center rounded-none transition-all",
-                  agentSpeaking ? "bg-primary text-white" : "bg-muted-foreground/20 text-muted-foreground",
+                  agentSpeaking ? "bg-primary text-white" : "bg-base-200-foreground/20 text-base-content/60",
                 )}
               >
                 <Phone className="size-7" />
               </div>
             </div>
-            <p className="text-sm font-medium text-muted-foreground">
+            <p className="text-sm font-medium text-base-content/60">
               {agentSpeaking ? "Interviewer is speaking..." : "Listening..."}
             </p>
             {/* Audio bars */}
@@ -285,7 +285,7 @@ export function VoiceCall({
                   key={i}
                   className={cn(
                     "w-1.5 rounded-none transition-all",
-                    agentSpeaking ? "bg-primary animate-pulse" : "bg-muted-foreground/30",
+                    agentSpeaking ? "bg-primary animate-pulse" : "bg-base-200-foreground/30",
                   )}
                   style={{
                     height: agentSpeaking ? 12 + Math.sin(i * 0.8) * 16 : 8,
@@ -298,7 +298,7 @@ export function VoiceCall({
         )}
 
         {status === "ended" && (
-          <p className="text-sm text-muted-foreground">Call ended</p>
+          <p className="text-sm text-base-content/60">Call ended</p>
         )}
       </div>
 
@@ -311,7 +311,7 @@ export function VoiceCall({
         {status === "idle" && (
           <button
             onClick={startCall}
-            className="flex items-center gap-2 rounded-none bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/25 transition hover:bg-primary/90"
+            className="flex items-center gap-2 rounded-none bg-primary px-6 py-3 text-sm font-medium text-primary-content shadow-lg shadow-primary/25 transition hover:bg-primary/90"
           >
             <Phone className="size-4" />
             Start Call
@@ -324,7 +324,7 @@ export function VoiceCall({
               onClick={toggleMute}
               className={cn(
                 "flex size-12 items-center justify-center rounded-none shadow-md transition hover:scale-105",
-                isMuted ? "bg-red-500 text-white" : "bg-white text-foreground",
+                isMuted ? "bg-red-500 text-white" : "bg-white text-base-content",
               )}
               title={isMuted ? "Unmute" : "Mute"}
             >
@@ -344,7 +344,7 @@ export function VoiceCall({
         {status === "connecting" && (
           <button
             disabled
-            className="flex items-center gap-2 rounded-none bg-muted px-6 py-3 text-sm font-medium text-muted-foreground"
+            className="flex items-center gap-2 rounded-none bg-base-200 px-6 py-3 text-sm font-medium text-base-content/60"
           >
             <Loader2 className="size-4 animate-spin" />
             Connecting...

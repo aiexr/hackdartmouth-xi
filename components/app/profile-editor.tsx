@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { roleTracks } from "@/data/scenarios";
 import type { User } from "@/lib/models/User";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -203,14 +202,11 @@ export function ProfileEditor() {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
-          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          <Loader2 className="size-5 animate-spin text-base-content/60" />
         </CardContent>
       </Card>
     );
   }
-
-  const selectedTrack =
-    roleTracks.find((t) => t.id === formData.focusTrack)?.name || "None selected";
 
   return (
     <Card>
@@ -255,19 +251,19 @@ export function ProfileEditor() {
               disabled={saving}
               rows={3}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-base-content/60">
               {formData.bio.length}/256 characters
             </p>
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-border/70 bg-muted/30 p-4">
+          <div className="space-y-4 rounded-none border border-base-300/70 bg-base-200/30 p-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <FileText className="size-4 text-muted-foreground" />
+                  <FileText className="size-4 text-base-content/60" />
                   <label className="text-sm font-medium">Resume</label>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-base-content/60">
                   Upload a PDF or DOCX. We extract and store text context for interview grading.
                 </p>
               </div>
@@ -291,7 +287,7 @@ export function ProfileEditor() {
                   }}
                   disabled={saving || uploadingResume}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-base-content/60">
                   PDF or DOCX up to 10 MB.
                 </p>
               </div>
@@ -330,12 +326,12 @@ export function ProfileEditor() {
             )}
 
             {hasResumeContext && (
-              <div className="rounded-xl border border-dashed border-border/80 bg-background px-4 py-3 text-sm">
+              <div className="rounded-xl border border-dashed border-base-300/80 bg-base-200 px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">
                     {lastProcessedFileName || "Resume context available"}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-base-content/60">
                     Resume processed successfully. Extracted text is stored in your profile for interview context.
                   </p>
                 </div>
@@ -343,34 +339,6 @@ export function ProfileEditor() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Focus Track</label>
-            <div className="grid gap-2">
-              {roleTracks.map((track) => (
-                <button
-                  key={track.id}
-                  type="button"
-                  onClick={() => handleInputChange("focusTrack", track.id)}
-                  disabled={saving}
-                  className={`flex items-center justify-between rounded-lg border-2 p-3 text-left transition-colors ${
-                    formData.focusTrack === track.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div>
-                    <p className="font-medium text-sm">{track.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {track.description}
-                    </p>
-                  </div>
-                  {formData.focusTrack === track.id && (
-                    <span className="text-xs font-semibold text-primary">✓</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="flex gap-3 pt-4">
             <Button

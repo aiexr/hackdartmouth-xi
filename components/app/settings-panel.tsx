@@ -38,15 +38,15 @@ export function SettingsPanel() {
   return (
     <div className="space-y-4">
       {settings.map((setting) => (
-        <Card key={setting.title} className="bg-white/80">
+        <Card key={setting.title} className="bg-base-100/80">
           <CardContent className="flex items-center justify-between gap-4 p-5">
             <div className="flex min-w-0 items-center gap-4">
-              <div className="flex size-11 items-center justify-center rounded-none bg-secondary text-secondary-foreground">
+              <div className="flex size-11 items-center justify-center rounded-none bg-neutral/10 text-base-content">
                 <setting.icon className="size-5" />
               </div>
               <div>
                 <h3 className="text-base">{setting.title}</h3>
-                <p className="text-sm leading-6 text-muted-foreground">
+                <p className="text-sm leading-6 text-base-content/60">
                   {setting.description}
                 </p>
               </div>
