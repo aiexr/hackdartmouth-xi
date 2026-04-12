@@ -263,7 +263,7 @@ export async function getUserInterviewMetrics(
       activityDays: getActivityDays([]),
       goals: [
         {
-          label: `Complete ${DEFAULT_WEEKLY_TARGET} practice loops this week`,
+          label: `Complete ${DEFAULT_WEEKLY_TARGET} interviews this week`,
           current: 0,
           total: DEFAULT_WEEKLY_TARGET,
         },
@@ -307,7 +307,7 @@ export async function getUserInterviewMetrics(
       activityDays: getActivityDays([]),
       goals: [
         {
-          label: `Complete ${DEFAULT_WEEKLY_TARGET} practice loops this week`,
+          label: `Complete ${DEFAULT_WEEKLY_TARGET} interviews this week`,
           current: 0,
           total: DEFAULT_WEEKLY_TARGET,
         },
@@ -389,7 +389,7 @@ export async function getUserInterviewMetrics(
     activityDays,
     goals: [
       {
-        label: `Complete ${weeklyTarget} practice loops this week`,
+        label: `Complete ${weeklyTarget} interviews this week`,
         current: weeklyCompleted,
         total: weeklyTarget,
       },

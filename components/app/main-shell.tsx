@@ -51,20 +51,25 @@ export function MainShell({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const [isPending, startTransition] = useTransition();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setPendingHref(null);
   }, [pathname]);
 
   useEffect(() => {
-    if (status !== "authenticated") {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || status !== "authenticated") {
       return;
     }
 
     for (const item of navigation) {
       router.prefetch(item.href);
     }
-  }, [router, status]);
+  }, [mounted, router, status]);
 
   useEffect(() => {
     if (status !== "unauthenticated" || pathname === "/") {
@@ -72,7 +77,6 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     }
 
     router.replace("/");
-    router.refresh();
   }, [pathname, router, status]);
 
   const navigateTo = (href: string) => {
@@ -104,8 +108,9 @@ export function MainShell({ children }: { children: React.ReactNode }) {
   };
 
   const activeHref = pendingHref ?? pathname;
-  const hideLandingChrome =
-    pathname === "/" && status !== "authenticated";
+  const resolvedStatus = mounted ? status : "loading";
+  const hideLandingChrome = pathname === "/" && resolvedStatus !== "authenticated";
+  const sessionUser = mounted ? session?.user : undefined;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -157,7 +162,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
               <ThemeLogo alt="LeetSpeak logo" className="h-9 w-auto" />
               <span className="text-sm font-semibold tracking-tight">LeetSpeak</span>
             </Link>
-            {session?.user ? (
+            {sessionUser ? (
               <div className="ml-auto flex items-center gap-3">
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}
@@ -166,9 +171,9 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                   Sign out
                 </button>
                 <Link href="/profile" className="cursor-pointer transition-opacity hover:opacity-80">
-                  {session.user.image ? (
+                  {sessionUser.image ? (
                     <img
-                      src={session.user.image}
+                      src={sessionUser.image}
                       alt=""
                       referrerPolicy="no-referrer"
                       className="size-9 rounded-full ring-2 ring-border"
