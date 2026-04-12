@@ -10,6 +10,7 @@ import {
   Lightbulb,
   RotateCcw,
   Star,
+  TrendingDown,
   TrendingUp,
 } from "lucide-react";
 import { getOptionalServerSession } from "@/lib/auth";
@@ -254,6 +255,9 @@ export default async function ReviewPage({
           highlight: line.highlight,
         }));
   const scoreDisplay = hasPersistedReview ? (overallScore ?? "--") : staticReview.overallScore;
+  const fallbackScoreDelta = staticReview.overallScore - staticReview.previousScore;
+  const visibleScoreDelta = hasPersistedReview ? scoreDelta : fallbackScoreDelta;
+  const isNegativeScoreDelta = visibleScoreDelta !== null && visibleScoreDelta < 0;
 
   const reviewNotice =
     persistedReview?.notice ??
@@ -365,8 +369,16 @@ export default async function ReviewPage({
               </div>
             </div>
 
-            <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-600">
-              <TrendingUp className="size-4" />
+            <div
+              className={`mt-5 inline-flex items-center gap-2 text-sm font-semibold ${
+                isNegativeScoreDelta ? "text-red-600" : "text-emerald-600"
+              }`}
+            >
+              {isNegativeScoreDelta ? (
+                <TrendingDown className="size-4" />
+              ) : (
+                <TrendingUp className="size-4" />
+              )}
               {hasPersistedReview ? (
                 scoreDelta !== null ? (
                   <>
@@ -379,7 +391,10 @@ export default async function ReviewPage({
                   <>Transcript saved successfully, but scoring is still pending</>
                 )
               ) : (
-                <>{staticReview.overallScore - staticReview.previousScore} points from the last attempt</>
+                <>
+                  {fallbackScoreDelta >= 0 ? "+" : ""}
+                  {fallbackScoreDelta} points from the last attempt
+                </>
               )}
             </div>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-base-content/60">
