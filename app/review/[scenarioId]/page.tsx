@@ -34,6 +34,12 @@ type PersistedInterview = {
       type?: "strength" | "improvement" | "note";
       description?: string;
     }>;
+    diagram_analysis?: {
+      description?: string;
+      strengths?: string[];
+      improvements?: string[];
+      key_points?: string[];
+    };
   } | null;
   transcript?: Array<{
     role?: string;
@@ -294,7 +300,60 @@ export default async function ReviewPage({
           </Card>
         ) : null}
 
+<<<<<<< HEAD
         <Card className="bg-base-100/85 text-center">
+=======
+        {hasPersistedReview && interview?.gradingResult?.diagram_analysis ? (
+          <Card className="bg-white/85">
+            <CardContent className="p-6">
+              <h2 className="flex items-center gap-2">
+                <Lightbulb className="size-5 text-violet-500" />
+                Diagram analysis
+              </h2>
+              <div className="mt-4 space-y-4 text-sm leading-6 text-muted-foreground">
+                {interview.gradingResult.diagram_analysis.description ? (
+                  <p>{interview.gradingResult.diagram_analysis.description}</p>
+                ) : null}
+
+                {Array.isArray(interview.gradingResult.diagram_analysis.strengths) && interview.gradingResult.diagram_analysis.strengths.length ? (
+                  <div>
+                    <strong>Diagram strengths:</strong>
+                    <ul className="mt-2 list-inside list-disc">
+                      {interview.gradingResult.diagram_analysis.strengths.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {Array.isArray(interview.gradingResult.diagram_analysis.improvements) && interview.gradingResult.diagram_analysis.improvements.length ? (
+                  <div>
+                    <strong>Diagram improvements:</strong>
+                    <ul className="mt-2 list-inside list-disc">
+                      {interview.gradingResult.diagram_analysis.improvements.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {Array.isArray(interview.gradingResult.diagram_analysis.key_points) && interview.gradingResult.diagram_analysis.key_points.length ? (
+                  <div>
+                    <strong>Key points:</strong>
+                    <ul className="mt-2 list-inside list-disc">
+                      {interview.gradingResult.diagram_analysis.key_points.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        <Card className="bg-white/85 text-center">
+>>>>>>> 82cafda (feat: add diagram analysis support to interview grading and review components)
           <CardContent className="p-8">
             <div className="inline-flex items-center gap-2 rounded-none bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
               <Award className="size-4" />
@@ -491,6 +550,11 @@ export default async function ReviewPage({
                   className="w-full"
                 />
               </div>
+              {isNonEmptyString(interview?.gradingResult?.diagram_analysis?.description) ? (
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  {interview.gradingResult.diagram_analysis.description}
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         ) : null}
