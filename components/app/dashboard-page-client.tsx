@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSession } from "next-auth/react";
 import {
   BookOpen,
   Calendar,
@@ -14,7 +12,6 @@ import {
   Zap,
 } from "lucide-react";
 import { ActivityCalendar } from "@/components/app/activity-calendar";
-import { LandingPage } from "@/components/app/landing-page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -52,86 +49,27 @@ type UserInterviewMetrics = {
   improvements: ImprovementMetric[];
 };
 
-type InitialSessionUser = {
-  email?: string | null;
-  name?: string | null;
-  image?: string | null;
-};
+function getRollingActiveDays(activityDays: ActivityDay[]) {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
 
-let dashboardMetricsCache: UserInterviewMetrics | null = null;
+  const start = new Date(end);
+  start.setDate(start.getDate() - 364);
 
-function MetricsSkeleton() {
-  return (
-    <>
-      <div className="grid gap-4 animate-pulse">
-        <div className="h-40 rounded border border-border bg-base-200/30" />
-        <div className="h-32 rounded border border-border bg-base-200/30" />
-      </div>
-      <div className="h-48 rounded border border-border bg-base-200/30 animate-pulse" />
-    </>
-  );
+  const startKey = [
+    start.getFullYear(),
+    `${start.getMonth() + 1}`.padStart(2, "0"),
+    `${start.getDate()}`.padStart(2, "0"),
+  ].join("-");
+
+  return activityDays.filter((day) => day.date >= startKey && day.count > 0).length;
 }
 
 export function DashboardPageClient({
-  initialUser,
+  initialMetrics,
 }: {
-  initialUser?: InitialSessionUser | null;
+  initialMetrics: UserInterviewMetrics;
 }) {
-  const { status } = useSession();
-  const [metrics, setMetrics] = useState<UserInterviewMetrics | null>(dashboardMetricsCache);
-  const [loading, setLoading] = useState(() => !dashboardMetricsCache);
-  const effectiveStatus =
-    status === "loading"
-      ? initialUser
-        ? "authenticated"
-        : "unauthenticated"
-      : status;
-
-  useEffect(() => {
-    if (effectiveStatus !== "authenticated") {
-      setMetrics(null);
-      setLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    setLoading(!dashboardMetricsCache);
-    fetch("/api/user/metrics", { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch metrics");
-        }
-
-        return (await response.json()) as UserInterviewMetrics;
-      })
-      .then((nextMetrics) => {
-        dashboardMetricsCache = nextMetrics;
-        setMetrics(nextMetrics);
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        console.error("Failed to load dashboard metrics:", error);
-        setMetrics(null);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      controller.abort();
-    };
-  }, [effectiveStatus]);
-
-  if (effectiveStatus !== "authenticated") {
-    return <LandingPage />;
-  }
-
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -154,7 +92,7 @@ export function DashboardPageClient({
           </CardContent>
         </Card>
 
-        {loading || !metrics ? <MetricsSkeleton /> : <DashboardMetrics metrics={metrics} />}
+        <DashboardMetrics metrics={initialMetrics} />
       </section>
     </div>
   );
@@ -315,7 +253,7 @@ function DashboardMetrics({ metrics }: { metrics: UserInterviewMetrics }) {
             </div>
             <div className="min-w-0">
               <div className="text-2xl font-semibold leading-none">
-                {metrics.activityDays.filter((day) => day.count > 0).length}
+                {getRollingActiveDays(metrics.activityDays)}
               </div>
               <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Active days</div>
             </div>

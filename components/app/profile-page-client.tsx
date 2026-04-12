@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import { Briefcase, Edit3, User } from "lucide-react";
 import { scenarios } from "@/data/scenarios";
 import { ProfileHistory } from "@/components/app/profile-history";
@@ -43,9 +41,12 @@ type InterviewRecord = {
   completedAt?: string | null;
 };
 
-let profileCache: UserProfile | null = null;
-let profileMetricsCache: UserInterviewMetrics | null = null;
-let profileInterviewsCache: InterviewRecord[] | null = null;
+type ProfilePageInitialData = {
+  isAuthenticated: boolean;
+  profile: UserProfile | null;
+  metrics: UserInterviewMetrics;
+  interviews: InterviewRecord[];
+};
 
 const scenarioById = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
 
@@ -93,90 +94,16 @@ function getHistoryScenarioMeta(scenarioId: string | null) {
   };
 }
 
-function ProfileStatsSkeleton() {
-  return (
-    <>
-      <div className="h-4 w-48 animate-pulse rounded bg-base-300/50" />
-      <div className="h-24 animate-pulse rounded border border-border bg-base-200/30" />
-      <div className="h-20 animate-pulse rounded border border-border bg-base-200/30" />
-    </>
-  );
-}
-
-function ProfileHistorySkeleton() {
-  return (
-    <div className="rounded-none border border-border bg-base-100 p-6">
-      <div className="h-6 w-28 animate-pulse rounded-none bg-base-300/55" />
-      <div className="mt-2 h-4 w-80 animate-pulse rounded-none bg-base-300/40" />
-      <div className="mt-6 space-y-4">
-        <div className="h-56 animate-pulse rounded-none border border-border bg-base-200/40" />
-        <div className="h-56 animate-pulse rounded-none border border-border bg-base-200/40" />
-      </div>
-    </div>
-  );
-}
-
-export function ProfilePageClient() {
-  const { data: session } = useSession();
-  const [profile, setProfile] = useState<UserProfile | null>(profileCache);
-  const [metrics, setMetrics] = useState<UserInterviewMetrics | null>(profileMetricsCache);
-  const [interviews, setInterviews] = useState<InterviewRecord[]>(profileInterviewsCache ?? []);
-  const [loading, setLoading] = useState(
-    () => !(profileCache && profileMetricsCache && profileInterviewsCache),
-  );
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    setLoading(!(profileCache && profileMetricsCache && profileInterviewsCache));
-    Promise.all([
-      fetch("/api/user/profile", { signal: controller.signal }).then(async (response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch profile");
-        }
-        return (await response.json()) as UserProfile;
-      }),
-      fetch("/api/user/metrics", { signal: controller.signal }).then(async (response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch metrics");
-        }
-        return (await response.json()) as UserInterviewMetrics;
-      }),
-      fetch("/api/interviews", { signal: controller.signal }).then(async (response) => {
-        if (!response.ok) {
-          throw new Error("Failed to fetch interviews");
-        }
-        return (await response.json()) as InterviewRecord[];
-      }),
-    ])
-      .then(([nextProfile, nextMetrics, nextInterviews]) => {
-        profileCache = nextProfile;
-        profileMetricsCache = nextMetrics;
-        profileInterviewsCache = nextInterviews;
-        setProfile(nextProfile);
-        setMetrics(nextMetrics);
-        setInterviews(nextInterviews);
-      })
-      .catch((error) => {
-        if (controller.signal.aborted) {
-          return;
-        }
-
-        console.error("Failed to load profile page data:", error);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      controller.abort();
-    };
-  }, []);
-
-  const profileName = session?.user?.name ?? profile?.name ?? "Guest user";
-  const profileImage = session?.user?.image ?? profile?.image ?? "";
+export function ProfilePageClient({
+  initialData,
+}: {
+  initialData: ProfilePageInitialData;
+}) {
+  const { isAuthenticated, interviews, metrics, profile } = initialData;
+  const profileName = profile?.name ?? "Guest user";
+  const profileImage = profile?.image ?? "";
+  const profileActionHref = isAuthenticated ? "#profile-editor" : "/";
+  const profileActionLabel = isAuthenticated ? "Edit profile" : "Sign in";
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-6 py-8 md:px-10 md:py-10">
@@ -198,29 +125,23 @@ export function ProfilePageClient() {
             <h1>{profileName}</h1>
           </div>
           <Button asChild variant="secondary">
-            <Link href="#profile-editor">
+            <Link href={profileActionHref}>
               <Edit3 className="size-4" />
-              Edit profile
+              {profileActionLabel}
             </Link>
           </Button>
         </CardContent>
       </Card>
 
-      {loading || !metrics ? (
-        <ProfileStatsSkeleton />
-      ) : (
-        <ProfileStats profile={profile} metrics={metrics} />
-      )}
+      <ProfileStats profile={profile} metrics={metrics} signedIn={isAuthenticated} />
 
-      <div id="profile-editor" className="space-y-4 scroll-mt-8">
-        <ProfileEditor />
-      </div>
+      {isAuthenticated ? (
+        <div id="profile-editor" className="space-y-4 scroll-mt-8">
+          <ProfileEditor />
+        </div>
+      ) : null}
 
-      {loading ? (
-        <ProfileHistorySkeleton />
-      ) : (
-        <ProfileHistory signedIn sessions={buildSessions(interviews)} />
-      )}
+      <ProfileHistory signedIn={isAuthenticated} sessions={isAuthenticated ? buildSessions(interviews) : []} />
     </div>
   );
 }
@@ -228,9 +149,11 @@ export function ProfilePageClient() {
 function ProfileStats({
   profile,
   metrics,
+  signedIn,
 }: {
   profile: UserProfile | null;
   metrics: UserInterviewMetrics;
+  signedIn: boolean;
 }) {
   const profileBio = profile?.bio || null;
   const hasResumeContext = Boolean(profile?.hasResumeContext);
@@ -268,7 +191,7 @@ function ProfileStats({
         </Card>
       )}
 
-      <ResumeUploaderCard initialHasResumeContext={hasResumeContext} />
+      {signedIn ? <ResumeUploaderCard initialHasResumeContext={hasResumeContext} /> : null}
 
       <div className="rounded-none border border-border bg-base-100">
         <div className="grid grid-cols-3 divide-x divide-y divide-border sm:grid-cols-6 sm:divide-y-0">

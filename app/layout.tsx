@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { RootProvider } from "@/app/root-provider";
-import { SessionProvider } from "@/components/auth/session-provider";
 import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
@@ -98,9 +97,7 @@ export default function RootLayout({
       <body
         className={`${bodyFont.variable} ${displayFont.variable} min-h-screen font-(--font-body) text-base-content`}
       >
-        <SessionProvider>
-          <RootProvider>{children}</RootProvider>
-        </SessionProvider>
+        <RootProvider>{children}</RootProvider>
       </body>
     </html>
   );
