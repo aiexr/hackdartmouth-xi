@@ -47,19 +47,7 @@ async function extractPdfWithPdfToText(buffer: Buffer): Promise<string> {
   }
 }
 
-async function extractPdfWithPdfParse(buffer: Buffer): Promise<string> {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
-
-  try {
-    const result = await parser.getText();
-    return result.text || "";
-  } finally {
-    await parser.destroy();
-  }
-}
-
-function shouldFallbackToPdfParse(error: unknown) {
+function isMissingPdftotext(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return /spawn\s+pdftotext\s+enoent|pdftotext.*not found|enoent/i.test(message);
 }
@@ -68,11 +56,12 @@ async function extractPdf(buffer: Buffer): Promise<string> {
   try {
     return await extractPdfWithPdfToText(buffer);
   } catch (error) {
-    if (!shouldFallbackToPdfParse(error)) {
-      throw error;
+    if (isMissingPdftotext(error)) {
+      throw new Error(
+        "PDF extraction requires the `pdftotext` system binary, which is not available in this environment.",
+      );
     }
-
-    return extractPdfWithPdfParse(buffer);
+    throw error;
   }
 }
 

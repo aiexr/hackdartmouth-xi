@@ -261,9 +261,9 @@ export default async function DashboardPage() {
                 <h1 className="max-w-2xl">
                   Start practicing your interviewing skills.
                 </h1>
-                {/* <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
-                  Switch between behavioral, technical coding, and system design rounds, then review visible progress over time. Weekly goals, streaks, and saved interview history flow through MongoDB-backed scoring.
-                </p> */}
+                <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
+                  Practice behavioral, technical, and system design interviews with instant feedback.
+                </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="lg" className="text-white">
                     <Link href="/practice">

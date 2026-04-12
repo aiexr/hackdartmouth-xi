@@ -687,11 +687,20 @@ export default function PracticePage() {
                     Loading
                   </div>
                 )}
+                <span className="ml-auto text-xs text-base-content/60">
+                  {lcTotal > 0
+                    ? lcProblems.length < lcTotal
+                      ? `Showing ${lcProblems.length} of ${lcTotal} problems`
+                      : `${lcTotal} problems`
+                    : lcLoading
+                      ? "Loading count..."
+                      : "0 problems"}
+                </span>
                 <button
                   type="button"
                   onClick={pickRandomLc}
                   disabled={lcProblems.filter((p) => !p.paidOnly).length === 0}
-                  className="btn btn-sm btn-ghost ml-auto gap-1.5"
+                  className="btn btn-sm btn-ghost gap-1.5"
                 >
                   <Shuffle className="size-3.5" />
                   Random
