@@ -31,6 +31,14 @@ export type Scenario = {
       args: unknown[];
       expected: unknown;
     }>;
+    source?: "LeetCode";
+    sourceId?: string;
+    sourceTitle?: string;
+    sourceSlug?: string;
+    sourceDifficulty?: "Easy" | "Medium" | "Hard";
+    sourceUrl?: string;
+    topicTags?: string[];
+    sourceHints?: string[];
   };
 };
 
@@ -686,24 +694,7 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
       "How would you test the negative-number and repeated-index cases?",
     ],
     codingProblem: {
-      description:
-        "Given an array of integers `nums` and an integer `target`, return the indices of the two numbers such that they add up to `target`. Assume exactly one valid answer exists and you may not use the same element twice.",
-      examples: [
-        {
-          input: "nums = [2,7,11,15], target = 9",
-          output: "[0,1]",
-          explanation: "nums[0] + nums[1] = 9.",
-        },
-        {
-          input: "nums = [3,2,4], target = 6",
-          output: "[1,2]",
-        },
-      ],
-      constraints: [
-        "2 <= nums.length <= 10^4",
-        "-10^9 <= nums[i] <= 10^9",
-        "-10^9 <= target <= 10^9",
-      ],
+      ...leetCodeCodingProblems.twoSum,
       optimalApproach:
         "Use a hash map from value to index while scanning once. For each number, check whether `target - nums[i]` has already been seen; if so, return the previous index and `i`. This gives O(n) time and O(n) space.",
       starterCode:
@@ -748,23 +739,7 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
       "What test cases prove your implementation handles nested and broken input?",
     ],
     codingProblem: {
-      description:
-        "Given a string `s` containing just the characters `()[]{}`, determine if the input string is valid. A string is valid if open brackets are closed by the same type of brackets and in the correct order.",
-      examples: [
-        {
-          input: 's = "()[]{}"',
-          output: "true",
-        },
-        {
-          input: 's = "(]"',
-          output: "false",
-          explanation: "The closing bracket does not match the most recent opening bracket.",
-        },
-      ],
-      constraints: [
-        "1 <= s.length <= 10^4",
-        "s consists only of the characters ()[]{}",
-      ],
+      ...leetCodeCodingProblems.validParentheses,
       optimalApproach:
         "Use a stack to track unmatched opening brackets. On every closing bracket, verify it matches the latest opening bracket and fail fast if not. This yields O(n) time and O(n) space in the worst case.",
       starterCode:
@@ -811,24 +786,7 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
       "What cases would you use to verify touching intervals behave correctly?",
     ],
     codingProblem: {
-      description:
-        "Given an array of intervals where `intervals[i] = [start_i, end_i]`, merge all overlapping intervals and return an array of the non-overlapping intervals that cover all input intervals.",
-      examples: [
-        {
-          input: "intervals = [[1,3],[2,6],[8,10],[15,18]]",
-          output: "[[1,6],[8,10],[15,18]]",
-        },
-        {
-          input: "intervals = [[1,4],[4,5]]",
-          output: "[[1,5]]",
-          explanation: "Intervals that touch at the boundary should be merged.",
-        },
-      ],
-      constraints: [
-        "1 <= intervals.length <= 10^4",
-        "intervals[i].length == 2",
-        "0 <= start_i <= end_i <= 10^4",
-      ],
+      ...leetCodeCodingProblems.mergeIntervals,
       optimalApproach:
         "Sort intervals by start time, then scan once while keeping the last merged interval. If the current interval overlaps the last merged interval, extend its end; otherwise append a new interval. This is O(n log n) time and O(n) output space.",
       starterCode:
@@ -873,23 +831,7 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
       "How would the approach change if the input were a large data stream?",
     ],
     codingProblem: {
-      description:
-        "Given an integer array `nums` and an integer `k`, return the `k` most frequent elements. You may return the answer in any order.",
-      examples: [
-        {
-          input: "nums = [1,1,1,2,2,3], k = 2",
-          output: "[1,2]",
-        },
-        {
-          input: "nums = [1], k = 1",
-          output: "[1]",
-        },
-      ],
-      constraints: [
-        "1 <= nums.length <= 10^5",
-        "-10^4 <= nums[i] <= 10^4",
-        "1 <= k <= number of unique elements",
-      ],
+      ...leetCodeCodingProblems.topKFrequentElements,
       optimalApproach:
         "Count frequencies with a hash map, then either keep a min-heap of size `k` or bucket values by frequency. A heap-based solution runs in O(n log k) time and O(n) space and is usually the clearest interview answer.",
       starterCode:
@@ -934,21 +876,7 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
       "How would you adapt this if entries also had time-based expiration?",
     ],
     codingProblem: {
-      description:
-        "Design a data structure that follows the constraints of a Least Recently Used (LRU) cache. Implement the `LRUCache` class with `get(key)` and `put(key, value)` operations, both in O(1) average time.",
-      examples: [
-        {
-          input:
-            '["LRUCache","put","put","get","put","get","put","get","get","get"] with [[2],[1,1],[2,2],[1],[3,3],[2],[4,4],[1],[3],[4]]',
-          output: "[null,null,null,1,null,-1,null,-1,3,4]",
-        },
-      ],
-      constraints: [
-        "1 <= capacity <= 3000",
-        "0 <= key <= 10^4",
-        "0 <= value <= 10^5",
-        "At most 2 * 10^5 calls will be made to get and put",
-      ],
+      ...leetCodeCodingProblems.lruCache,
       optimalApproach:
         "Combine a doubly linked list with a hash map from key to node. The list maintains recency order, and the map gives O(1) access to nodes for updates and eviction. Both `get` and `put` stay O(1) on average.",
       starterCode:
@@ -987,21 +915,7 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
       "How would bidirectional BFS change the tradeoffs?",
     ],
     codingProblem: {
-      description:
-        "A transformation sequence from `beginWord` to `endWord` uses a dictionary of words where only one letter may change at a time and every intermediate word must exist in the dictionary. Return the length of the shortest transformation sequence, or `0` if none exists.",
-      examples: [
-        {
-          input:
-            'beginWord = "hit", endWord = "cog", wordList = ["hot","dot","dog","lot","log","cog"]',
-          output: "5",
-          explanation: 'One shortest path is "hit" -> "hot" -> "dot" -> "dog" -> "cog".',
-        },
-      ],
-      constraints: [
-        "1 <= beginWord.length <= 10",
-        "1 <= wordList.length <= 5000",
-        "All words have the same length",
-      ],
+      ...leetCodeCodingProblems.wordLadder,
       optimalApproach:
         "Model the words as an implicit graph and run BFS from the begin word. Either generate one-letter mutations on the fly with a hash set lookup or precompute wildcard patterns to reduce repeated work. The intended solution is BFS-based because the first time you reach `endWord` is the shortest path.",
       starterCode:

@@ -20,12 +20,30 @@ const NON_CHAT_MODEL_KEYWORDS = [
 
 type ChatMessage = {
   role: "system" | "user";
-  content: string;
+  content:
+    | string
+    | Array<
+        | {
+            type: "text";
+            text: string;
+          }
+        | {
+            type: "image_url";
+            image_url: {
+              url: string;
+            };
+          }
+      >;
 };
 
 type ExecuteResult = {
   content: string;
   modelUsed: string;
+};
+
+type ImagePart = {
+  mimeType: string;
+  dataBase64: string;
 };
 
 export function getModel() {
@@ -134,6 +152,25 @@ function extractContent(responseJson: unknown): string {
   return "";
 }
 
+function toImageDataUrl(image: ImagePart) {
+  const mimeType = image.mimeType.trim().toLowerCase();
+  if (!mimeType.startsWith("image/")) {
+    throw new Error(`Unsupported image mime type: ${image.mimeType}`);
+  }
+
+  const raw = image.dataBase64.trim();
+  if (!raw) {
+    throw new Error("Image dataBase64 cannot be empty.");
+  }
+
+  if (raw.startsWith("data:")) {
+    return raw;
+  }
+
+  const normalizedBase64 = raw.replace(/\s+/g, "");
+  return `data:${mimeType};base64,${normalizedBase64}`;
+}
+
 export async function fetchAvailableModels(): Promise<
   [models: string[], warning: string | null]
 > {
@@ -235,5 +272,78 @@ export async function execute(
 
   throw new Error(
     `All ${modelsToTry.length} model(s) failed. Last error: ${lastError?.message ?? "unknown"}`,
+  );
+}
+
+export async function executeWithImage(
+  prompt: string,
+  systemPrompt: string,
+  modelOverride: string | undefined,
+  temperature: number,
+  maxTokens: number,
+  image: ImagePart,
+  fallbacks: string[] = [],
+): Promise<ExecuteResult> {
+  const { apiKey, baseUrl } = getApiConfig();
+  const modelsToTry = [modelOverride || getModel(), ...fallbacks].filter(Boolean);
+
+  if (modelsToTry.length === 0) {
+    throw new Error(
+      "No models configured. Set OPENAI_MODEL or provide a model override.",
+    );
+  }
+
+  const imageUrl = toImageDataUrl(image);
+  let lastError: Error | null = null;
+
+  for (const model of modelsToTry) {
+    try {
+      const messages: ChatMessage[] = [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ],
+        },
+      ];
+
+      const response = await fetch(`${baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(
+          buildCompletionPayload(model, temperature, maxTokens, messages),
+        ),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(
+          `Model ${model} failed with ${response.status}: ${text.slice(0, 300)}`,
+        );
+      }
+
+      const json = await response.json();
+      const content = extractContent(json);
+
+      if (!content) {
+        throw new Error(`Model ${model} returned empty content`);
+      }
+
+      return {
+        content,
+        modelUsed: model,
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+  }
+
+  throw new Error(
+    `All ${modelsToTry.length} image model(s) failed. Last error: ${lastError?.message ?? "unknown"}`,
   );
 }

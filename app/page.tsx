@@ -46,12 +46,12 @@ async function withTimeout<T>(
 export default async function DashboardPage() {
   const session = await withTimeout(
     getOptionalServerSession(),
-    4500,
+    1200,
     "Session lookup timed out.",
   ).catch(() => null);
   const metrics = await withTimeout(
     getUserInterviewMetrics(session?.user?.email),
-    5000,
+    1600,
     "Metrics lookup timed out.",
   ).catch(() => getUserInterviewMetrics());
   const loopProgress = Math.min(
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="lg" className="text-white">
                     <Link href="/practice">
-                      <Play className="size-4" />
+                      <Play className="w-4 h-4" />
                       Start quick practice
                     </Link>
                   </Button>
@@ -106,8 +106,8 @@ export default async function DashboardPage() {
                 Today's progress
               </div>
               <div className="mt-5 flex items-center gap-4">
-                <div className="relative flex size-28 items-center justify-center">
-                  <svg className="size-full -rotate-90" viewBox="0 0 120 120">
+                <div className="relative flex w-28 h-28 items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
                     <circle
                       cx="60"
                       cy="60"
