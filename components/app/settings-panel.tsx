@@ -120,7 +120,7 @@ export function SettingsPanel() {
                   {confirmDelete ? (
                     <p className="mt-2 text-sm leading-6 text-destructive">
                       This is not a local-only reset. It permanently removes your
-                      stored HackDartmouth XI account data and signs you out.
+                      stored LeetSpeak account data and signs you out.
                     </p>
                   ) : null}
                   {deleteError ? (
