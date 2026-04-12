@@ -7,7 +7,7 @@ export default function AuthPopupCompletePage() {
   useEffect(() => {
     try {
       if (window.opener) {
-        window.opener.location.href = "/auth/popup/handoff";
+        window.opener.location.replace("/");
         window.close();
         return;
       }
@@ -15,7 +15,7 @@ export default function AuthPopupCompletePage() {
       // Fall through to same-tab redirect.
     }
 
-    window.location.href = "/auth/popup/handoff";
+    window.location.replace("/");
   }, []);
 
   return (

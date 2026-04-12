@@ -81,15 +81,33 @@ export class UserModel {
     if (!db) return null;
 
     const usersCollection = db.collection<User>("users");
+    const now = new Date();
     const result = await usersCollection.findOneAndUpdate(
       { email },
       {
+        $setOnInsert: {
+          email,
+          name: "",
+          image: "",
+          provider: "google",
+          focusTrack: null,
+          bio: null,
+          resumeExtractedText: null,
+          preferences: {
+            voiceId: null,
+            feedbackStyle: "structured",
+            practiceReminders: true,
+            weeklyGoal: 4,
+          },
+          favorites: [],
+          createdAt: now,
+        },
         $set: {
           ...updates,
-          updatedAt: new Date(),
+          updatedAt: now,
         },
       },
-      { returnDocument: "after" }
+      { upsert: true, returnDocument: "after" }
     );
 
     return result ?? null;

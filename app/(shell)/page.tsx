@@ -1,13 +1,17 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  ArrowRight,
   BookOpen,
+  Braces,
   Calendar,
   Flame,
+  Network,
   Play,
   Target,
   TrendingUp,
   Trophy,
+  Users,
   Zap,
 } from "lucide-react";
 import { getOptionalServerSession } from "@/lib/auth";
@@ -20,6 +24,36 @@ import { LandingPage } from "@/components/app/landing-page";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 25;
+
+const dashboardSuggestedScenarios = [
+  {
+    id: "technical-two-sum",
+    title: "Code Two Sum live",
+    reason: "Fast first coding rep to establish a baseline.",
+    trackLabel: "Technical Coding",
+    meta: "Foundations / 18 min",
+    icon: Braces,
+    iconClassName: "text-emerald-500",
+  },
+  {
+    id: "system-url-shortener",
+    title: "Design a URL shortener",
+    reason: "Starter system design round with clear tradeoffs.",
+    trackLabel: "System Design",
+    meta: "Foundations / 22 min",
+    icon: Network,
+    iconClassName: "text-amber-500",
+  },
+  {
+    id: "staff-swe-story",
+    title: "Tell me about yourself for a staff-level role",
+    reason: "Good first behavioral prompt to tighten your story.",
+    trackLabel: "Behavioral",
+    meta: "Foundations / 8 min",
+    icon: Users,
+    iconClassName: "text-violet-700",
+  },
+] as const;
 
 async function DashboardMetrics({ email }: { email?: string | null }) {
   const metrics = await getUserInterviewMetrics(email ?? undefined).catch(
@@ -251,33 +285,75 @@ export default async function DashboardPage() {
   }
 
   return (
-      <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="overflow-hidden">
-            <CardContent className="p-7 md:p-8">
-              <div className="mt-5">
-                <h1 className="max-w-2xl">
-                  Start practicing your interviewing skills.
-                </h1>
-                <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
-                  Practice behavioral, technical, and system design interviews with instant feedback.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Button asChild size="lg" className="text-white">
-                    <Link href="/practice">
-                      <Play className="w-4 h-4" />
-                      Start quick practice
-                    </Link>
-                  </Button>
+    <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
+      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="overflow-hidden">
+          <CardContent className="p-7 md:p-8">
+            <div className="space-y-5">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <Target className="size-4" />
+                    Suggested next reps
+                  </div>
+                  <h1 className="mt-3 max-w-2xl">
+                    Start with three strong interview reps.
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-base text-base-content/60 md:text-lg">
+                    These stay visible even on a brand-new account, so you always have a clear place to start.
+                  </p>
                 </div>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/practice">Browse all practice</Link>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
 
-          <Suspense fallback={<MetricsSkeleton />}>
-            <DashboardMetrics email={session?.user?.email} />
-          </Suspense>
-        </section>
-      </div>
+              <div className="space-y-3">
+                {dashboardSuggestedScenarios.map((scenario) => (
+                  <Link
+                    key={scenario.id}
+                    href={`/practice/${scenario.id}`}
+                    className="group flex items-start justify-between gap-4 rounded-none border border-base-300 bg-base-100 p-4 transition hover:border-primary/40 hover:bg-base-200/20"
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex size-9 shrink-0 items-center justify-center border border-base-300 bg-base-200/40">
+                        <scenario.icon
+                          className={`size-4 ${scenario.iconClassName}`}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <h2 className="text-base leading-6">{scenario.title}</h2>
+                        <p className="mt-1 text-sm leading-6 text-base-content/60">
+                          {scenario.reason}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.12em] text-base-content/45">
+                          <span>{scenario.trackLabel}</span>
+                          <span>-</span>
+                          <span>{scenario.meta}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="mt-1 size-4 shrink-0 text-base-content/30 transition group-hover:text-primary" />
+                  </Link>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button asChild size="lg" className="text-white">
+                  <Link href={`/practice/${dashboardSuggestedScenarios[0].id}`}>
+                    <Play className="w-4 h-4" />
+                    Start quick practice
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Suspense fallback={<MetricsSkeleton />}>
+          <DashboardMetrics email={session?.user?.email} />
+        </Suspense>
+      </section>
+    </div>
   );
 }
