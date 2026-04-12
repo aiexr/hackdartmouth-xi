@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { VoiceConversation } from "@elevenlabs/client";
 import { Mic, MicOff, Phone, PhoneOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const INTERNAL_PROMPT_MARKER = "[[internal-interviewer-context]]";
 
 export type TranscriptEntry = {
   id: string;
@@ -30,6 +32,10 @@ const TONE_PROMPTS: Record<string, string> = {
 
 type TranscriptRole = TranscriptEntry["role"];
 
+export type VoiceCallHandle = {
+  stop: () => Promise<void>;
+};
+
 type VoiceCallProps = {
   tone?: string;
   promptRequest?: { id: string; text: string } | null;
@@ -38,13 +44,13 @@ type VoiceCallProps = {
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
 };
 
-export function VoiceCall({
+export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function VoiceCall({
   tone = "neutral",
   promptRequest,
   onTranscriptUpdate,
   onSessionEnd,
   onStateChange,
-}: VoiceCallProps) {
+}, ref) {
   const conversationRef = useRef<VoiceConversation | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const lastPromptIdRef = useRef<string | null>(null);
@@ -71,6 +77,7 @@ export function VoiceCall({
     (role: "user" | "interviewer", rawContent: string, partial: boolean) => {
       const trimmed = rawContent.replace(/\(.*?\)/g, "").replace(/\s{2,}/g, " ").trim();
       if (!trimmed) return;
+      if (role === "user" && trimmed.includes(INTERNAL_PROMPT_MARKER)) return;
       const entries = [...transcriptRef.current];
       const activePartialId = activePartialIdRef.current[role];
       const activePartialIndex = activePartialId
@@ -218,6 +225,10 @@ export function VoiceCall({
     setIsMuted(newMuted);
   }, [isMuted]);
 
+  useImperativeHandle(ref, () => ({
+    stop: endCall,
+  }), [endCall]);
+
   useEffect(() => {
     if (!promptRequest || status !== "connected" || !conversationRef.current) {
       return;
@@ -363,4 +374,4 @@ export function VoiceCall({
       </div>
     </div>
   );
-}
+});
