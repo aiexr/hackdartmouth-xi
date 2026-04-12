@@ -32,6 +32,10 @@ export interface User {
   updatedAt: Date;
 }
 
+export type UserProfileRecord = Omit<User, "resumeExtractedText"> & {
+  hasResumeContext: boolean;
+};
+
 export class UserModel {
   private static indexesPromise: Promise<void> | null = null;
 
@@ -88,6 +92,51 @@ export class UserModel {
     try {
       const usersCollection = db.collection<User>("users");
       return await usersCollection.findOne({ email });
+    } catch (error) {
+      if (isConnectionError(error)) clearMongoClient();
+      throw error;
+    }
+  }
+
+  static async getUserProfileByEmail(email: string): Promise<UserProfileRecord | null> {
+    const db = await getMongoDb();
+    if (!db) return null;
+
+    try {
+      const usersCollection = db.collection<User>("users");
+      const [user] = await usersCollection
+        .aggregate<UserProfileRecord>([
+          { $match: { email } },
+          { $limit: 1 },
+          {
+            $project: {
+              _id: 1,
+              email: 1,
+              name: 1,
+              image: 1,
+              provider: 1,
+              focusTrack: 1,
+              bio: 1,
+              preferences: 1,
+              favorites: 1,
+              createdAt: 1,
+              updatedAt: 1,
+              hasResumeContext: {
+                $gt: [
+                  {
+                    $strLenCP: {
+                      $ifNull: ["$resumeExtractedText", ""],
+                    },
+                  },
+                  0,
+                ],
+              },
+            },
+          },
+        ])
+        .toArray();
+
+      return user ?? null;
     } catch (error) {
       if (isConnectionError(error)) clearMongoClient();
       throw error;

@@ -5,15 +5,31 @@ import { InterviewModel, UserModel, type User } from "@/lib/models";
 
 const scenarioById = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
 
-function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUserByEmail>>) {
+function sanitizeUserForClient(
+  user:
+    | Awaited<ReturnType<typeof UserModel.getUserByEmail>>
+    | Awaited<ReturnType<typeof UserModel.getUserProfileByEmail>>,
+) {
   if (!user) {
     return null;
   }
 
-  const { resumeExtractedText, ...publicUser } = user;
+  const hasResumeContext =
+    typeof (user as unknown as { hasResumeContext?: unknown }).hasResumeContext === "boolean"
+      ? ((user as unknown as { hasResumeContext: boolean }).hasResumeContext ?? false)
+      : Boolean(
+          (
+            user as {
+              resumeExtractedText?: string | null;
+            }
+          ).resumeExtractedText?.trim(),
+        );
+  const publicUser = { ...user } as Record<string, unknown>;
+  delete publicUser.resumeExtractedText;
+
   return {
     ...publicUser,
-    hasResumeContext: Boolean(resumeExtractedText?.trim()),
+    hasResumeContext,
   };
 }
 
@@ -101,10 +117,14 @@ export async function GET() {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [metrics, dbUser, interviews] = await Promise.all([
-    getUserInterviewMetrics(email).catch(() => getUserInterviewMetrics()),
-    UserModel.getUserByEmail(email).catch(() => null),
-    InterviewModel.getInterviewHistoryByUser(email).catch(() => []),
+  const userPromise = UserModel.getUserProfileByEmail(email).catch(() => null);
+  const interviewsPromise = InterviewModel.getInterviewHistoryByUser(email).catch(() => []);
+  const dbUser = await userPromise;
+  const [metrics, interviews] = await Promise.all([
+    getUserInterviewMetrics(email, {
+      weeklyTarget: dbUser?.preferences?.weeklyGoal ?? null,
+    }).catch(() => getUserInterviewMetrics()),
+    interviewsPromise,
   ]);
 
   const user =

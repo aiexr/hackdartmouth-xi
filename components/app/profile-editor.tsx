@@ -186,6 +186,7 @@ function ProfileEditorSkeleton() {
 
 type ProfileEditorProps = {
   initialUser?: Record<string, unknown> | null;
+  deferInitialFetch?: boolean;
   onProfileUpdated?: (user: Record<string, unknown>) => void;
 };
 
@@ -200,6 +201,7 @@ function toFormData(user: User) {
 
 export function ProfileEditor({
   initialUser = null,
+  deferInitialFetch = false,
   onProfileUpdated,
 }: ProfileEditorProps) {
   const initialParsedUser = initialUser ? toUser(initialUser) : null;
@@ -229,11 +231,14 @@ export function ProfileEditor({
 
   useEffect(() => {
     if (!initialUser) {
+      if (deferInitialFetch) {
+        setLoading(true);
+      }
       return;
     }
 
     applyUser(initialUser);
-  }, [applyUser, initialUser]);
+  }, [applyUser, deferInitialFetch, initialUser]);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -264,12 +269,12 @@ export function ProfileEditor({
   }, [applyUser]);
 
   useEffect(() => {
-    if (initialUser) {
+    if (initialUser || deferInitialFetch) {
       return;
     }
 
     void fetchProfile();
-  }, [fetchProfile, initialUser]);
+  }, [deferInitialFetch, fetchProfile, initialUser]);
 
   const handleInputChange = (
     field: "name" | "bio" | "focusTrack",

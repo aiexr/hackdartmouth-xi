@@ -430,6 +430,7 @@ export function ProfilePage() {
         {signedIn ? (
           <ProfileEditor
             initialUser={profileUser}
+            deferInitialFetch={isLoading && !summary}
             onProfileUpdated={handleProfileUpdated}
           />
         ) : (

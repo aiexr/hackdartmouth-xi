@@ -62,16 +62,32 @@ function validateInterviewWrapUpPreference(value: unknown) {
   return null;
 }
 
-function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUserByEmail>>) {
+function sanitizeUserForClient(
+  user:
+    | Awaited<ReturnType<typeof UserModel.getUserByEmail>>
+    | Awaited<ReturnType<typeof UserModel.getUserProfileByEmail>>,
+) {
   if (!user) {
     return null;
   }
 
-  const { resumeExtractedText, ...publicUser } = user;
+  const hasResumeContext =
+    typeof (user as { hasResumeContext?: unknown }).hasResumeContext === "boolean"
+      ? ((user as { hasResumeContext: boolean }).hasResumeContext ?? false)
+      : Boolean(
+          (
+            user as {
+              resumeExtractedText?: string | null;
+            }
+          ).resumeExtractedText?.trim(),
+        );
+  const publicUser = { ...user } as Record<string, unknown>;
+  delete publicUser.resumeExtractedText;
+
   return {
     ...publicUser,
     preferences: sanitizePreferences(user.preferences),
-    hasResumeContext: Boolean(resumeExtractedText?.trim()),
+    hasResumeContext,
   };
 }
 
@@ -127,7 +143,7 @@ export async function GET() {
       );
     }
 
-    const existingUser = await UserModel.getUserByEmail(session.user.email);
+    const existingUser = await UserModel.getUserProfileByEmail(session.user.email);
     const user =
       existingUser ??
       buildFallbackUserProfile({

@@ -243,6 +243,9 @@ function buildImprovements(interviews: InterviewRecord[]) {
 
 export async function getUserInterviewMetrics(
   userEmail?: string | null,
+  options?: {
+    weeklyTarget?: number | null;
+  },
 ): Promise<UserInterviewMetrics> {
   const mongoConfigured = Boolean(env.mongodbUri);
 
@@ -372,14 +375,21 @@ export async function getUserInterviewMetrics(
     return completedAt ? completedAt >= start : false;
   }).length;
 
-  const dbUser = await withTimeout(
-    UserModel.getUserByEmail(userEmail),
-    3000,
-    "User profile query timed out.",
-  ).catch(() => null);
+  const providedWeeklyTarget =
+    typeof options?.weeklyTarget === "number" && Number.isFinite(options.weeklyTarget)
+      ? options.weeklyTarget
+      : null;
+  const dbUser =
+    providedWeeklyTarget !== null
+      ? null
+      : await withTimeout(
+          UserModel.getUserByEmail(userEmail),
+          3000,
+          "User profile query timed out.",
+        ).catch(() => null);
   const weeklyTarget = Math.max(
     1,
-    Math.round(dbUser?.preferences?.weeklyGoal ?? DEFAULT_WEEKLY_TARGET),
+    Math.round(providedWeeklyTarget ?? dbUser?.preferences?.weeklyGoal ?? DEFAULT_WEEKLY_TARGET),
   );
   const bestScore = gradedSessions.length
     ? Math.max(...gradedSessions.map((interview) => interview.overallScore))

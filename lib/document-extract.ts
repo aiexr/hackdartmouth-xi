@@ -2,11 +2,22 @@ import "server-only";
 
 // Use pdfjs-dist directly — pdf-parse relies on @napi-rs native bindings
 // that don't work in Cloudflare Workers.
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { WorkerMessageHandler } from "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
-// Disable worker threads — not available in Cloudflare Workers runtime.
-GlobalWorkerOptions.workerSrc = "";
+type PdfJsWorkerGlobal = typeof globalThis & {
+  pdfjsWorker?: {
+    WorkerMessageHandler: unknown;
+  };
+};
+
+// Force pdf.js to use its in-process "fake worker" path. In Cloudflare-style
+// runtimes, spawning a module worker can accidentally resolve a different
+// bundled pdf.js worker version and trigger API/worker version mismatches.
+(globalThis as PdfJsWorkerGlobal).pdfjsWorker ??= {
+  WorkerMessageHandler,
+};
 
 let mammothModulePromise: Promise<typeof import("mammoth")> | null = null;
 
