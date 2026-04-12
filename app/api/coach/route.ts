@@ -20,6 +20,7 @@ Rules:
 - Ask at most one clarifying question when the user message is ambiguous.
 - Do not assume the user pasted a resume or class reflection unless it appears in the latest user message or explicit resume context.
 - Ignore incorrect assumptions from prior assistant messages.
+- Use Markdown formatting (headings, lists, tables) when it improves readability.
 - Always respond in plain conversational text, never JSON.`;
 
 function parseCoachHistory(rawHistory: unknown) {

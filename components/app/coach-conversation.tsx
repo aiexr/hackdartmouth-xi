@@ -8,6 +8,8 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -130,6 +132,42 @@ function normalizeCoachText(text: string | undefined) {
   return trimmed;
 }
 
+function CoachMarkdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+        ul: ({ children }) => <ul className="mb-3 list-inside list-disc space-y-1">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-3 list-inside list-decimal space-y-1">{children}</ol>,
+        li: ({ children }) => <li>{children}</li>,
+        table: ({ children }) => (
+          <div className="my-3 overflow-x-auto rounded-none border border-border/70">
+            <table className="min-w-full border-collapse text-left text-xs">{children}</table>
+          </div>
+        ),
+        thead: ({ children }) => <thead className="bg-base-300/55">{children}</thead>,
+        th: ({ children }) => (
+          <th className="border border-border/70 px-2 py-1 font-semibold">{children}</th>
+        ),
+        td: ({ children }) => <td className="border border-border/70 px-2 py-1">{children}</td>,
+        pre: ({ children }) => (
+          <pre className="my-3 overflow-x-auto rounded-none bg-base-300/55 p-3 text-xs leading-6">
+            {children}
+          </pre>
+        ),
+        code: ({ children }) => (
+          <code className="rounded-none bg-base-300/65 px-1 py-0.5 font-mono text-[0.85em]">
+            {children}
+          </code>
+        ),
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+}
+
 export function CoachConversation() {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -242,11 +280,13 @@ export function CoachConversation() {
                     {isUser ? "Y" : "C"}
                   </div>
                   <div
-                    className={`max-w-[85%] whitespace-pre-wrap rounded-3xl px-4 py-3 text-sm leading-6 ${
-                      isUser ? "bg-primary text-primary-content" : "bg-base-200/75"
+                    className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
+                      isUser
+                        ? "whitespace-pre-wrap bg-primary text-primary-content"
+                        : "bg-base-200/75"
                     }`}
                   >
-                    {msg.text}
+                    {isUser ? msg.text : <CoachMarkdown text={msg.text} />}
                   </div>
                 </div>
               );
