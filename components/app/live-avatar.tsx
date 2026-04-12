@@ -56,7 +56,7 @@ function wrapInternalPrompt(text: string) {
   ].join("\n\n");
 }
 
-function buildBootstrapInterviewerContext(candidateName: string, resumeContext: string) {
+function buildSessionProfileContext(candidateName: string, resumeContext: string) {
   const sections = [
     candidateName
       ? `The candidate's name is ${candidateName}. If you greet or address the candidate by name, use exactly "${candidateName}". Never use placeholder tokens like [Candidate Name], [Name], or candidate name.`
@@ -67,7 +67,26 @@ function buildBootstrapInterviewerContext(candidateName: string, resumeContext: 
     sections.push(`Candidate resume context:\n${resumeContext}`);
   }
 
-  return wrapInternalPrompt(sections.join("\n\n"));
+  return sections.join("\n\n");
+}
+
+function augmentInternalPromptWithSessionProfile(
+  promptText: string,
+  candidateName: string,
+  resumeContext: string,
+) {
+  const sessionProfileContext = buildSessionProfileContext(candidateName, resumeContext).trim();
+  if (!sessionProfileContext || !promptText.includes(INTERNAL_PROMPT_MARKER)) {
+    return promptText;
+  }
+
+  const paragraphs = promptText.split("\n\n");
+  if (paragraphs.length < 3 || paragraphs[0] !== INTERNAL_PROMPT_MARKER) {
+    return promptText;
+  }
+
+  const body = paragraphs.slice(2).join("\n\n").trim();
+  return wrapInternalPrompt([sessionProfileContext, body].filter(Boolean).join("\n\n"));
 }
 
 export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function LiveAvatar({
@@ -86,6 +105,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   const userVideoRef = useRef<HTMLVideoElement>(null);
   const userStreamRef = useRef<MediaStream | null>(null);
   const sessionRef = useRef<LiveAvatarSession | null>(null);
+  const sessionProfileRef = useRef({ candidateName: "", resumeContext: "" });
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const deliveredPromptIdsRef = useRef<Set<string>>(new Set());
   const deliveredPromptTextsRef = useRef<Set<string>>(new Set());
@@ -244,8 +264,19 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
     deliveredPromptIdsRef.current.add(promptRequest.id);
     deliveredPromptTextsRef.current.add(promptRequest.text);
 
+    const augmentedPromptText = augmentInternalPromptWithSessionProfile(
+      promptRequest.text,
+      sessionProfileRef.current.candidateName,
+      sessionProfileRef.current.resumeContext,
+    );
+
+    console.log("[LiveAvatar] Session profile context", {
+      candidateName: sessionProfileRef.current.candidateName,
+      resumeContext: sessionProfileRef.current.resumeContext,
+    });
+
     try {
-      sessionRef.current.message(promptRequest.text);
+      sessionRef.current.message(augmentedPromptText);
     } catch {
       deliveredPromptIdsRef.current.delete(promptRequest.id);
       deliveredPromptTextsRef.current.delete(promptRequest.text);
@@ -290,6 +321,10 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
         typeof data.candidateName === "string"
           ? data.candidateName.replace(/\s+/g, " ").trim()
           : "";
+      sessionProfileRef.current = {
+        candidateName,
+        resumeContext,
+      };
 
       if (!token) {
         throw new Error("No session token received");
@@ -354,13 +389,8 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       }
 
       await session.start();
-
-      try {
-        session.message(buildBootstrapInterviewerContext(candidateName, resumeContext));
-      } catch {
-        // Keep the session alive even if the initial private context injection fails.
-      }
     } catch (err) {
+      sessionProfileRef.current = { candidateName: "", resumeContext: "" };
       sessionRef.current = null;
       const message = err instanceof Error ? err.message : "Failed to start session";
       setError(message);
@@ -438,6 +468,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
         sessionRef.current.stop().catch(() => {});
         sessionRef.current = null;
       }
+      sessionProfileRef.current = { candidateName: "", resumeContext: "" };
       deliveredPromptIdsRef.current.clear();
       deliveredPromptTextsRef.current.clear();
     };
