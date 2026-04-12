@@ -264,7 +264,7 @@ export default async function ReviewPage({
   return (
     <div className="min-h-screen bg-base-200">
       <header className="border-b border-border bg-base-100/80 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+        <div className="flex w-full items-center justify-between gap-4">
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-sm text-base-content/60 transition hover:text-base-content"
