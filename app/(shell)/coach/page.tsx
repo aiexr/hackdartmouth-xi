@@ -1,4 +1,19 @@
-import { CoachConversation } from "@/components/app/coach-conversation";
+import dynamic from "next/dynamic";
+
+const CoachConversation = dynamic(
+  () =>
+    import("@/components/app/coach-conversation").then(
+      (module) => module.CoachConversation,
+    ),
+  {
+    loading: () => (
+      <div className="space-y-6">
+        <div className="h-24 animate-pulse rounded-none border border-border bg-base-200/35" />
+        <div className="h-[32rem] animate-pulse rounded-none border border-border bg-base-200/35" />
+      </div>
+    ),
+  },
+);
 
 export default function CoachPage() {
   return (

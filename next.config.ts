@@ -3,6 +3,7 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  optimizePackageImports: ["lucide-react"],
   turbopack: {
     root: process.cwd(),
   },
