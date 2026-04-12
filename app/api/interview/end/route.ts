@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
-import { scenarios, type Scenario } from "@/data/scenarios";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models";
 import { ll } from "@/lib/integrations/llm";
 
 const MAX_DOCUMENT_FILE_SIZE = 10 * 1024 * 1024;
+const DEFAULT_DARTMOUTH_VISION_MODEL = "qwen.qwen3-vl-32b-instruct-fp8";
 
 type NormalizedGradingResult = {
   overall_score: number;
@@ -25,6 +25,12 @@ type NormalizedGradingResult = {
     type: "strength" | "improvement" | "note";
     description: string;
   }>;
+  diagram_analysis?: {
+    description: string;
+    strengths: string[];
+    improvements: string[];
+    key_points: string[];
+  };
   model_used?: string;
   generated_at?: string;
 };
@@ -84,72 +90,6 @@ function transcriptToText(transcript: unknown) {
     })
     .filter(Boolean)
     .join("\n");
-}
-
-function getScenarioById(scenarioId: string | null | undefined) {
-  if (!scenarioId) {
-    return null;
-  }
-
-  return scenarios.find((scenario) => scenario.id === scenarioId) ?? null;
-}
-
-function buildCategoryScoringGuidance(category: Scenario["category"] | string) {
-  switch (category) {
-    case "technical":
-      return [
-        "- Weigh code correctness most heavily, then complexity analysis, then communication.",
-        "- Check whether the candidate chose the right algorithm and could defend it.",
-        "- Use the editor snapshot as primary evidence for correctness and implementation quality.",
-      ];
-    case "system-design":
-      return [
-        "- Weigh component clarity, tradeoff reasoning, and scaling awareness most heavily.",
-        "- Reward candidates who clarify requirements before drawing architecture.",
-        "- Look for explicit handling of bottlenecks, failure modes, and data flow choices.",
-      ];
-    case "behavioral":
-    default:
-      return [
-        "- Weigh STAR structure, specificity, and results most heavily.",
-        "- Reward concrete actions the candidate personally drove, not generic team outcomes.",
-      ];
-  }
-}
-
-function buildScenarioContext(scenario: Scenario | null) {
-  if (!scenario) {
-    return [];
-  }
-
-  const parts = [
-    "Scenario context:",
-    `- Title: ${scenario.title}`,
-    `- Category: ${scenario.category}`,
-    `- Pattern: ${scenario.pattern}`,
-    `- Prompt: ${scenario.prompt}`,
-    `- Visible rubric: ${scenario.rubric.join(", ")}`,
-    `- Focus areas: ${scenario.focus.join(", ")}`,
-    `- Follow-ups: ${scenario.followUps.join(" | ") || "None"}`,
-  ];
-
-  if (scenario.codingProblem) {
-    parts.push(
-      `- Coding problem description: ${scenario.codingProblem.description}`,
-      `- Coding examples: ${scenario.codingProblem.examples
-        .map(
-          (example, index) =>
-            `Example ${index + 1}: input ${example.input}; output ${example.output}${
-              example.explanation ? `; explanation ${example.explanation}` : ""
-            }`,
-        )
-        .join(" | ")}`,
-      `- Coding constraints: ${scenario.codingProblem.constraints.join(" | ")}`,
-      `- Expected optimal approach: ${scenario.codingProblem.optimalApproach}`,
-    );
-  }
-
-  return parts;
 }
 
 function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
@@ -269,6 +209,32 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
         )
     : [];
 
+  // Diagram analysis (optional; present for system-design interviews)
+  const diagramAnalysisRaw = payload.diagram_analysis ?? payload.diagramAnalysis;
+  const diagram_analysis =
+    diagramAnalysisRaw && typeof diagramAnalysisRaw === "object"
+      ? ((): { description: string; strengths: string[]; improvements: string[]; key_points: string[] } => {
+          const d = diagramAnalysisRaw as Record<string, unknown>;
+          const description = typeof d.description === "string" ? d.description : "";
+          const strengthsArr = Array.isArray(d.strengths)
+            ? d.strengths.filter((it): it is string => typeof it === "string")
+            : [];
+          const improvementsArr = Array.isArray(d.improvements)
+            ? d.improvements.filter((it): it is string => typeof it === "string")
+            : [];
+          const keyPointsArr = Array.isArray(d.key_points)
+            ? d.key_points.filter((it): it is string => typeof it === "string")
+            : [];
+
+          return {
+            description,
+            strengths: strengthsArr,
+            improvements: improvementsArr,
+            key_points: keyPointsArr,
+          };
+        })()
+      : undefined;
+
   return {
     overall_score: overallScore,
     letter_grade: letterGrade,
@@ -277,6 +243,7 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
     strengths,
     improvements,
     key_moments: keyMoments,
+    diagram_analysis,
   };
 }
 
@@ -294,14 +261,15 @@ export async function POST(req: NextRequest) {
   let body: {
     interviewId?: string;
     transcript?: unknown;
-    editorContent?: unknown;
-    diagramSnapshot?: unknown;
+    diagramSnapshot?: string;
+    editorContent?: string;
   } = {
     interviewId: undefined,
     transcript: undefined,
-    editorContent: undefined,
     diagramSnapshot: undefined,
+    editorContent: undefined,
   };
+  let diagramSnapshotString: string | null = null;
   let documentError: string | null = null;
   let uploadedDocument: { buffer: Buffer; mimeType: string; filename: string } | null = null;
 
@@ -313,6 +281,7 @@ export async function POST(req: NextRequest) {
       const interviewIdField = formData.get("interviewId");
       const transcriptField = formData.get("transcript");
       const documentFile = formData.get("document") as File | null;
+      const diagramField = formData.get("diagramSnapshot");
 
       body.interviewId =
         typeof interviewIdField === "string" ? interviewIdField : undefined;
@@ -320,14 +289,11 @@ export async function POST(req: NextRequest) {
         typeof transcriptField === "string"
           ? JSON.parse(transcriptField)
           : undefined;
-      body.editorContent =
-        typeof formData.get("editorContent") === "string"
-          ? formData.get("editorContent")
-          : undefined;
-      body.diagramSnapshot =
-        typeof formData.get("diagramSnapshot") === "string"
-          ? formData.get("diagramSnapshot")
-          : undefined;
+
+      if (typeof diagramField === "string" && diagramField.trim()) {
+        diagramSnapshotString = diagramField.trim();
+        body.diagramSnapshot = diagramSnapshotString;
+      }
 
       // Extract document if present
       if (documentFile && documentFile.size > 0) {
@@ -361,10 +327,14 @@ export async function POST(req: NextRequest) {
     }
   } else {
     // Parse as JSON (backward compatibility)
-    body = (await req.json()) as typeof body;
+    const jsonBody = (await req.json()) as Record<string, unknown>;
+    body = jsonBody as typeof body;
+    if (typeof jsonBody?.diagramSnapshot === "string" && jsonBody.diagramSnapshot.trim()) {
+      diagramSnapshotString = jsonBody.diagramSnapshot.trim();
+    }
   }
 
-  const { interviewId, transcript, editorContent, diagramSnapshot } = body;
+  const { interviewId, transcript } = body;
 
   if (!interviewId) {
     return NextResponse.json({ error: "interviewId required" }, { status: 400 });
@@ -387,28 +357,55 @@ export async function POST(req: NextRequest) {
   }
 
   const transcriptText = transcriptToText(transcript ?? []);
-  const editorSnapshot =
-    typeof editorContent === "string" ? editorContent.trim().slice(0, 6000) : "";
   const profile = await UserModel.getUserByEmail(session.user.email);
   const resumeContext = profile?.resumeExtractedText?.trim()
     ? profile.resumeExtractedText.trim().slice(0, 8000)
     : "";
-  const scenario = getScenarioById(
-    typeof interview.scenarioId === "string" ? interview.scenarioId : null,
-  );
-  const interviewCategory = scenario?.category ?? String(interview.type ?? "behavioral");
 
-  const diagramDataUrl =
-    typeof diagramSnapshot === "string" && diagramSnapshot.startsWith("data:")
-      ? diagramSnapshot
-      : null;
+  // If a diagram snapshot (data URL) was provided, parse it into an image payload
+  let diagramImage: { mimeType: string; dataBase64: string } | undefined;
+  if (diagramSnapshotString) {
+    const match = diagramSnapshotString.match(/^data:([^;]+);base64,(.+)$/);
+    if (match) {
+      const mimeType = String(match[1]).trim();
+      const dataBase64 = String(match[2]).trim();
+      if (mimeType.startsWith("image/") && dataBase64.length > 0) {
+        // Optional: enforce size limit on decoded bytes
+        try {
+          const byteLen = Buffer.byteLength(dataBase64, "base64");
+          if (byteLen > 10 * 1024 * 1024) {
+            // ignore overly large images
+            diagramImage = undefined;
+          } else {
+            diagramImage = { mimeType, dataBase64 };
+          }
+        } catch {
+          diagramImage = undefined;
+        }
+      }
+    }
+  }
 
   let gradingResult: NormalizedGradingResult | null = null;
   let gradingError: string | null = null;
 
-  if (transcriptText) {
+    if (transcriptText) {
     const systemPrompt =
       "You are a senior interview coach. Grade interview performance with strict, constructive, and fair feedback. Return only valid JSON.";
+
+    // If a whiteboard diagram is attached, make the system prompt explicit about using it.
+    // Important: always ask the model to return valid JSON. If the image bytes are unreadable,
+    // instruct the model to include a top-level boolean `image_unreadable: true` and keep
+    // `diagram_analysis` set to null rather than returning raw text like IMAGE_UNREADABLE.
+    const effectiveSystemPrompt = diagramImage
+      ? [
+          systemPrompt,
+          "",
+          "A whiteboard diagram image is attached to this request. Use it as a primary source of truth when evaluating the candidate's system-design reasoning.",
+          "Do not claim that you cannot view images.",
+          'If image bytes are unreadable, still return valid JSON. Set a top-level boolean field "image_unreadable": true and set "diagram_analysis": null. Do NOT output raw non-JSON text like IMAGE_UNREADABLE.',
+        ].join("\n")
+      : systemPrompt;
 
     const promptParts = [
       "Evaluate this mock interview and return a JSON object with this exact schema:",
@@ -426,17 +423,35 @@ export async function POST(req: NextRequest) {
       "- Evaluate correctness, reasoning, communication clarity, and structure.",
       "- Be specific and evidence-based from the transcript.",
       "- Keep strengths and improvements concise and actionable.",
-      ...buildCategoryScoringGuidance(interviewCategory),
       "",
       "Interview metadata:",
       `- Type: ${String(interview.type ?? "behavioral")}`,
       `- Difficulty: ${String(interview.difficulty ?? "medium")}`,
       `- Scenario ID: ${String(interview.scenarioId ?? "unknown")}`,
-      `- Resolved category: ${interviewCategory}`,
-      "",
-      ...buildScenarioContext(scenario),
       "",
     ];
+
+    // If this is a system-design interview, request an explicit diagram_analysis section
+    try {
+      if (String(interview.type ?? "").toLowerCase() === "system-design") {
+        const closingIndex = promptParts.findIndex((line) => line === "}");
+        if (closingIndex !== -1) {
+          promptParts.splice(
+            closingIndex,
+            0,
+            '  "diagram_analysis": {',
+            '    "description": string,',
+            '    "strengths": string[],',
+            '    "improvements": string[],',
+            '    "key_points": string[]',
+            '  },',
+            '  "image_unreadable": boolean,'
+          );
+        }
+      }
+    } catch {
+      // no-op; keep original promptParts on error
+    }
 
     promptParts.push("Transcript:");
 
@@ -452,62 +467,70 @@ export async function POST(req: NextRequest) {
 
     promptParts.push(transcriptText);
 
-    if (editorSnapshot) {
-      promptParts.push("", "Current editor snapshot:", editorSnapshot);
-    } else if (interviewCategory === "technical") {
-      promptParts.push(
-        "",
-        "Current editor snapshot:",
-        "No code was captured from the editor. Grade the candidate accordingly using the transcript only.",
-      );
-    }
-
-    // For system-design interviews, add a note about the diagram
-    if (interviewCategory === "system-design" && diagramDataUrl) {
-      promptParts.push(
-        "",
-        "The candidate's whiteboard diagram is attached as an image. Use it to evaluate component clarity, data flow, and architectural completeness.",
-      );
-    } else if (interviewCategory === "system-design") {
-      promptParts.push(
-        "",
-        "No diagram was captured. Grade based on verbal architecture discussion in the transcript only.",
-      );
-    }
-
     const userPrompt = promptParts.join("\n");
 
-    // Extract base64 from data URL for image grading
-    let imagePayload: { mimeType: string; dataBase64: string } | undefined;
-    if (diagramDataUrl) {
-      const match = diagramDataUrl.match(/^data:([^;]+);base64,(.+)$/);
-      if (match) {
-        imagePayload = { mimeType: match[1], dataBase64: match[2] };
+      // Declare modelOverride here so it's visible in the catch block below.
+      let modelOverride: string | undefined = undefined;
+
+      try {
+        // Prefer a vision-capable model/provider when an image is attached.
+        const autoSelectVision = Boolean(diagramImage);
+        const providerOverride = autoSelectVision ? ("openai" as const) : undefined;
+        // When an image is present, force the Dartmouth vision model as the first try
+        // so a multimodal model is used instead of a text-only default.
+        modelOverride = autoSelectVision ? DEFAULT_DARTMOUTH_VISION_MODEL : undefined;
+        const modelFallbacks = autoSelectVision ? undefined : undefined;
+
+        const llmResponse = await ll(userPrompt, {
+          systemPrompt: effectiveSystemPrompt,
+          parseJson: true,
+          temperature: 0.2,
+          maxTokens: 3000,
+          modelOverride,
+          document: uploadedDocument
+            ? {
+                mimeType: uploadedDocument.mimeType,
+                filename: uploadedDocument.filename,
+                buffer: uploadedDocument.buffer,
+              }
+            : undefined,
+          image: diagramImage,
+          providerOverride,
+          modelFallbacks,
+        });
+
+        gradingResult = normalizeGradingResult(llmResponse.json);
+        gradingResult.model_used = llmResponse.modelUsed;
+        gradingResult.generated_at = new Date().toISOString();
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+
+        // If the model returned the literal IMAGE_UNREADABLE (which breaks JSON parsing),
+        // synthesize a safe grading result marking the diagram as unreadable so the UI can render.
+        if (errMsg.includes("IMAGE_UNREADABLE") || errMsg.includes('"IMAGE_UNREADABLE"')) {
+          gradingResult = {
+            overall_score: 70,
+            letter_grade: toLetterGrade(70),
+            dimensions: [],
+            per_question: [],
+            strengths: [],
+            improvements: [],
+            key_moments: [],
+            diagram_analysis: {
+              description:
+                "IMAGE_UNREADABLE: the model reported the diagram image as unreadable.",
+              strengths: [],
+              improvements: [],
+              key_points: [],
+            },
+          };
+          gradingResult.model_used = modelOverride ?? undefined;
+          gradingResult.generated_at = new Date().toISOString();
+          gradingError = null;
+        } else {
+          gradingError = errMsg;
+        }
       }
-    }
-
-    try {
-      const llmResponse = await ll(userPrompt, {
-        systemPrompt,
-        parseJson: true,
-        temperature: 0.2,
-        maxTokens: 3000,
-        document: uploadedDocument
-          ? {
-              mimeType: uploadedDocument.mimeType,
-              filename: uploadedDocument.filename,
-              buffer: uploadedDocument.buffer,
-            }
-          : undefined,
-        image: imagePayload,
-      });
-
-      gradingResult = normalizeGradingResult(llmResponse.json);
-      gradingResult.model_used = llmResponse.modelUsed;
-      gradingResult.generated_at = new Date().toISOString();
-    } catch (error) {
-      gradingError = error instanceof Error ? error.message : String(error);
-    }
   }
 
   await db.collection("interviews").updateOne(
@@ -517,12 +540,11 @@ export async function POST(req: NextRequest) {
         status: "completed",
         transcript: transcript ?? [],
         completedAt: new Date(),
+        diagramSnapshot: diagramSnapshotString ?? null,
         overallScore: gradingResult?.overall_score ?? null,
         letterGrade: gradingResult?.letter_grade ?? null,
         gradingResult,
         gradingError,
-        ...(editorSnapshot ? { codeSnapshot: editorSnapshot } : {}),
-        ...(diagramDataUrl ? { diagramSnapshot: diagramDataUrl } : {}),
       },
     },
   );
