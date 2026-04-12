@@ -55,6 +55,7 @@ export function LandingPage() {
           left: previewRect.left,
           width: previewRect.width,
           height: previewRect.height,
+          theme: document.documentElement.getAttribute("data-theme"),
         }),
       );
     }

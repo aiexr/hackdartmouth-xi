@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import type { CSSProperties, RefObject } from "react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Bot,
@@ -213,10 +213,12 @@ export function ScaledDashboardPreview({
   className,
   avatarUrl,
   frameRef,
+  outerStyle,
 }: {
   className?: string;
   avatarUrl?: string | null;
   frameRef?: RefObject<HTMLDivElement | null>;
+  outerStyle?: CSSProperties;
 }) {
   const localFrameRef = useRef<HTMLDivElement | null>(null);
   const resolvedFrameRef = frameRef ?? localFrameRef;
@@ -247,7 +249,10 @@ export function ScaledDashboardPreview({
         "relative ml-auto w-full max-w-[70rem] overflow-hidden border border-border bg-base-100",
         className,
       )}
-      style={{ aspectRatio: `${PREVIEW_NATURAL_WIDTH} / ${PREVIEW_NATURAL_HEIGHT}` }}
+      style={{
+        aspectRatio: `${PREVIEW_NATURAL_WIDTH} / ${PREVIEW_NATURAL_HEIGHT}`,
+        ...outerStyle,
+      }}
     >
       <div
         className={cn(

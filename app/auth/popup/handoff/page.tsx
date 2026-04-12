@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   AUTH_PREVIEW_GEOMETRY_KEY,
+  PREVIEW_NATURAL_HEIGHT,
+  PREVIEW_NATURAL_WIDTH,
   ScaledDashboardPreview,
 } from "@/components/app/dashboard-preview";
 
@@ -12,22 +14,22 @@ type PreviewGeometry = {
   left: number;
   width: number;
   height: number;
+  theme?: string | null;
 };
+
+const ANIMATION_DURATION_MS = 1080;
+const ANIMATION_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 export default function AuthPopupHandoffPage() {
   const router = useRouter();
-  const [stage, setStage] = useState<"compact" | "expanded">("compact");
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const [geometry, setGeometry] = useState<PreviewGeometry | null>(null);
-  const [canUseClientGeometry, setCanUseClientGeometry] = useState(false);
-
-  useLayoutEffect(() => {
-    setCanUseClientGeometry(true);
-  }, []);
 
   useLayoutEffect(() => {
     try {
       const raw = window.sessionStorage.getItem(AUTH_PREVIEW_GEOMETRY_KEY);
       if (!raw) return;
+
       const parsed = JSON.parse(raw) as PreviewGeometry;
       if (
         typeof parsed.top === "number" &&
@@ -35,111 +37,117 @@ export default function AuthPopupHandoffPage() {
         typeof parsed.width === "number" &&
         typeof parsed.height === "number"
       ) {
+        if (typeof parsed.theme === "string" && parsed.theme) {
+          document.documentElement.setAttribute("data-theme", parsed.theme);
+        }
         setGeometry(parsed);
       }
     } catch {
-      // Ignore malformed geometry and fall back to computed values.
+      // Ignore malformed geometry and fall back to a default preview frame.
     }
   }, []);
 
-  useLayoutEffect(() => {
-    let frame = 0;
-
-    frame = window.requestAnimationFrame(() => {
-      frame = window.requestAnimationFrame(() => {
-        setStage("expanded");
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-    };
-  }, []);
-
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      window.sessionStorage.removeItem(AUTH_PREVIEW_GEOMETRY_KEY);
-      router.replace("/");
-      router.refresh();
-    }, 920);
+    const element = previewRef.current;
+    if (!element) return;
+
+    const compact = getCompactStyle(geometry);
+    const expanded = getExpandedStyle();
+    let cancelled = false;
+    let animation: Animation | null = null;
+
+    const startAnimation = window.setTimeout(() => {
+      if (cancelled) return;
+
+      animation = element.animate(
+        [
+          {
+            top: px(compact.top),
+            left: px(compact.left),
+            width: px(compact.width),
+            height: px(compact.height),
+          },
+          {
+            top: px(expanded.top),
+            left: px(expanded.left),
+            width: px(expanded.width),
+            height: px(expanded.height),
+          },
+        ],
+        {
+          duration: ANIMATION_DURATION_MS,
+          easing: ANIMATION_EASING,
+          fill: "forwards",
+        },
+      );
+
+      void animation.finished.finally(() => {
+        if (cancelled) return;
+        window.sessionStorage.removeItem(AUTH_PREVIEW_GEOMETRY_KEY);
+        router.replace("/");
+      });
+    }, 28);
 
     return () => {
-      window.clearTimeout(timeout);
+      cancelled = true;
+      window.clearTimeout(startAnimation);
+      animation?.cancel();
     };
-  }, [router]);
+  }, [geometry, router]);
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-background">
-      <div
-        className="absolute overflow-hidden transition-[top,left,width,height,transform] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={getHandoffStyle(stage, geometry, canUseClientGeometry)}
-      >
-        <ScaledDashboardPreview className="max-w-none" />
-      </div>
+      <ScaledDashboardPreview
+        frameRef={previewRef}
+        className="ml-0 max-w-none"
+        outerStyle={{
+          position: "fixed",
+          overflow: "hidden",
+          ...getCompactStyle(geometry),
+        }}
+      />
     </div>
   );
 }
 
-function getHandoffStyle(
-  stage: "compact" | "expanded",
-  geometry: PreviewGeometry | null,
-  canUseClientGeometry: boolean,
-) {
-  if (stage === "expanded") {
-    return {
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      transform: "scale(1)",
-    };
-  }
-
-  if (!canUseClientGeometry || typeof window === "undefined") {
-    return {
-      top: "12vh",
-      left: "52vw",
-      width: "44vw",
-      height: "auto",
-      aspectRatio: "1460 / 920",
-      transform: "scale(1)",
-    };
-  }
-
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-
+function getCompactStyle(geometry: PreviewGeometry | null) {
   if (geometry) {
     return {
       top: geometry.top,
       left: geometry.left,
       width: geometry.width,
       height: geometry.height,
-      transform: "scale(1)",
     };
   }
 
-  if (viewportWidth < 1024) {
+  if (typeof window === "undefined") {
     return {
-      top: Math.max(24, viewportHeight * 0.22),
-      left: 24,
-      width: Math.max(0, viewportWidth - 48),
-      height: Math.max(0, viewportHeight - Math.max(24, viewportHeight * 0.22) - Math.max(24, viewportHeight * 0.24)),
-      transform: "scale(0.98)",
+      top: 96,
+      left: 760,
+      width: 960,
+      height: (960 * PREVIEW_NATURAL_HEIGHT) / PREVIEW_NATURAL_WIDTH,
     };
   }
 
-  const containerWidth = Math.min(viewportWidth - 64, 1280);
-  const previewWidth = Math.min(1120, containerWidth * 0.72);
-  const previewHeight = previewWidth / (1460 / 920);
-  const left = (viewportWidth - containerWidth) / 2 + containerWidth - previewWidth;
-  const top = Math.max(40, (viewportHeight - previewHeight) / 2);
+  const width = Math.min(window.innerWidth * 0.44, 1120);
 
   return {
-    top,
-    left,
-    width: previewWidth,
-    height: previewHeight,
-    transform: "scale(1)",
+    top: window.innerHeight * 0.12,
+    left: window.innerWidth * 0.52,
+    width,
+    height: (width * PREVIEW_NATURAL_HEIGHT) / PREVIEW_NATURAL_WIDTH,
   };
+}
+
+function getExpandedStyle() {
+  return {
+    top: 0,
+    left: 0,
+    width: window.innerWidth,
+    height: window.innerHeight,
+  };
+}
+
+function px(value: number) {
+  return `${value}px`;
 }

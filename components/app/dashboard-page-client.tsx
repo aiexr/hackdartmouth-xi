@@ -13,8 +13,8 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
-import { LandingPage } from "@/components/app/landing-page";
 import { ActivityCalendar } from "@/components/app/activity-calendar";
+import { LandingPage } from "@/components/app/landing-page";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -52,6 +52,12 @@ type UserInterviewMetrics = {
   improvements: ImprovementMetric[];
 };
 
+type InitialSessionUser = {
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+};
+
 let dashboardMetricsCache: UserInterviewMetrics | null = null;
 
 function MetricsSkeleton() {
@@ -66,17 +72,23 @@ function MetricsSkeleton() {
   );
 }
 
-export function DashboardPageClient() {
+export function DashboardPageClient({
+  initialUser,
+}: {
+  initialUser?: InitialSessionUser | null;
+}) {
   const { status } = useSession();
   const [metrics, setMetrics] = useState<UserInterviewMetrics | null>(dashboardMetricsCache);
   const [loading, setLoading] = useState(() => !dashboardMetricsCache);
+  const effectiveStatus =
+    status === "loading"
+      ? initialUser
+        ? "authenticated"
+        : "unauthenticated"
+      : status;
 
   useEffect(() => {
-    if (status === "loading") {
-      return;
-    }
-
-    if (status !== "authenticated") {
+    if (effectiveStatus !== "authenticated") {
       setMetrics(null);
       setLoading(false);
       return;
@@ -114,29 +126,9 @@ export function DashboardPageClient() {
     return () => {
       controller.abort();
     };
-  }, [status]);
+  }, [effectiveStatus]);
 
-  if (status === "loading") {
-    return (
-      <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="overflow-hidden">
-            <CardContent className="p-7 md:p-8">
-              <div className="space-y-4 animate-pulse">
-                <div className="h-10 w-96 max-w-full rounded bg-base-300/50" />
-                <div className="h-5 w-[32rem] max-w-full rounded bg-base-300/35" />
-                <div className="h-12 w-48 rounded bg-base-300/45" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <MetricsSkeleton />
-        </section>
-      </div>
-    );
-  }
-
-  if (status !== "authenticated") {
+  if (effectiveStatus !== "authenticated") {
     return <LandingPage />;
   }
 
