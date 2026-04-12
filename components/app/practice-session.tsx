@@ -686,7 +686,7 @@ export function PracticeSession({
 
             {/* Technical: problem + editor fills the space, avatar is PiP */}
             {isTechnical && codingProblem && (
-              <div className="flex min-h-0 flex-1 flex-col gap-4 pl-0 xl:pl-60">
+              <div className="flex min-h-0 flex-1 flex-col gap-4 pl-0 xl:pl-72">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -797,7 +797,7 @@ export function PracticeSession({
 
             {/* System Design: whiteboard fills the space, avatar is PiP */}
             {isSystemDesign && (
-              <div className="flex min-h-0 flex-1 flex-col gap-4 pl-0 xl:pl-60">
+              <div className="flex min-h-0 flex-1 flex-col gap-4 pl-0 xl:pl-72">
                 <div>
                   <h2 className="text-lg font-semibold">{scenario.title}</h2>
                   <p className="mt-1 text-sm text-base-content/60">
@@ -818,39 +818,39 @@ export function PracticeSession({
             panelOpen ? "lg:w-[24rem] lg:overflow-y-auto" : "lg:w-10",
           )}
         >
-          {/* Collapse / expand toggle */}
-          <button
-            type="button"
-            onClick={() => setPanelOpen((v) => !v)}
-            className="hidden items-center justify-center border-b border-base-300 py-2 text-base-content/60 transition hover:text-base-content lg:flex"
-            title={panelOpen ? "Collapse panel" : "Expand panel"}
-          >
-            {panelOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
-          </button>
-
           {panelOpen && (
             <>
-              <div className="grid grid-cols-3 border-b border-base-300">
-                {[
-                  { id: "rubric", label: "Rubric", icon: MessageSquareText },
-                  { id: "hints", label: "Hints", icon: Lightbulb },
-                  { id: "transcript", label: "Transcript", icon: FileText },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setPanel(item.id as PracticePanel)}
-                    className={cn(
-                      "flex items-center justify-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition",
-                      panel === item.id
-                        ? "border-primary text-primary"
-                        : "border-transparent text-base-content/60 hover:text-base-content",
-                    )}
-                  >
-                    <item.icon className="size-4" />
-                    {item.label}
-                  </button>
-                ))}
+              <div className="flex border-b border-base-300">
+                <div className="grid min-w-0 flex-1 grid-cols-3">
+                  {[
+                    { id: "rubric", label: "Rubric", icon: MessageSquareText },
+                    { id: "hints", label: "Hints", icon: Lightbulb },
+                    { id: "transcript", label: "Transcript", icon: FileText },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setPanel(item.id as PracticePanel)}
+                      className={cn(
+                        "flex items-center justify-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition",
+                        panel === item.id
+                          ? "border-primary text-primary"
+                          : "border-transparent text-base-content/60 hover:text-base-content",
+                      )}
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPanelOpen(false)}
+                  className="hidden w-11 shrink-0 items-center justify-center border-l border-base-300 text-base-content/50 transition hover:bg-base-200/60 hover:text-base-content lg:flex"
+                  title="Collapse panel"
+                >
+                  <PanelRightClose className="size-4" />
+                </button>
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -964,6 +964,19 @@ export function PracticeSession({
             ) : null}
               </div>
             </>
+          )}
+
+          {!panelOpen && (
+            <div className="hidden pt-3 lg:flex lg:justify-center">
+              <button
+                type="button"
+                onClick={() => setPanelOpen(true)}
+                className="flex size-8 items-center justify-center rounded-none text-base-content/50 transition hover:bg-base-200/60 hover:text-base-content"
+                title="Expand panel"
+              >
+                <PanelRightOpen className="size-4" />
+              </button>
+            </div>
           )}
         </aside>
       </div>
