@@ -263,7 +263,7 @@ export function ProfileEditor() {
             </p>
           </div>
 
-          <div className="space-y-4 rounded-none border border-base-300/70 bg-base-200/30 p-4">
+          <div className="space-y-4 rounded-none border border-border/70 bg-base-200/30 p-4">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
@@ -333,7 +333,7 @@ export function ProfileEditor() {
             )}
 
             {hasResumeContext && (
-              <div className="rounded-xl border border-dashed border-base-300/80 bg-base-200 px-4 py-3 text-sm">
+              <div className="rounded-xl border border-dashed border-border/80 bg-base-200 px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">
                     {lastProcessedFileName || "Resume context available"}

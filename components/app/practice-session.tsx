@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full min-h-[24rem] items-center justify-center rounded-3xl border border-base-300 bg-base-200/30 text-sm text-base-content/60">
+    <div className="flex h-full min-h-[24rem] items-center justify-center rounded-3xl border border-border bg-base-200/30 text-sm text-base-content/60">
       Loading editor...
     </div>
   ),
@@ -48,7 +48,7 @@ const WhiteboardPanel = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[28rem] items-center justify-center rounded-3xl border border-base-300 bg-base-200/30 text-sm text-base-content/60">
+      <div className="flex h-full min-h-[28rem] items-center justify-center rounded-3xl border border-border bg-base-200/30 text-sm text-base-content/60">
         Loading whiteboard...
       </div>
     ),
@@ -446,7 +446,7 @@ export function PracticeSession({
 
   return (
     <div className="flex min-h-screen flex-col bg-base-200">
-      <header className="border-b border-base-300 bg-base-100/75 backdrop-blur">
+      <header className="border-b border-border bg-base-100/75 backdrop-blur">
         <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="text-base-content/60 transition hover:text-base-content">
             <X className="size-5" />
@@ -516,7 +516,7 @@ export function PracticeSession({
                 {scenario.prompt}
               </p>
               {isTechnical && codingProblem && (
-                <div className="mt-4 max-h-60 w-full overflow-y-auto rounded-none border border-base-300 bg-base-100/60 p-4 text-left">
+                <div className="mt-4 max-h-60 w-full overflow-y-auto rounded-none border border-border bg-base-100/60 p-4 text-left">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="text-xs font-semibold">{codingProblem.sourceTitle}</span>
                     {codingProblem.sourceDifficulty && (
@@ -560,7 +560,7 @@ export function PracticeSession({
 
             <div className="mt-6 flex flex-col items-start gap-3">
               {!isTechnical && (
-                <div className="flex items-center gap-2 rounded-none border border-base-300 bg-base-100 p-1">
+                <div className="flex items-center gap-2 rounded-none border border-border bg-base-100 p-1">
                   <button
                     type="button"
                     onClick={() => setInterviewMode("video")}
@@ -611,7 +611,7 @@ export function PracticeSession({
                 ))}
               </div>
 
-              <div className="flex max-w-sm items-center gap-3 rounded-lg border border-base-300 bg-base-200/40 px-4 py-3">
+              <div className="flex max-w-sm items-center gap-3 rounded-lg border border-border bg-base-200/40 px-4 py-3">
                 <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-base-content/60 hover:text-base-content">
                   <FileText className="size-4" />
                   <input
@@ -647,7 +647,7 @@ export function PracticeSession({
                 {scenario.focus.map((focus) => (
                   <span
                     key={focus}
-                    className="rounded-none border border-base-300 bg-base-100/75 px-3 py-1 text-sm font-medium text-base-content/85"
+                    className="rounded-none border border-border bg-base-100/75 px-3 py-1 text-sm font-medium text-base-content/85"
                   >
                     {focus}
                   </span>
@@ -670,7 +670,7 @@ export function PracticeSession({
               "absolute bottom-0 left-0 right-0 lg:right-96 mx-auto w-full max-w-2xl p-6",
             // Connected + split-view: PiP overlay in top-left
             (sessionState === "connected" || sessionState === "ended") && hasSplitView &&
-              "absolute left-4 top-4 w-56 border border-base-300 bg-base-100 shadow-lg xl:w-64",
+              "absolute left-4 top-4 w-56 border border-border bg-base-100 shadow-lg xl:w-64",
             // Connected + behavioral: centered, top of main area
             (sessionState === "connected" || sessionState === "ended") && !hasSplitView &&
               "absolute inset-x-0 top-0 mx-auto w-full max-w-3xl p-6",
@@ -700,7 +700,7 @@ export function PracticeSession({
                         </span>
                       )}
                       {codingProblem.topicTags?.slice(0, 3).map((tag) => (
-                        <span key={tag} className="rounded-none border border-base-300 bg-base-200/60 px-1.5 py-0.5 text-[10px] text-base-content/50">
+                        <span key={tag} className="rounded-none border border-border bg-base-200/60 px-1.5 py-0.5 text-[10px] text-base-content/50">
                           {tag}
                         </span>
                       ))}
@@ -748,7 +748,7 @@ export function PracticeSession({
                       "inline-flex shrink-0 items-center gap-2 rounded-none border px-3 py-1.5 text-xs font-medium transition",
                       sessionState === "connected"
                         ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400"
-                        : "border-base-300 bg-base-200/40 text-base-content/60",
+                        : "border-border bg-base-200/40 text-base-content/60",
                     )}
                   >
                     <Sparkles className="size-3.5" />
@@ -770,7 +770,7 @@ export function PracticeSession({
                       scrollBeyondLastLine: false,
                       wordWrap: "on",
                     }}
-                    className="min-h-80 overflow-hidden rounded-none border border-base-300"
+                    className="min-h-80 overflow-hidden rounded-none border border-border"
                   />
                 </div>
 
@@ -813,7 +813,7 @@ export function PracticeSession({
 
         <aside
           className={cn(
-            "flex min-h-0 flex-col border-t border-base-300 bg-base-100/85 backdrop-blur transition-all duration-200 lg:border-l lg:border-t-0",
+            "flex min-h-0 flex-col border-t border-border bg-base-100/85 backdrop-blur transition-all duration-200 lg:border-l lg:border-t-0",
             panelOpen ? "lg:w-[24rem] lg:overflow-y-auto" : "lg:w-10",
           )}
         >
@@ -821,7 +821,7 @@ export function PracticeSession({
           <button
             type="button"
             onClick={() => setPanelOpen((v) => !v)}
-            className="hidden items-center justify-center border-b border-base-300 py-2 text-base-content/60 transition hover:text-base-content lg:flex"
+            className="hidden items-center justify-center border-b border-border py-2 text-base-content/60 transition hover:text-base-content lg:flex"
             title={panelOpen ? "Collapse panel" : "Expand panel"}
           >
             {panelOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
@@ -829,7 +829,7 @@ export function PracticeSession({
 
           {panelOpen && (
             <>
-              <div className="grid grid-cols-3 border-b border-base-300">
+              <div className="grid grid-cols-3 border-b border-border">
                 {[
                   { id: "rubric", label: "Rubric", icon: MessageSquareText },
                   { id: "hints", label: "Hints", icon: Lightbulb },

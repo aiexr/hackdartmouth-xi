@@ -113,10 +113,10 @@ function ProfileStatsSkeleton() {
       <div className="h-4 w-48 rounded bg-base-300/50 animate-pulse" />
       <div className="grid gap-4 md:grid-cols-4 animate-pulse">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-24 rounded border border-base-300 bg-base-200/30" />
+          <div key={i} className="h-24 rounded border border-border bg-base-200/30" />
         ))}
       </div>
-      <div className="h-40 rounded border border-base-300 bg-base-200/30 animate-pulse" />
+      <div className="h-40 rounded border border-border bg-base-200/30 animate-pulse" />
     </>
   );
 }

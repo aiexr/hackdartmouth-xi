@@ -6,10 +6,10 @@ export default function ShellLoading() {
         <div className="h-4 w-96 max-w-full rounded bg-base-300/40" />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="h-48 rounded border border-base-300 bg-base-200/30" />
-        <div className="h-48 rounded border border-base-300 bg-base-200/30" />
+        <div className="h-48 rounded border border-border bg-base-200/30" />
+        <div className="h-48 rounded border border-border bg-base-200/30" />
       </div>
-      <div className="h-32 rounded border border-base-300 bg-base-200/30" />
+      <div className="h-32 rounded border border-border bg-base-200/30" />
     </div>
   );
 }

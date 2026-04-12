@@ -9,8 +9,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "btn-primary text-primary-content",
-        secondary: "bg-base-200 text-base-content border border-base-300 hover:bg-base-300",
-        outline: "border border-base-300 bg-transparent text-base-content hover:bg-base-200",
+        secondary: "bg-base-200 text-base-content border border-border hover:bg-base-300",
+        destructive: "bg-destructive text-destructive-foreground border border-destructive hover:bg-destructive/90",
+        outline: "border border-border bg-transparent text-base-content hover:bg-base-200",
         ghost: "bg-transparent text-base-content/60 border-0 hover:bg-base-200 hover:text-base-content",
         link: "bg-transparent text-primary border-0 underline-offset-4 hover:underline",
       },

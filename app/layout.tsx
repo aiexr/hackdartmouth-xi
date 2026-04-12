@@ -26,6 +26,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      {/* Restore theme before first paint to avoid flash */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body
         className={`${bodyFont.variable} ${displayFont.variable} min-h-screen font-(--font-body) text-base-content`}
       >

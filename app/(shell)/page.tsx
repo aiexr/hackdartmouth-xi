@@ -47,7 +47,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
   return (
     <>
       <div className="grid gap-4">
-        <div className="rounded-none border border-base-300 bg-base-100 p-5">
+        <div className="rounded-none border border-border bg-base-100 p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-primary">
             <Target className="size-4" />
             Today's progress
@@ -93,7 +93,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
           </div>
         </div>
 
-        <div className="rounded-none border border-base-300 bg-base-100 p-5">
+        <div className="rounded-none border border-border bg-base-100 p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-base-content">
             <TrendingUp className="size-4" />
             Current goals
@@ -114,14 +114,14 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
         </div>
       </div>
 
-      <section className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(220px,1fr)]">
+      <section className="col-span-full grid items-stretch gap-4 md:grid-cols-[minmax(0,3fr)_minmax(220px,1fr)]">
         <div className="min-w-0">
           <ActivityCalendar
             activityDays={metrics.activityDays}
             totalSessions={metrics.completedSessions}
           />
         </div>
-        <div className="flex flex-col justify-around rounded-xl border border-base-300 bg-base-100 p-5">
+        <div className="flex flex-col justify-around rounded-xl border border-border bg-base-100 p-5">
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-lg bg-orange-50">
               <Flame className="size-5 text-orange-500" />
@@ -154,7 +154,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
         </div>
       </section>
 
-      <section>
+      <section className="col-span-full">
         <div>
           <div className="mb-4 flex items-center gap-2">
             <BookOpen className="size-5 text-amber-500" />
@@ -186,10 +186,10 @@ function MetricsSkeleton() {
   return (
     <>
       <div className="grid gap-4 animate-pulse">
-        <div className="h-40 rounded border border-base-300 bg-base-200/30" />
-        <div className="h-32 rounded border border-base-300 bg-base-200/30" />
+        <div className="h-40 rounded border border-border bg-base-200/30" />
+        <div className="h-32 rounded border border-border bg-base-200/30" />
       </div>
-      <div className="h-48 rounded border border-base-300 bg-base-200/30 animate-pulse" />
+      <div className="h-48 rounded border border-border bg-base-200/30 animate-pulse" />
     </>
   );
 }
@@ -204,11 +204,11 @@ export default async function DashboardPage() {
             <CardContent className="p-7 md:p-8">
               <div className="mt-5">
                 <h1 className="max-w-2xl">
-                  Practice interviewing the LeetSpeak way with canonical round types and repeatable loops.
+                  Start practicing your interviewing skills.
                 </h1>
-                <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
+                {/* <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
                   Switch between behavioral, technical coding, and system design rounds, then review visible progress over time. Weekly goals, streaks, and saved interview history flow through MongoDB-backed scoring.
-                </p>
+                </p> */}
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="lg" className="text-white">
                     <Link href="/practice">

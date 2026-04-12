@@ -263,7 +263,7 @@ export default async function ReviewPage({
 
   return (
     <div className="min-h-screen bg-base-200">
-      <header className="border-b border-base-300 bg-base-100/80 px-6 py-4 backdrop-blur">
+      <header className="border-b border-border bg-base-100/80 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <Link
             href="/"
@@ -356,7 +356,7 @@ export default async function ReviewPage({
               Session complete
             </div>
 
-            <div className="mx-auto mt-6 flex size-40 items-center justify-center rounded-none border-12 border-base-300 bg-base-100 shadow-lg shadow-primary/10">
+            <div className="mx-auto mt-6 flex size-40 items-center justify-center rounded-none border-12 border-border bg-base-100 shadow-lg shadow-primary/10">
               <div>
                 <div className="text-5xl font-semibold">{scoreDisplay}</div>
                 <div className="text-xs font-medium text-base-content/60">
@@ -538,7 +538,7 @@ export default async function ReviewPage({
               <h2 className="flex items-center gap-2">
                 Your System Design
               </h2>
-              <div className="mt-4 overflow-hidden rounded-none border border-base-300">
+              <div className="mt-4 overflow-hidden rounded-none border border-border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={interview.diagramSnapshot}
@@ -568,7 +568,7 @@ export default async function ReviewPage({
                         ? "border-emerald-200/70 bg-emerald-50"
                         : line.highlight === "improve"
                           ? "border-amber-200/70 bg-amber-50"
-                          : "border-base-300 bg-base-200/45"
+                          : "border-border bg-base-200/45"
                     }`}
                   >
                     <div className="flex items-start gap-4">
@@ -590,7 +590,7 @@ export default async function ReviewPage({
                   </div>
                 ))
               ) : (
-                <div className="rounded-none border border-dashed border-base-300 px-4 py-6 text-sm leading-6 text-base-content/60">
+                <div className="rounded-none border border-dashed border-border px-4 py-6 text-sm leading-6 text-base-content/60">
                   This attempt did not save any transcript lines.
                 </div>
               )}

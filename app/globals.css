@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: corporate;
+  themes: corporate, dark;
 }
 
 :root {
@@ -30,6 +30,24 @@
   --radius-box: 0;
   --radius-field: 0;
   --radius-selector: 0;
+}
+
+[data-theme="dark"] {
+  --background: #13131f;
+  --foreground: #e5e5f0;
+  --card: #1c1c2e;
+  --card-foreground: #e5e5f0;
+  --popover: #1c1c2e;
+  --popover-foreground: #e5e5f0;
+  --secondary: #1e1e38;
+  --secondary-foreground: #a5b4fc;
+  --muted: #1e1e2e;
+  --muted-foreground: #9ca3af;
+  --accent: #0d2a1e;
+  --accent-foreground: #34d399;
+  --border: #2e2e4a;
+  --input-background: #1e1e2e;
+  --switch-background: #374151;
 }
 
 @theme inline {

@@ -127,8 +127,8 @@ export default function PracticePage() {
                 className={cn(
                   "btn btn-sm gap-2",
                   active
-                    ? "btn-primary"
-                    : "border border-base-300 bg-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content",
+                    ? "btn-primary text-white"
+                    : "border border-border bg-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content",
                 )}
               >
                 <meta.icon className="size-4" />
@@ -166,7 +166,7 @@ export default function PracticePage() {
         {/* Problem list */}
         <div className="card card-bordered bg-base-100 overflow-hidden">
           {/* Table header */}
-          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_5rem_5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
+          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_5rem_5rem] items-center gap-3 border-b border-border px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
             <span className="text-center">#</span>
             <span>Title</span>
             <span>Time</span>
@@ -182,7 +182,7 @@ export default function PracticePage() {
           {grouped.map(({ difficulty, scenarios: rows }) => (
             <div key={difficulty}>
               {/* Difficulty section header */}
-              <div className="border-b border-base-300 bg-base-200/40 px-4 py-2">
+              <div className="border-b border-border bg-base-200/40 px-4 py-2">
                 <span className={cn("text-xs font-semibold", difficultyStyles[difficulty])}>
                   {difficulty}
                 </span>
@@ -198,7 +198,7 @@ export default function PracticePage() {
                     onClick={() => router.push(`/practice/${scenario.id}`)}
                     className={cn(
                       "grid w-full cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_5rem_5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
-                      idx < rows.length - 1 && "border-b border-base-300/50",
+                      idx < rows.length - 1 && "border-b border-border/50",
                     )}
                   >
                     <span className="text-center text-xs text-base-content/50">

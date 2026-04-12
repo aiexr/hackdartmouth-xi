@@ -249,7 +249,7 @@ export default function LlmTestPage() {
                 </div>
 
                 {useProviderOverride ? (
-                  <div className="flex items-center gap-3 rounded-none border border-base-300 px-3 py-2">
+                  <div className="flex items-center gap-3 rounded-none border border-border px-3 py-2">
                     <span
                       className={providerOverride === "openai" ? "text-sm font-medium text-base-content" : "text-sm text-base-content/60"}
                     >
@@ -297,7 +297,7 @@ export default function LlmTestPage() {
               </div>
             ) : null}
 
-            <div className="min-h-28 whitespace-pre-wrap rounded-none border border-base-300 bg-base-200/40 p-4 text-sm leading-6">
+            <div className="min-h-28 whitespace-pre-wrap rounded-none border border-border bg-base-200/40 p-4 text-sm leading-6">
               {result?.content || "Run a test prompt to see model output here."}
             </div>
           </CardContent>
@@ -387,7 +387,7 @@ export default function LlmTestPage() {
               ) : null}
 
               {documentResult && (
-                <div className="max-h-72 overflow-y-auto rounded-none border border-base-300 bg-base-200/40 p-4 text-sm leading-6 whitespace-pre-wrap">
+                <div className="max-h-72 overflow-y-auto rounded-none border border-border bg-base-200/40 p-4 text-sm leading-6 whitespace-pre-wrap">
                   {documentResult.text}
                 </div>
               )}

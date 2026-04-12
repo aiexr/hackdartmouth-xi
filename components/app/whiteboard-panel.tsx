@@ -40,7 +40,7 @@ export const WhiteboardPanel = forwardRef<WhiteboardHandle>(
 
     return (
       <div className="flex h-full min-h-112 flex-col">
-        <div className="min-h-0 flex-1 overflow-hidden rounded-none border border-base-300">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-none border border-border">
           <Tldraw onMount={handleMount} />
         </div>
       </div>

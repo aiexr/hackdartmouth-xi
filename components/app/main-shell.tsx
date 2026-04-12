@@ -106,7 +106,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                     src={session.user.image}
                     alt=""
                     referrerPolicy="no-referrer"
-                    className="size-9 rounded-none ring-2 ring-base-300"
+                    className="size-9 rounded-none ring-2 ring-border"
                   />
                 ) : (
                   <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-content ring-2 ring-primary/20">
