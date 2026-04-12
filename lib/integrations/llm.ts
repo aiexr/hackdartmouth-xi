@@ -7,6 +7,22 @@ import {
 
 export type LlmProviderName = "openai" | "gemini";
 
+type PdfInput = {
+  mimeType: "application/pdf";
+  dataBase64: string;
+};
+
+type ImageInput = {
+  mimeType: string;
+  dataBase64: string;
+};
+
+type DocumentInput = {
+  mimeType: string;
+  filename: string;
+  buffer: Buffer;
+};
+
 type ProviderModule = {
   getModel: () => string;
   fetchAvailableModels: () => Promise<[models: string[], warning: string | null]>;
@@ -24,7 +40,7 @@ type ProviderModule = {
     modelOverride: string | undefined,
     temperature: number,
     maxTokens: number,
-    pdf: { mimeType: "application/pdf"; dataBase64: string },
+    pdf: PdfInput,
     fallbacks?: string[],
   ) => Promise<{ content: string; modelUsed: string }>;
   executeWithImage?: (
@@ -33,7 +49,7 @@ type ProviderModule = {
     modelOverride: string | undefined,
     temperature: number,
     maxTokens: number,
-    image: { mimeType: string; dataBase64: string },
+    image: ImageInput,
     fallbacks?: string[],
   ) => Promise<{ content: string; modelUsed: string }>;
 };
@@ -89,15 +105,8 @@ type LlOptions = {
   temperature?: number;
   maxTokens?: number;
   parseJson?: boolean;
-  document?: {
-    mimeType: string;
-    filename: string;
-    buffer: Buffer;
-  };
-  image?: {
-    mimeType: string;
-    dataBase64: string;
-  };
+  document?: DocumentInput;
+  image?: ImageInput;
 };
 
 type LlResult = {
@@ -105,6 +114,17 @@ type LlResult = {
   modelUsed: string;
   json?: unknown;
 };
+
+async function appendDocumentContext(prompt: string, document: DocumentInput) {
+  const extracted = await extractDocumentText(document.buffer, document.filename);
+
+  return [
+    prompt,
+    "",
+    "Candidate background document:",
+    formatDocumentContextForPrompt(extracted),
+  ].join("\n");
+}
 
 export async function ll(
   prompt: string,
@@ -118,75 +138,72 @@ export async function ll(
   const trimmedPrompt = prompt.trim();
   const document = options.document;
   const image = options.image;
+  const hasImage = Boolean(image);
 
   const shouldUseNativePdf =
-    document?.mimeType === "application/pdf" && Boolean(provider.executeWithPdf);
-  const shouldUseImage = Boolean(image) && Boolean(provider.executeWithImage);
+    !hasImage &&
+    document?.mimeType === "application/pdf" &&
+    Boolean(provider.executeWithPdf);
 
   try {
-    const { content, modelUsed } = shouldUseImage
-      ? await provider.executeWithImage!(
-          trimmedPrompt,
-          systemPrompt,
-          options.modelOverride,
-          temperature,
-          maxTokens,
-          image!,
-          options.modelFallbacks,
-        )
-      : shouldUseNativePdf
-      ? await (() => {
-          if (!document) {
-            throw new Error("Document was not provided.");
-          }
+    if (hasImage && !provider.executeWithImage) {
+      throw new Error(`Provider ${providerName} does not support image input.`);
+    }
 
-          if (!provider.executeWithPdf) {
-            throw new Error(
-              `Provider ${providerName} does not support native PDF input.`,
-            );
-          }
+    const promptWithDocument =
+      document && !shouldUseNativePdf
+        ? await appendDocumentContext(trimmedPrompt, document)
+        : trimmedPrompt;
 
-          return provider.executeWithPdf(
-            trimmedPrompt,
-            systemPrompt,
-            options.modelOverride,
-            temperature,
-            maxTokens,
-            {
-              mimeType: "application/pdf",
-              dataBase64: document.buffer.toString("base64"),
-            },
-            options.modelFallbacks,
-          );
-        })()
-      : document
-        ? await (() => {
-            const extracted = extractDocumentText(document.buffer, document.filename);
+    let response: { content: string; modelUsed: string };
 
-            return extracted.then((doc) =>
-              provider.execute(
-                [
-                  trimmedPrompt,
-                  "",
-                  "Candidate background document:",
-                  formatDocumentContextForPrompt(doc),
-                ].join("\n"),
-                systemPrompt,
-                options.modelOverride,
-                temperature,
-                maxTokens,
-                options.modelFallbacks,
-              ),
-            );
-          })()
-      : await provider.execute(
-          trimmedPrompt,
-          systemPrompt,
-          options.modelOverride,
-          temperature,
-          maxTokens,
-          options.modelFallbacks,
-        );
+    if (hasImage) {
+      if (!image || !provider.executeWithImage) {
+        throw new Error(`Provider ${providerName} does not support image input.`);
+      }
+
+      response = await provider.executeWithImage(
+        promptWithDocument,
+        systemPrompt,
+        options.modelOverride,
+        temperature,
+        maxTokens,
+        image,
+        options.modelFallbacks,
+      );
+    } else if (shouldUseNativePdf) {
+      if (!document) {
+        throw new Error("Document was not provided.");
+      }
+
+      if (!provider.executeWithPdf) {
+        throw new Error(`Provider ${providerName} does not support native PDF input.`);
+      }
+
+      response = await provider.executeWithPdf(
+        trimmedPrompt,
+        systemPrompt,
+        options.modelOverride,
+        temperature,
+        maxTokens,
+        {
+          mimeType: "application/pdf",
+          dataBase64: document.buffer.toString("base64"),
+        },
+        options.modelFallbacks,
+      );
+    } else {
+      response = await provider.execute(
+        promptWithDocument,
+        systemPrompt,
+        options.modelOverride,
+        temperature,
+        maxTokens,
+        options.modelFallbacks,
+      );
+    }
+
+    const { content, modelUsed } = response;
 
     if (!options.parseJson) {
       return {

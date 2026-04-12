@@ -14,6 +14,8 @@ type LlmTestResponse = {
   content: string;
   modelUsed: string;
   provider: string;
+  imageProcessed: boolean;
+  autoSelectedVisionModel: boolean;
 };
 
 type DocumentTestResponse = {
@@ -33,6 +35,8 @@ function toLlmTestResponse(value: Record<string, unknown>): LlmTestResponse {
     content: typeof value.content === "string" ? value.content : "",
     modelUsed: typeof value.modelUsed === "string" ? value.modelUsed : "unknown",
     provider: typeof value.provider === "string" ? value.provider : "unknown",
+    imageProcessed: Boolean(value.imageProcessed),
+    autoSelectedVisionModel: Boolean(value.autoSelectedVisionModel),
   };
 }
 
@@ -42,6 +46,36 @@ function toDocumentTestResponse(value: Record<string, unknown>): DocumentTestRes
     filename: typeof value.filename === "string" ? value.filename : "unknown",
     extracted_length:
       typeof value.extracted_length === "number" ? value.extracted_length : 0,
+  };
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+
+      reject(new Error("Failed to read image data."));
+    };
+    reader.onerror = () => reject(new Error("Failed to read image data."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function imageFileToPayload(file: File) {
+  const dataUrl = await fileToDataUrl(file);
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+
+  if (!match) {
+    throw new Error("Selected file is not a valid base64 image.");
+  }
+
+  return {
+    mimeType: match[1],
+    dataBase64: match[2],
   };
 }
 
@@ -57,6 +91,7 @@ export default function LlmTestPage() {
   const [result, setResult] = useState<LlmTestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentResult, setDocumentResult] = useState<DocumentTestResponse | null>(null);
@@ -70,6 +105,10 @@ export default function LlmTestPage() {
     setError(null);
 
     try {
+      const imagePayload = imageFile
+        ? await imageFileToPayload(imageFile)
+        : undefined;
+
       const res = await fetch("/api/llm/test", {
         method: "POST",
         headers: {
@@ -79,6 +118,7 @@ export default function LlmTestPage() {
           prompt,
           systemPrompt,
           providerOverride: useProviderOverride ? providerOverride : undefined,
+          image: imagePayload,
         }),
       });
 
@@ -166,6 +206,40 @@ export default function LlmTestPage() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Image (optional)</label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0] ?? null;
+                      setImageFile(file);
+                    }}
+                  />
+                  {imageFile ? (
+                    <button
+                      type="button"
+                      onClick={() => setImageFile(null)}
+                      className="text-muted-foreground hover:text-foreground"
+                      aria-label="Clear selected image"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  ) : null}
+                </div>
+                {imageFile ? (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: {imageFile.name} ({(imageFile.size / 1024).toFixed(1)}KB)
+                  </p>
+                ) : null}
+                {imageFile && !useProviderOverride ? (
+                  <p className="text-xs text-muted-foreground">
+                    Image attached with no provider override. This sandbox will auto-use Dartmouth vision model qwen.qwen3-vl-32b-instruct-fp8.
+                  </p>
+                ) : null}
+              </div>
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Provider override (optional)</label>
@@ -215,6 +289,12 @@ export default function LlmTestPage() {
                 <div className="flex items-center gap-2">
                   <Badge className="bg-secondary text-secondary-foreground">provider: {result.provider}</Badge>
                   <Badge className="bg-secondary text-secondary-foreground">model: {result.modelUsed}</Badge>
+                  <Badge className="bg-secondary text-secondary-foreground">
+                    image: {result.imageProcessed ? "yes" : "no"}
+                  </Badge>
+                  {result.autoSelectedVisionModel ? (
+                    <Badge className="bg-secondary text-secondary-foreground">auto-model: qwen-vl</Badge>
+                  ) : null}
                 </div>
               ) : null}
             </div>
