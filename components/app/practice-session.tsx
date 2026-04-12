@@ -465,8 +465,10 @@ export function PracticeSession({
                 type="button"
                 onClick={() => avatarRef.current?.toggleMute()}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-none transition hover:scale-105",
-                  avatarControls.isMuted ? "bg-red-500 text-white" : "bg-base-200 text-base-content",
+                  "flex size-8 items-center justify-center rounded-none border transition hover:scale-105",
+                  avatarControls.isMuted
+                    ? "border-red-500 bg-red-500 text-white"
+                    : "border-base-300 bg-base-100 text-base-content hover:bg-base-200",
                 )}
                 title={avatarControls.isMuted ? "Unmute" : "Mute"}
               >
@@ -476,8 +478,10 @@ export function PracticeSession({
                 type="button"
                 onClick={() => avatarRef.current?.toggleCamera()}
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-none transition hover:scale-105",
-                  !avatarControls.isCameraOn ? "bg-red-500 text-white" : "bg-base-200 text-base-content",
+                  "flex size-8 items-center justify-center rounded-none border transition hover:scale-105",
+                  !avatarControls.isCameraOn
+                    ? "border-red-500 bg-red-500 text-white"
+                    : "border-base-300 bg-base-100 text-base-content hover:bg-base-200",
                 )}
                 title={avatarControls.isCameraOn ? "Turn off camera" : "Turn on camera"}
               >
@@ -597,7 +601,7 @@ export function PracticeSession({
                     type="button"
                     onClick={() => setInterviewTone(tone.id)}
                     className={cn(
-                      "flex cursor-pointer items-center gap-1.5 rounded-none border px-3 py-1.5 text-xs font-medium transition",
+                      "flex items-center gap-1.5 rounded-none border px-3 py-1.5 text-xs font-medium transition",
                       interviewTone === tone.id
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content",
@@ -630,7 +634,7 @@ export function PracticeSession({
                     "mt-3 flex items-center gap-2 rounded-none px-6 py-3 text-sm font-medium transition",
                     sessionState === "idle"
                       ? "bg-primary text-primary-content shadow-lg shadow-primary/25 hover:bg-primary/90"
-                      : "cursor-not-allowed bg-base-300 text-base-content/50",
+                      : "bg-base-300 text-base-content/50",
                   )}
                 >
                   <Phone className="size-4" />

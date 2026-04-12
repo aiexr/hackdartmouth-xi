@@ -527,8 +527,10 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
             <button
               onClick={toggleMute}
               className={cn(
-                "flex size-12 items-center justify-center rounded-none shadow-md transition hover:scale-105",
-                isMuted ? "bg-red-500 text-white" : "bg-white text-base-content",
+                "flex size-12 items-center justify-center rounded-none border shadow-md transition hover:scale-105",
+                isMuted
+                  ? "border-red-500 bg-red-500 text-white"
+                  : "border-base-300 bg-base-100 text-base-content hover:bg-base-200",
               )}
               title={isMuted ? "Unmute" : "Mute"}
             >
@@ -538,8 +540,10 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
             <button
               onClick={toggleCamera}
               className={cn(
-                "flex size-12 items-center justify-center rounded-none shadow-md transition hover:scale-105",
-                !isCameraOn ? "bg-red-500 text-white" : "bg-white text-base-content",
+                "flex size-12 items-center justify-center rounded-none border shadow-md transition hover:scale-105",
+                !isCameraOn
+                  ? "border-red-500 bg-red-500 text-white"
+                  : "border-base-300 bg-base-100 text-base-content hover:bg-base-200",
               )}
               title={isCameraOn ? "Turn off camera" : "Turn on camera"}
             >
