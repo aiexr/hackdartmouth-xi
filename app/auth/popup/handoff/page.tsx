@@ -17,8 +17,9 @@ type PreviewGeometry = {
   theme?: string | null;
 };
 
-const ANIMATION_DURATION_MS = 1080;
-const ANIMATION_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
+const ANIMATION_DURATION_MS = 1480;
+const ANIMATION_EASING = "cubic-bezier(0.2, 0.92, 0.16, 1)";
+const ANIMATION_INITIAL_HOLD = 0.08;
 
 export default function AuthPopupHandoffPage() {
   const router = useRouter();
@@ -62,12 +63,21 @@ export default function AuthPopupHandoffPage() {
       animation = element.animate(
         [
           {
+            offset: 0,
             top: px(compact.top),
             left: px(compact.left),
             width: px(compact.width),
             height: px(compact.height),
           },
           {
+            offset: ANIMATION_INITIAL_HOLD,
+            top: px(compact.top),
+            left: px(compact.left),
+            width: px(compact.width),
+            height: px(compact.height),
+          },
+          {
+            offset: 1,
             top: px(expanded.top),
             left: px(expanded.left),
             width: px(expanded.width),
