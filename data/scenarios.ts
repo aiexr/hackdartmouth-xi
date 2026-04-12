@@ -1,3 +1,5 @@
+import { leetCodeCodingProblems } from "@/data/leetcode-problems";
+
 export type Scenario = {
   id: string;
   title: string;
