@@ -1,25 +1,11 @@
 import "server-only";
 
-// Use pdfjs-dist directly — pdf-parse relies on @napi-rs native bindings
-// that don't work in Cloudflare Workers.
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { WorkerMessageHandler } from "pdfjs-dist/legacy/build/pdf.worker.mjs";
-import type { TextItem } from "pdfjs-dist/types/src/display/api";
-
-type PdfJsWorkerGlobal = typeof globalThis & {
-  pdfjsWorker?: {
-    WorkerMessageHandler: unknown;
-  };
-};
-
-// Force pdf.js to use its in-process "fake worker" path. In Cloudflare-style
-// runtimes, spawning a module worker can accidentally resolve a different
-// bundled pdf.js worker version and trigger API/worker version mismatches.
-(globalThis as PdfJsWorkerGlobal).pdfjsWorker ??= {
-  WorkerMessageHandler,
-};
-
-let mammothModulePromise: Promise<typeof import("mammoth")> | null = null;
+import { writeFile, unlink } from "fs/promises";
+import mammoth from "mammoth";
+import { tmpdir } from "os";
+import { join } from "path";
+// @ts-ignore - pdf-text-extract doesn't have @types package
+import extract from "pdf-text-extract";
 
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -31,57 +17,41 @@ export type ExtractedDocument = {
   extracted_length: number;
 };
 
-function loadMammoth() {
-  if (!mammothModulePromise) {
-    mammothModulePromise = import("mammoth");
-  }
-
-  return mammothModulePromise;
-}
-
 async function extractPdf(buffer: Buffer): Promise<string> {
-  const doc = await getDocument({
-    data: new Uint8Array(buffer),
-    useSystemFonts: true,
-    isEvalSupported: false,
-    disableFontFace: true,
-  }).promise;
+  // pdf-text-extract requires a file path, not a Buffer.
+  const tempPath = join(
+    tmpdir(),
+    `pdf-extract-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`,
+  );
 
-  const parts: string[] = [];
   try {
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      const pageText = content.items
-        .filter((item): item is TextItem => "str" in item)
-        .map((item) => item.str)
-        .join(" ");
-      if (pageText.trim()) {
-        parts.push(pageText);
-      }
-    }
+    await writeFile(tempPath, buffer);
+
+    const text = await new Promise<string>((resolve, reject) => {
+      extract(tempPath, { splitPages: false }, (err: Error | null, pages: string[]) => {
+        if (err) {
+          reject(new Error(`PDF extraction error: ${err.message}`));
+          return;
+        }
+
+        resolve((pages || []).join("\n"));
+      });
+    });
+
+    return text;
   } finally {
-    await doc.destroy().catch(() => undefined);
+    try {
+      await unlink(tempPath);
+    } catch {
+      // Ignore cleanup errors.
+    }
   }
-
-  return parts.join("\n");
-}
-
-function normalizeExtractedText(text: string) {
-  const normalized = text.replace(/\s+/g, " ").trim();
-
-  if (normalized.length <= MAX_EXTRACTED_LENGTH) {
-    return normalized;
-  }
-
-  return `${normalized.slice(0, MAX_EXTRACTED_LENGTH)}\n[... document truncated for context length ...]`;
 }
 
 export async function extractDocumentText(
   buffer: Buffer,
   filename: string,
 ): Promise<ExtractedDocument> {
-  // Validate file extension
   const ext = filename.toLowerCase().slice(filename.lastIndexOf("."));
   if (!SUPPORTED_EXTENSIONS.includes(ext)) {
     throw new Error(
@@ -89,7 +59,6 @@ export async function extractDocumentText(
     );
   }
 
-  // Validate file size
   if (buffer.length > MAX_FILE_SIZE) {
     throw new Error(
       `File too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB. Max: 10MB`,
@@ -100,11 +69,8 @@ export async function extractDocumentText(
     let text = "";
 
     if (ext === ".pdf") {
-      // Extract PDF text in-process so uploads work in worker runtimes.
       text = await extractPdf(buffer);
     } else if (ext === ".docx") {
-      // Extract Word doc using mammoth
-      const mammoth = await loadMammoth();
       const result = await mammoth.extractRawText({ buffer });
       text = result.value || "";
     }
@@ -113,7 +79,14 @@ export async function extractDocumentText(
       throw new Error("No text extracted from document");
     }
 
-    text = normalizeExtractedText(text);
+    text = text
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, MAX_EXTRACTED_LENGTH);
+
+    if (text.length >= MAX_EXTRACTED_LENGTH) {
+      text += "\n[... document truncated for context length ...]";
+    }
 
     return {
       text,
