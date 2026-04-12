@@ -33,6 +33,7 @@ type ProviderModule = {
     temperature: number,
     maxTokens: number,
     fallbacks?: string[],
+    responseFormat?: "text" | "json",
   ) => Promise<{ content: string; modelUsed: string }>;
   executeWithPdf?: (
     prompt: string,
@@ -42,6 +43,7 @@ type ProviderModule = {
     maxTokens: number,
     pdf: PdfInput,
     fallbacks?: string[],
+    responseFormat?: "text" | "json",
   ) => Promise<{ content: string; modelUsed: string }>;
   executeWithImage?: (
     prompt: string,
@@ -51,6 +53,7 @@ type ProviderModule = {
     maxTokens: number,
     image: ImageInput,
     fallbacks?: string[],
+    responseFormat?: "text" | "json",
   ) => Promise<{ content: string; modelUsed: string }>;
 };
 
@@ -139,6 +142,7 @@ export async function ll(
   const document = options.document;
   const image = options.image;
   const hasImage = Boolean(image);
+  const responseFormat = options.parseJson ? "json" : "text";
 
   const shouldUseNativePdf =
     !hasImage &&
@@ -170,6 +174,7 @@ export async function ll(
         maxTokens,
         image,
         options.modelFallbacks,
+        responseFormat,
       );
     } else if (shouldUseNativePdf) {
       if (!document) {
@@ -191,6 +196,7 @@ export async function ll(
           dataBase64: document.buffer.toString("base64"),
         },
         options.modelFallbacks,
+        responseFormat,
       );
     } else {
       response = await provider.execute(
@@ -200,6 +206,7 @@ export async function ll(
         temperature,
         maxTokens,
         options.modelFallbacks,
+        responseFormat,
       );
     }
 

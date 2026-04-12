@@ -17,6 +17,119 @@ type Message = {
   text: string;
 };
 
+type CoachHistoryItem = {
+  role: "user" | "coach";
+  text: string;
+};
+
+function parseCoachJson(candidate: string) {
+  try {
+    const parsed = JSON.parse(candidate) as {
+      error?: unknown;
+      message?: unknown;
+      reply?: unknown;
+      content?: unknown;
+      text?: unknown;
+    };
+
+    if (typeof parsed.reply === "string" && parsed.reply.trim()) {
+      return parsed.reply.trim();
+    }
+
+    if (typeof parsed.content === "string" && parsed.content.trim()) {
+      return parsed.content.trim();
+    }
+
+    if (typeof parsed.message === "string" && parsed.message.trim()) {
+      return parsed.message.trim();
+    }
+
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return parsed.error.trim();
+    }
+
+    if (typeof parsed.text === "string" && parsed.text.trim()) {
+      return parsed.text.trim();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function extractLeadingJsonObject(text: string) {
+  const trimmed = text.trimStart();
+  if (!trimmed.startsWith("{")) {
+    return null;
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < trimmed.length; i += 1) {
+    const char = trimmed[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return trimmed.slice(0, i + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+function normalizeCoachText(text: string | undefined) {
+  if (!text?.trim()) {
+    return "No response received.";
+  }
+
+  const trimmed = text.trim();
+  const directJsonReply = parseCoachJson(trimmed);
+  if (directJsonReply) {
+    return directJsonReply;
+  }
+
+  const leadingJson = extractLeadingJsonObject(trimmed);
+  if (leadingJson) {
+    const leadingJsonReply = parseCoachJson(leadingJson);
+    if (leadingJsonReply) {
+      return leadingJsonReply;
+    }
+
+    const malformedSingleString = leadingJson.match(/^\{\s*"([\s\S]+)"\s*\}$/);
+    if (malformedSingleString?.[1]) {
+      return malformedSingleString[1].trim();
+    }
+  }
+
+  return trimmed;
+}
+
 export function CoachConversation() {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -36,6 +149,10 @@ export function CoachConversation() {
 
   async function sendToCoach(message: string, action?: string) {
     const userMsg = message || (action === "resume-review" ? "Review my resume" : "");
+    const history: CoachHistoryItem[] = messages
+      .slice(-8)
+      .map((item) => ({ role: item.role, text: item.text }));
+
     setMessages((prev) => [...prev, { role: "user", text: userMsg }]);
     setInput("");
     setLoading(true);
@@ -44,7 +161,7 @@ export function CoachConversation() {
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, action }),
+        body: JSON.stringify({ message, action, history }),
       });
 
       const data = (await res.json()) as { reply?: string; error?: string };
@@ -52,12 +169,18 @@ export function CoachConversation() {
       if (!res.ok) {
         setMessages((prev) => [
           ...prev,
-          { role: "coach", text: data.error || "Something went wrong. Try again." },
+          {
+            role: "coach",
+            text: normalizeCoachText(data.error || data.reply || "Something went wrong. Try again."),
+          },
         ]);
         return;
       }
 
-      setMessages((prev) => [...prev, { role: "coach", text: data.reply || "No response received." }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "coach", text: normalizeCoachText(data.reply) },
+      ]);
     } catch {
       setMessages((prev) => [
         ...prev,

@@ -93,6 +93,7 @@ function buildCompletionPayload(
   temperature: number,
   maxTokens: number,
   messages: ChatMessage[],
+  responseFormat: "text" | "json",
 ) {
   const provider = detectProvider(model);
 
@@ -103,7 +104,7 @@ function buildCompletionPayload(
     messages,
   };
 
-  if (provider === "openai" || provider === "gemini") {
+  if (responseFormat === "json" && (provider === "openai" || provider === "gemini")) {
     payload.response_format = { type: "json_object" };
   }
 
@@ -217,6 +218,7 @@ export async function execute(
   temperature: number,
   maxTokens: number,
   fallbacks: string[] = [],
+  responseFormat: "text" | "json" = "text",
 ): Promise<ExecuteResult> {
   const { apiKey, baseUrl } = getApiConfig();
   const modelsToTry = [modelOverride || getModel(), ...fallbacks].filter(Boolean);
@@ -243,7 +245,7 @@ export async function execute(
           "content-type": "application/json",
         },
         body: JSON.stringify(
-          buildCompletionPayload(model, temperature, maxTokens, messages),
+          buildCompletionPayload(model, temperature, maxTokens, messages, responseFormat),
         ),
       });
 
@@ -283,6 +285,7 @@ export async function executeWithImage(
   maxTokens: number,
   image: ImagePart,
   fallbacks: string[] = [],
+  responseFormat: "text" | "json" = "text",
 ): Promise<ExecuteResult> {
   const { apiKey, baseUrl } = getApiConfig();
   const modelsToTry = [modelOverride || getModel(), ...fallbacks].filter(Boolean);
@@ -316,7 +319,7 @@ export async function executeWithImage(
           "content-type": "application/json",
         },
         body: JSON.stringify(
-          buildCompletionPayload(model, temperature, maxTokens, messages),
+          buildCompletionPayload(model, temperature, maxTokens, messages, responseFormat),
         ),
       });
 

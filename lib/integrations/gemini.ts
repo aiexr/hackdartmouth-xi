@@ -149,6 +149,7 @@ export async function execute(
   temperature: number,
   maxTokens: number,
   fallbacks: string[] = [],
+  responseFormat: "text" | "json" = "text",
 ): Promise<ExecuteResult> {
   const { apiKey, baseUrl } = getApiConfig();
   const modelsToTry = [modelOverride || getModel(), ...fallbacks].filter(Boolean);
@@ -181,7 +182,9 @@ export async function execute(
             generationConfig: {
               temperature,
               maxOutputTokens: maxTokens,
-              responseMimeType: "application/json",
+              ...(responseFormat === "json"
+                ? { responseMimeType: "application/json" }
+                : {}),
             },
           }),
         },
@@ -223,6 +226,7 @@ export async function executeWithPdf(
   maxTokens: number,
   pdf: PdfPart,
   fallbacks: string[] = [],
+  responseFormat: "text" | "json" = "text",
 ): Promise<ExecuteResult> {
   const { apiKey, baseUrl } = getApiConfig();
   const modelsToTry = [modelOverride || getModel(), ...fallbacks].filter(Boolean);
@@ -268,7 +272,9 @@ export async function executeWithPdf(
             generationConfig: {
               temperature,
               maxOutputTokens: maxTokens,
-              responseMimeType: "application/json",
+              ...(responseFormat === "json"
+                ? { responseMimeType: "application/json" }
+                : {}),
             },
           }),
         },
@@ -310,6 +316,7 @@ export async function executeWithImage(
   maxTokens: number,
   image: ImagePart,
   fallbacks: string[] = [],
+  responseFormat: "text" | "json" = "text",
 ): Promise<ExecuteResult> {
   const { apiKey, baseUrl } = getApiConfig();
   const modelsToTry = [modelOverride || getModel(), ...fallbacks].filter(Boolean);
@@ -353,7 +360,9 @@ export async function executeWithImage(
             generationConfig: {
               temperature,
               maxOutputTokens: maxTokens,
-              responseMimeType: "application/json",
+              ...(responseFormat === "json"
+                ? { responseMimeType: "application/json" }
+                : {}),
             },
           }),
         },
