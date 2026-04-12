@@ -19,6 +19,7 @@ const fillClasses = [
 const CELL = 12;
 const GAP = 3;
 const STEP = CELL + GAP;
+const DAY_LABEL_WIDTH = 25;
 
 const monthLabels = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -85,6 +86,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
 
   const weeks = buildWeeks(activityDays);
   const months = getMonthPositions(weeks);
+  const gridWidth = weeks.length > 0 ? weeks.length * CELL + (weeks.length - 1) * GAP : 0;
 
   return (
     <div>
@@ -97,18 +99,22 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
       <div className="overflow-x-auto rounded-none border border-border px-3 py-2">
         <div className="min-w-max">
           {/* Month labels */}
-          <div className="flex" style={{ paddingLeft: 26 }}>
+          <div className="relative" style={{ marginLeft: DAY_LABEL_WIDTH, width: gridWidth, height: 16 }}>
             {months.map((m, i) => {
               const nextX = months[i + 1]?.x ?? weeks.length;
               const span = nextX - m.x;
-              const pct = (span / weeks.length) * 100;
+
+              if (span < 3) {
+                return null;
+              }
+
               return (
                 <span
                   key={`${m.label}-${m.x}`}
-                  className="text-xs text-base-content/60"
-                  style={{ width: `${pct}%` }}
+                  className="absolute top-0 text-xs text-base-content/60"
+                  style={{ left: m.x * STEP }}
                 >
-                  {span >= 3 ? m.label : ""}
+                  {m.label}
                 </span>
               );
             })}
@@ -117,7 +123,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
           {/* Grid with day labels */}
           <div className="mt-1 flex">
             {/* Day-of-week labels */}
-            <div className="flex flex-col pr-1" style={{ gap: GAP, width: 25, flexShrink: 0 }}>
+            <div className="flex flex-col pr-1" style={{ gap: GAP, width: DAY_LABEL_WIDTH, flexShrink: 0 }}>
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label, i) => (
                 <div
                   key={label}

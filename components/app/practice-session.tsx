@@ -507,7 +507,7 @@ export function PracticeSession({
       <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden">
         {/* Pre-session screen (idle + connecting) — media surface flows inline */}
         {(sessionState === "idle" || sessionState === "connecting") && (
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:justify-center">
           <section className="flex flex-col items-center px-6 py-10 text-center">
             <div className="max-w-xl space-y-3">
               <p className="text-sm font-medium text-base-content/60">
@@ -652,8 +652,12 @@ export function PracticeSession({
             "z-20 overflow-hidden transition-all duration-500 ease-out",
             (sessionState === "idle" || sessionState === "connecting") &&
               cn(
-                "mx-auto w-full px-6 pb-6",
-                interviewMode === "video" ? "max-w-2xl" : "max-w-2xl",
+                "w-full px-6 pt-6 pb-6 lg:self-center",
+                interviewMode === "video" &&
+                  (panelOpen
+                    ? "mx-auto max-w-2xl"
+                    : "mx-auto lg:ml-4 lg:mr-auto max-w-2xl lg:max-w-[54rem]"),
+                interviewMode !== "video" && "mx-auto max-w-2xl",
               ),
             (sessionState === "connected" || sessionState === "ended") &&
               hasSplitView &&
@@ -661,7 +665,12 @@ export function PracticeSession({
             (sessionState === "connected" || sessionState === "ended") &&
               isBehavioral &&
               interviewMode === "video" &&
-              "mx-auto w-full max-w-2xl px-6 pb-6",
+              cn(
+                "mt-6 w-full px-6 pb-6",
+                panelOpen
+                  ? "mx-auto max-w-2xl"
+                  : "mx-auto lg:ml-4 lg:mr-auto max-w-2xl lg:max-w-[54rem]",
+              ),
             (sessionState === "connected" || sessionState === "ended") &&
               !hasSplitView &&
               !isBehavioral &&

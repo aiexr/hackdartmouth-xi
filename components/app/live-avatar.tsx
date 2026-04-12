@@ -379,12 +379,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   const useLargeLayout = isPreSession || keepLargeLayout;
 
   return (
-    <div
-      className={cn(
-        "flex w-full flex-col gap-4",
-        keepLargeLayout && !isPreSession && "pt-6",
-      )}
-    >
+    <div className="flex w-full flex-col gap-4">
       {/* Video grid -- always rendered so refs stay stable */}
       <div
         className={cn(
