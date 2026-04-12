@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import type { RefObject } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Bot,
   Calendar,
@@ -21,8 +22,9 @@ import { Progress } from "@/components/ui/progress";
 import type { ActivityDay } from "@/lib/interview-metrics";
 import { cn } from "@/lib/utils";
 
-export const AUTH_PREVIEW_STORAGE_KEY = "leetspeak-auth-preview";
-export const AUTH_PREVIEW_COOKIE = "leetspeak-auth-preview";
+export const PREVIEW_NATURAL_WIDTH = 1460;
+export const PREVIEW_NATURAL_HEIGHT = 920;
+export const AUTH_PREVIEW_GEOMETRY_KEY = "leetspeak-auth-preview-geometry";
 
 type DashboardPreviewProps = {
   className?: string;
@@ -42,7 +44,12 @@ export function DashboardPreview({ className, avatarUrl }: DashboardPreviewProps
   const activityDays = useMemo(() => buildPreviewActivityDays(), []);
 
   return (
-    <div className={cn("flex h-full w-full overflow-hidden bg-transparent text-base-content select-none", className)}>
+    <div
+      className={cn(
+        "flex h-full w-full overflow-hidden bg-transparent text-base-content select-none pointer-events-none",
+        className,
+      )}
+    >
       <aside className="hidden w-64 shrink-0 border-r border-border bg-base-100 px-4 py-7 md:flex md:flex-col">
         <div className="flex items-center gap-3 px-3">
           <ThemeLogo alt="LeetSpeak logo" className="h-10 w-auto" />
@@ -102,7 +109,7 @@ export function DashboardPreview({ className, avatarUrl }: DashboardPreviewProps
                       Practice behavioral, technical, and system design interviews with instant feedback.
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3">
-                      <Button size="lg" className="text-white">
+                      <Button size="lg" className="cursor-default text-white">
                         <Play className="w-4 h-4" />
                         Start quick practice
                       </Button>
@@ -185,24 +192,79 @@ export function DashboardPreview({ className, avatarUrl }: DashboardPreviewProps
           </div>
         </div>
 
-        <section className="col-span-full grid items-stretch gap-4 md:grid-cols-[minmax(0,3fr)_minmax(160px,160px)]">
+        <section className="col-span-full grid items-stretch gap-4 md:grid-cols-[minmax(0,3fr)_minmax(196px,220px)]">
           <div className="min-w-0">
             <ActivityCalendar
               activityDays={activityDays}
               totalSessions={0}
             />
           </div>
-          <div className="flex flex-col justify-around rounded-xl border border-border bg-base-100 p-5">
-            <PreviewStat icon={Flame} colorClass="bg-orange-50 text-orange-500" value={0} label="Current streak" />
-            <div className="h-px bg-base-300" />
-            <PreviewStat icon={Trophy} colorClass="bg-amber-50 text-amber-500" value={0} label="Longest streak" />
-            <div className="h-px bg-base-300" />
-            <PreviewStat icon={Calendar} colorClass="bg-emerald-50 text-emerald-500" value={0} label="Active days" />
+          <div className="flex flex-col divide-y divide-base-300/70 border border-border bg-base-100">
+            <PreviewStat icon={Flame} colorClass="bg-base-200/70 text-base-content/55" value={0} label="Current streak" />
+            <PreviewStat icon={Trophy} colorClass="bg-base-200/70 text-base-content/55" value={0} label="Longest streak" />
+            <PreviewStat icon={Calendar} colorClass="bg-base-200/70 text-base-content/55" value={0} label="Active days" />
           </div>
         </section>
       </>
     );
   }
+}
+
+export function ScaledDashboardPreview({
+  className,
+  avatarUrl,
+  frameRef,
+}: {
+  className?: string;
+  avatarUrl?: string | null;
+  frameRef?: RefObject<HTMLDivElement | null>;
+}) {
+  const localFrameRef = useRef<HTMLDivElement | null>(null);
+  const resolvedFrameRef = frameRef ?? localFrameRef;
+  const [scale, setScale] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const element = resolvedFrameRef.current;
+    if (!element) return;
+
+    const updateScale = () => {
+      setScale(element.clientWidth / PREVIEW_NATURAL_WIDTH);
+    };
+
+    updateScale();
+
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [resolvedFrameRef]);
+
+  return (
+    <div
+      ref={resolvedFrameRef}
+      className={cn(
+        "relative ml-auto w-full max-w-[70rem] overflow-hidden border border-border bg-base-100",
+        className,
+      )}
+      style={{ aspectRatio: `${PREVIEW_NATURAL_WIDTH} / ${PREVIEW_NATURAL_HEIGHT}` }}
+    >
+      <div
+        className={cn(
+          "absolute left-0 top-0 origin-top-left transition-opacity duration-150",
+          scale === null && "opacity-0",
+        )}
+        style={{
+          width: PREVIEW_NATURAL_WIDTH,
+          height: PREVIEW_NATURAL_HEIGHT,
+          transform: `scale(${scale ?? 1})`,
+        }}
+      >
+        <DashboardPreview className="h-full w-full" avatarUrl={avatarUrl} />
+      </div>
+    </div>
+  );
 }
 
 function PreviewGoal({
@@ -239,13 +301,13 @@ function PreviewStat({
   label: string;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className={cn("flex size-9 items-center justify-center rounded-lg", colorClass)}>
-        <Icon className="size-5" />
+    <div className="flex items-center gap-4 px-5 py-4">
+      <div className={cn("flex size-10 items-center justify-center", colorClass)}>
+        <Icon className="size-[18px]" />
       </div>
-      <div>
-        <div className="text-2xl font-semibold leading-tight">{value}</div>
-        <div className="text-xs text-base-content/60">{label}</div>
+      <div className="min-w-0">
+        <div className="text-2xl font-semibold leading-none">{value}</div>
+        <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">{label}</div>
       </div>
     </div>
   );

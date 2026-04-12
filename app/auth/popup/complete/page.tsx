@@ -2,40 +2,20 @@
 
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import {
-  AUTH_PREVIEW_STORAGE_KEY,
-} from "@/components/app/dashboard-preview";
 
 export default function AuthPopupCompletePage() {
   useEffect(() => {
-    const finish = async () => {
-      try {
-        await fetch("/api/auth/popup-handoff", {
-          method: "POST",
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-
-        if (window.opener) {
-          window.opener.sessionStorage.setItem(
-            AUTH_PREVIEW_STORAGE_KEY,
-            JSON.stringify({
-              source: "popup",
-              ts: Date.now(),
-            }),
-          );
-          window.opener.location.href = "/";
-          window.close();
-          return;
-        }
-      } catch {
-        // Fall through to same-tab redirect.
+    try {
+      if (window.opener) {
+        window.opener.location.href = "/auth/popup/handoff";
+        window.close();
+        return;
       }
+    } catch {
+      // Fall through to same-tab redirect.
+    }
 
-      window.location.href = "/";
-    };
-
-    void finish();
+    window.location.href = "/auth/popup/handoff";
   }, []);
 
   return (

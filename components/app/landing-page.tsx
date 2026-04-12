@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { DashboardPreview, AUTH_PREVIEW_STORAGE_KEY } from "@/components/app/dashboard-preview";
-import { ThemeLogo } from "@/components/app/theme-logo";
+import {
+  AUTH_PREVIEW_GEOMETRY_KEY,
+  ScaledDashboardPreview,
+} from "@/components/app/dashboard-preview";
 import { cn } from "@/lib/utils";
-
-const PREVIEW_NATURAL_WIDTH = 1460;
-const PREVIEW_NATURAL_HEIGHT = 920;
 
 export function LandingPage() {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const popupPollRef = useRef<number | null>(null);
+  const previewFrameRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -30,13 +30,18 @@ export function LandingPage() {
 
     setIsSigningIn(true);
 
-    window.sessionStorage.setItem(
-      AUTH_PREVIEW_STORAGE_KEY,
-      JSON.stringify({
-        source: "landing",
-        ts: Date.now(),
-      }),
-    );
+    const previewRect = previewFrameRef.current?.getBoundingClientRect();
+    if (previewRect) {
+      window.sessionStorage.setItem(
+        AUTH_PREVIEW_GEOMETRY_KEY,
+        JSON.stringify({
+          top: previewRect.top,
+          left: previewRect.left,
+          width: previewRect.width,
+          height: previewRect.height,
+        }),
+      );
+    }
 
     const width = 520;
     const height = 720;
@@ -79,13 +84,10 @@ export function LandingPage() {
               isSigningIn && "translate-y-1 opacity-70",
             )}
           >
-            <div className="inline-flex w-fit items-center gap-3 border border-border bg-base-100 px-4 py-3">
-              <ThemeLogo alt="LeetSpeak" className="h-9 w-auto" />
-              <div className="text-lg font-semibold tracking-tight">LeetSpeak</div>
-            </div>
+            <h1 className="text-4xl leading-tight md:text-5xl">Practice interviews.</h1>
 
             <p className="max-w-md text-base leading-7 text-base-content/65">
-              Practice behavioral, technical, and system design interviews. Get feedback on your resume and get scored after every interview to track your improvement.
+              Behavioral, technical, and system design interviews. Get feedback on your resume and get scored after every interview to track your improvement.
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -101,55 +103,9 @@ export function LandingPage() {
           </div>
 
           <div className="relative hidden lg:block">
-            <ScaledDashboardPreview isSigningIn={isSigningIn} />
+            <ScaledDashboardPreview frameRef={previewFrameRef} />
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function ScaledDashboardPreview({ isSigningIn }: { isSigningIn: boolean }) {
-  const frameRef = useRef<HTMLDivElement | null>(null);
-  const [scale, setScale] = useState(1);
-
-  useLayoutEffect(() => {
-    const element = frameRef.current;
-    if (!element) return;
-
-    const updateScale = () => {
-      const nextScale = element.clientWidth / PREVIEW_NATURAL_WIDTH;
-      setScale(nextScale);
-    };
-
-    updateScale();
-
-    const observer = new ResizeObserver(updateScale);
-    observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  return (
-    <div
-      ref={frameRef}
-      className={cn(
-        "relative ml-auto w-full max-w-[70rem] overflow-hidden border border-border bg-base-100 transition-[transform,opacity,filter] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
-        isSigningIn && "scale-[1.02] -translate-x-2 blur-[0.2px]",
-      )}
-      style={{ aspectRatio: `${PREVIEW_NATURAL_WIDTH} / ${PREVIEW_NATURAL_HEIGHT}` }}
-    >
-      <div
-        className="absolute left-0 top-0 origin-top-left"
-        style={{
-          width: PREVIEW_NATURAL_WIDTH,
-          height: PREVIEW_NATURAL_HEIGHT,
-          transform: `scale(${scale})`,
-        }}
-      >
-        <DashboardPreview className="h-full w-full" />
       </div>
     </div>
   );

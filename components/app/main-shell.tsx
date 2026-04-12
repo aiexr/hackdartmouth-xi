@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useTransition, useState } from "react";
+import { useEffect, useTransition, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Bot,
@@ -12,10 +12,6 @@ import {
   Settings,
   User,
 } from "lucide-react";
-import {
-  AUTH_PREVIEW_COOKIE,
-  AUTH_PREVIEW_STORAGE_KEY,
-} from "@/components/app/dashboard-preview";
 import { ThemeLogo } from "@/components/app/theme-logo";
 import { cn } from "@/lib/utils";
 
@@ -32,11 +28,8 @@ function WhistleIcon({ className }: { className?: string }) {
       className={className}
       aria-hidden
     >
-      {/* Whistle body with rounded right cap */}
       <path d="M2 9h12a3 3 0 0 1 0 6H2z" />
-      {/* Mouthpiece tube */}
       <path d="M17 10.5h5v3h-5" />
-      {/* Pea inside body */}
       <circle cx="8" cy="12" r="1.5" />
     </svg>
   );
@@ -51,21 +44,12 @@ const navigation = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function MainShell({
-  children,
-  initialAuthIntro = false,
-}: {
-  children: React.ReactNode;
-  initialAuthIntro?: boolean;
-}) {
+export function MainShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
   const [isPending, startTransition] = useTransition();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const [authIntroStage, setAuthIntroStage] = useState<"hidden" | "compact" | "expanded">(
-    initialAuthIntro ? "compact" : "hidden",
-  );
 
   useEffect(() => {
     setPendingHref(null);
@@ -80,53 +64,6 @@ export function MainShell({
     router.refresh();
   }, [pathname, router, status]);
 
-  useLayoutEffect(() => {
-    if (pathname !== "/" || typeof window === "undefined") {
-      return;
-    }
-
-    if (!window.sessionStorage.getItem(AUTH_PREVIEW_STORAGE_KEY)) {
-      return;
-    }
-
-    setAuthIntroStage("compact");
-  }, [initialAuthIntro, pathname]);
-
-  useEffect(() => {
-    if (authIntroStage !== "compact" || typeof window === "undefined") {
-      return;
-    }
-
-    window.sessionStorage.removeItem(AUTH_PREVIEW_STORAGE_KEY);
-    document.cookie = `${AUTH_PREVIEW_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
-
-    let expandFrame = 0;
-
-    expandFrame = window.requestAnimationFrame(() => {
-      expandFrame = window.requestAnimationFrame(() => {
-        setAuthIntroStage("expanded");
-      });
-    });
-
-    return () => {
-      window.cancelAnimationFrame(expandFrame);
-    };
-  }, [authIntroStage]);
-
-  useEffect(() => {
-    if (authIntroStage !== "expanded" || typeof window === "undefined") {
-      return;
-    }
-
-    const finishTimeout = window.setTimeout(() => {
-      setAuthIntroStage("hidden");
-    }, 920);
-
-    return () => {
-      window.clearTimeout(finishTimeout);
-    };
-  }, [authIntroStage]);
-
   const navigateTo = (href: string) => {
     if (href === pathname) return;
     setPendingHref(href);
@@ -135,20 +72,12 @@ export function MainShell({
     });
   };
 
-  // The "active" tab is either confirmed (pathname) or optimistically set (pendingHref)
   const activeHref = pendingHref ?? pathname;
-  const showAuthIntro = authIntroStage !== "hidden";
-  const authIntroStyle = getAuthIntroStyle(authIntroStage);
-  const shellClassName = cn(
-    "flex min-h-screen bg-background",
-    showAuthIntro &&
-      "fixed inset-0 z-[120] overflow-hidden transition-[top,right,bottom,left,transform,border-color] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
-    authIntroStage === "compact" && "border border-border",
-    authIntroStage === "expanded" && "border border-transparent",
-  );
+  const hideLandingChrome =
+    pathname === "/" && status !== "authenticated";
 
   return (
-    <div className={shellClassName} style={authIntroStyle}>
+    <div className="flex min-h-screen bg-background">
       <aside className="hidden w-64 shrink-0 border-r border-border bg-base-100 px-4 py-7 md:flex md:flex-col">
         <Link href="/" className="flex items-center gap-3 px-3">
           <ThemeLogo alt="LeetSpeak logo" className="h-10 w-auto" />
@@ -188,143 +117,91 @@ export function MainShell({
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border px-6 py-3">
-          <Link href="/" className="flex items-center gap-3 md:hidden">
+        {!hideLandingChrome ? (
+          <header className="flex items-center justify-between border-b border-border px-6 py-3">
+            <Link href="/" className="flex items-center gap-3 md:hidden">
               <ThemeLogo alt="LeetSpeak logo" className="h-9 w-auto" />
-            <span className="text-sm font-semibold tracking-tight">LeetSpeak</span>
-          </Link>
-          {session?.user ? (
-            <div className="ml-auto flex items-center gap-3">
-              <button
-                onClick={() => signOut({ callbackUrl: "/" })}
-                className="text-sm font-medium text-base-content/60 transition hover:text-base-content"
-              >
-                Sign out
-              </button>
-              <Link href="/profile" className="cursor-pointer transition-opacity hover:opacity-80">
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt=""
-                    referrerPolicy="no-referrer"
-                    className="size-9 rounded-full ring-2 ring-border"
-                  />
-                ) : (
-                  <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-content ring-2 ring-primary/20">
-                    <User className="size-4" />
-                  </div>
-                )}
-              </Link>
-            </div>
-          ) : (
-            <button
-              onClick={() => signIn("google")}
-              className="ml-auto cursor-pointer transition-opacity hover:opacity-80"
-            >
-              <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-content ring-2 ring-primary/20">
-                <User className="size-4" />
+              <span className="text-sm font-semibold tracking-tight">LeetSpeak</span>
+            </Link>
+            {session?.user ? (
+              <div className="ml-auto flex items-center gap-3">
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="text-sm font-medium text-base-content/60 transition hover:text-base-content"
+                >
+                  Sign out
+                </button>
+                <Link href="/profile" className="cursor-pointer transition-opacity hover:opacity-80">
+                  {session.user.image ? (
+                    <img
+                      src={session.user.image}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="size-9 rounded-full ring-2 ring-border"
+                    />
+                  ) : (
+                    <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-content ring-2 ring-primary/20">
+                      <User className="size-4" />
+                    </div>
+                  )}
+                </Link>
               </div>
-            </button>
-          )}
-        </header>
+            ) : (
+              <button
+                onClick={() => signIn("google")}
+                className="ml-auto cursor-pointer transition-opacity hover:opacity-80"
+              >
+                <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-content ring-2 ring-primary/20">
+                  <User className="size-4" />
+                </div>
+              </button>
+            )}
+          </header>
+        ) : null}
 
         <main
           className={cn(
-            "flex-1 pb-20 md:pb-0 transition-opacity duration-150",
+            "flex-1 transition-opacity duration-150",
+            !hideLandingChrome && "pb-20 md:pb-0",
             isPending && "opacity-50",
           )}
         >
           {children}
         </main>
 
-        {/* Mobile bottom nav */}
-        <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-2xl border border-border bg-base-100/95 p-2 backdrop-blur md:hidden">
-          {navigation.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? activeHref === "/"
-                : activeHref.startsWith(item.href);
-            const isSpinning = pendingHref === item.href && isPending;
+        {!hideLandingChrome ? (
+          <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-2xl border border-border bg-base-100/95 p-2 backdrop-blur md:hidden">
+            {navigation.map((item) => {
+              const isActive =
+                item.href === "/"
+                  ? activeHref === "/"
+                  : activeHref.startsWith(item.href);
+              const isSpinning = pendingHref === item.href && isPending;
 
-            return (
-              <button
-                key={item.href}
-                type="button"
-                onClick={() => navigateTo(item.href)}
-                className={cn(
-                  "flex min-w-14 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[0.7rem] font-medium transition-colors",
-                  isActive
-                    ? "bg-primary text-white"
-                    : "text-base-content/60",
-                )}
-              >
-                {isSpinning ? (
-                  <Loader2 className="size-5 animate-spin" />
-                ) : (
-                  <item.icon className="size-5" />
-                )}
-                {item.label}
-              </button>
-            );
-          })}
-        </nav>
+              return (
+                <button
+                  key={item.href}
+                  type="button"
+                  onClick={() => navigateTo(item.href)}
+                  className={cn(
+                    "flex min-w-14 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[0.7rem] font-medium transition-colors",
+                    isActive
+                      ? "bg-primary text-white"
+                      : "text-base-content/60",
+                  )}
+                >
+                  {isSpinning ? (
+                    <Loader2 className="size-5 animate-spin" />
+                  ) : (
+                    <item.icon className="size-5" />
+                  )}
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        ) : null}
       </div>
     </div>
   );
-}
-
-function getAuthIntroStyle(stage: "hidden" | "compact" | "expanded") {
-  if (stage === "hidden") {
-    return undefined;
-  }
-
-  if (stage === "expanded") {
-    return {
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-      transform: "scale(1)",
-    };
-  }
-
-  if (typeof window === "undefined") {
-    return {
-      top: "12vh",
-      right: "4vw",
-      bottom: "12vh",
-      left: "52vw",
-      opacity: 1,
-      transform: "scale(1)",
-    };
-  }
-
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-
-  if (viewportWidth < 1024) {
-    return {
-      top: Math.max(24, viewportHeight * 0.22),
-      right: 24,
-      bottom: Math.max(24, viewportHeight * 0.24),
-      left: 24,
-      opacity: 1,
-      transform: "scale(0.98)",
-    };
-  }
-
-  const containerWidth = Math.min(viewportWidth - 64, 1280);
-  const previewWidth = Math.min(720, containerWidth * 0.56);
-  const previewHeight = Math.min(620, viewportHeight - 140);
-  const left = (viewportWidth - containerWidth) / 2 + containerWidth - previewWidth;
-  const top = Math.max(40, (viewportHeight - previewHeight) / 2);
-
-  return {
-    top,
-    right: Math.max(32, viewportWidth - left - previewWidth),
-    bottom: Math.max(40, viewportHeight - top - previewHeight),
-    left,
-    opacity: 1,
-    transform: "scale(1)",
-  };
 }

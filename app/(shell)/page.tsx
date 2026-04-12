@@ -163,41 +163,39 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
         </div>
       </div>
 
-      <section className="col-span-full grid items-stretch gap-4 md:grid-cols-[minmax(0,3fr)_minmax(160px,160px)]">
+      <section className="col-span-full grid items-stretch gap-4 md:grid-cols-[minmax(0,3fr)_minmax(196px,220px)]">
         <div className="min-w-0">
           <ActivityCalendar
             activityDays={metrics.activityDays}
             totalSessions={metrics.completedSessions}
           />
         </div>
-        <div className="flex flex-col justify-around rounded-xl border border-border bg-base-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-orange-50">
-              <Flame className="size-5 text-orange-500" />
+        <div className="flex flex-col divide-y divide-base-300/70 border border-border bg-base-100">
+          <div className="flex items-center gap-4 px-5 py-4">
+            <div className="flex size-10 items-center justify-center bg-base-200/70 text-base-content/55">
+              <Flame className="size-[18px]" />
             </div>
-            <div>
-              <div className="text-2xl font-semibold leading-tight">{metrics.streakDays}</div>
-              <div className="text-xs text-base-content/60">Current streak</div>
-            </div>
-          </div>
-          <div className="h-px bg-base-300" />
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-amber-50">
-              <Trophy className="size-5 text-amber-500" />
-            </div>
-            <div>
-              <div className="text-2xl font-semibold leading-tight">{metrics.longestStreak}</div>
-              <div className="text-xs text-base-content/60">Longest streak</div>
+            <div className="min-w-0">
+              <div className="text-2xl font-semibold leading-none">{metrics.streakDays}</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Current streak</div>
             </div>
           </div>
-          <div className="h-px bg-base-300" />
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-50">
-              <Calendar className="size-5 text-emerald-500" />
+          <div className="flex items-center gap-4 px-5 py-4">
+            <div className="flex size-10 items-center justify-center bg-base-200/70 text-base-content/55">
+              <Trophy className="size-[18px]" />
             </div>
-            <div>
-              <div className="text-2xl font-semibold leading-tight">{metrics.activityDays.filter((d) => d.count > 0).length}</div>
-              <div className="text-xs text-base-content/60">Active days</div>
+            <div className="min-w-0">
+              <div className="text-2xl font-semibold leading-none">{metrics.longestStreak}</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Longest streak</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 px-5 py-4">
+            <div className="flex size-10 items-center justify-center bg-base-200/70 text-base-content/55">
+              <Calendar className="size-[18px]" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-2xl font-semibold leading-none">{metrics.activityDays.filter((d) => d.count > 0).length}</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Active days</div>
             </div>
           </div>
         </div>
