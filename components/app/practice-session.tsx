@@ -193,6 +193,7 @@ export function PracticeSession({
   const [editorContent, setEditorContent] = useState(() =>
     buildDefaultEditorContent(scenario),
   );
+  const [editorTheme, setEditorTheme] = useState<"vs-light" | "vs-dark">("vs-light");
   const [hydrated, setHydrated] = useState(false);
   const [resumed, setResumed] = useState(false);
   const [interviewerPrompt, setInterviewerPrompt] = useState<PracticePrompt>(null);
@@ -218,6 +219,25 @@ export function PracticeSession({
 
   useEffect(() => {
     setIsPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const syncEditorTheme = () => {
+      const activeTheme = root.getAttribute("data-theme");
+      setEditorTheme(activeTheme === "dark" ? "vs-dark" : "vs-light");
+    };
+
+    syncEditorTheme();
+
+    const observer = new MutationObserver(syncEditorTheme);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -785,7 +805,7 @@ export function PracticeSession({
 
                 <div className="min-h-0 flex-1">
                   <MonacoEditor
-                    theme="vs-light"
+                    theme={editorTheme}
                     defaultLanguage="typescript"
                     value={editorContent}
                     onChange={(value) => setEditorContent(value ?? "")}
