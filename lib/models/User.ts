@@ -9,6 +9,7 @@ export interface User {
   image: string;
   provider: string;
   focusTrack: string | null;
+  targetRole: string | null;
   bio: string | null;
   resumeExtractedText: string | null;
   preferences: {
@@ -42,6 +43,7 @@ export class UserModel {
           image,
           provider,
           focusTrack: null,
+          targetRole: null,
           bio: null,
           resumeExtractedText: null,
           preferences: {
@@ -75,7 +77,18 @@ export class UserModel {
 
   static async updateUserProfile(
     email: string,
-    updates: Partial<Pick<User, "name" | "bio" | "resumeExtractedText" | "focusTrack" | "preferences" | "favorites">>
+    updates: Partial<
+      Pick<
+        User,
+        | "name"
+        | "bio"
+        | "resumeExtractedText"
+        | "focusTrack"
+        | "targetRole"
+        | "preferences"
+        | "favorites"
+      >
+    >
   ): Promise<User | null> {
     const db = await getMongoDb();
     if (!db) return null;

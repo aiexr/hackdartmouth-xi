@@ -2,19 +2,23 @@
 
 import Link from "next/link";
 import {
+  ArrowRight,
+  Braces,
   BookOpen,
   Calendar,
   Flame,
-  Play,
+  Network,
   Target,
   TrendingUp,
   Trophy,
+  Users,
   Zap,
 } from "lucide-react";
 import { ActivityCalendar } from "@/components/app/activity-calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 type ActivityDay = {
   date: string;
@@ -35,6 +39,18 @@ type ImprovementMetric = {
   description: string;
 };
 
+type SuggestedScenario = {
+  id: string;
+  title: string;
+  category: "behavioral" | "technical" | "system-design";
+  trackLabel: string;
+  difficulty: "Foundations" | "Growth" | "Stretch";
+  duration: string;
+  focusLabel: string;
+  href: string;
+  reason: string;
+};
+
 type UserInterviewMetrics = {
   hasSession: boolean;
   databaseReady: boolean;
@@ -45,6 +61,7 @@ type UserInterviewMetrics = {
   streakDays: number;
   longestStreak: number;
   activityDays: ActivityDay[];
+  suggestedScenarios: SuggestedScenario[];
   goals: GoalMetric[];
   improvements: ImprovementMetric[];
 };
@@ -65,6 +82,85 @@ function getRollingActiveDays(activityDays: ActivityDay[]) {
   return activityDays.filter((day) => day.date >= startKey && day.count > 0).length;
 }
 
+const FALLBACK_SUGGESTED_SCENARIOS: SuggestedScenario[] = [
+  {
+    id: "technical-two-sum",
+    title: "Code Two Sum live",
+    category: "technical",
+    trackLabel: "Technical Coding",
+    difficulty: "Foundations",
+    duration: "18 min",
+    focusLabel: "Hash maps",
+    href: "/practice/technical-two-sum",
+    reason: "Starter coding warm-up",
+  },
+  {
+    id: "technical-valid-parentheses",
+    title: "Validate parentheses with a stack",
+    category: "technical",
+    trackLabel: "Technical Coding",
+    difficulty: "Foundations",
+    duration: "18 min",
+    focusLabel: "Stacks",
+    href: "/practice/technical-valid-parentheses",
+    reason: "Starter coding warm-up",
+  },
+  {
+    id: "system-url-shortener",
+    title: "Design a URL shortener",
+    category: "system-design",
+    trackLabel: "System Design",
+    difficulty: "Foundations",
+    duration: "22 min",
+    focusLabel: "Storage design",
+    href: "/practice/system-url-shortener",
+    reason: "Starter architecture rep",
+  },
+  {
+    id: "system-feature-flags",
+    title: "Design a feature flag platform",
+    category: "system-design",
+    trackLabel: "System Design",
+    difficulty: "Growth",
+    duration: "24 min",
+    focusLabel: "Control planes",
+    href: "/practice/system-feature-flags",
+    reason: "Starter architecture rep",
+  },
+  {
+    id: "staff-swe-story",
+    title: "Tell me about yourself for a staff-level role",
+    category: "behavioral",
+    trackLabel: "Staff Software Engineer",
+    difficulty: "Foundations",
+    duration: "8 min",
+    focusLabel: "Narrative",
+    href: "/practice/staff-swe-story",
+    reason: "Recommended first behavioral prompt",
+  },
+];
+
+const SUGGESTED_SCENARIO_META = {
+  technical: {
+    label: "Technical",
+    icon: Braces,
+    iconClass: "text-emerald-500",
+  },
+  "system-design": {
+    label: "System Design",
+    icon: Network,
+    iconClass: "text-amber-500",
+  },
+  behavioral: {
+    label: "Behavioral",
+    icon: Users,
+    iconClass: "text-violet-700",
+  },
+} satisfies Record<
+  SuggestedScenario["category"],
+  { label: string; icon: typeof Braces; iconClass: string }
+>;
+
 export function DashboardPageClient({
   initialMetrics,
 }: {
@@ -75,25 +171,66 @@ export function DashboardPageClient({
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="overflow-hidden">
           <CardContent className="p-7 md:p-8">
-            <div className="mt-5">
-              <h1 className="max-w-2xl">Start practicing your interviewing skills.</h1>
-              <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
-                Practice behavioral, technical, and system design interviews with instant feedback.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild size="lg" className="text-white">
-                  <Link href="/practice">
-                    <Play className="w-4 h-4" />
-                    Start quick practice
-                  </Link>
-                </Button>
-              </div>
-            </div>
+            <SuggestedScenariosPanel metrics={initialMetrics} />
           </CardContent>
         </Card>
 
         <DashboardMetrics metrics={initialMetrics} />
       </section>
+    </div>
+  );
+}
+
+function SuggestedScenariosPanel({
+  metrics,
+}: {
+  metrics: UserInterviewMetrics;
+}) {
+  const suggestedScenarios = (
+    metrics.suggestedScenarios.length ? metrics.suggestedScenarios : FALLBACK_SUGGESTED_SCENARIOS
+  ).slice(0, 3);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+            <Target className="size-4" />
+            Suggested next interviews
+          </div>
+          <h1 className="mt-3 max-w-2xl">Suggested scenarios</h1>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/practice">Browse all practice</Link>
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {suggestedScenarios.map((scenario) => {
+          const meta = SUGGESTED_SCENARIO_META[scenario.category];
+
+          return (
+            <Link
+              key={scenario.id}
+              href={scenario.href}
+              className="group flex items-start justify-between gap-4 rounded-none border border-base-300 bg-base-100 p-4 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
+            >
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center border border-base-300 bg-base-200/40">
+                  <meta.icon className={cn("size-4", meta.iconClass)} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base leading-6">{scenario.title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-base-content/60">
+                    {scenario.reason}
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="mt-1 size-4 shrink-0 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -224,9 +361,7 @@ function DashboardMetrics({ metrics }: { metrics: UserInterviewMetrics }) {
 
       <section className="col-span-full grid items-stretch gap-4 md:grid-cols-[minmax(0,3fr)_minmax(196px,220px)]">
         <div className="min-w-0">
-          <ActivityCalendar
-            activityDays={metrics.activityDays}
-          />
+          <ActivityCalendar activityDays={metrics.activityDays} />
         </div>
         <div className="flex flex-col divide-y divide-base-300/70 border border-border bg-base-100">
           <div className="flex items-center gap-4 px-5 py-4">
@@ -235,7 +370,9 @@ function DashboardMetrics({ metrics }: { metrics: UserInterviewMetrics }) {
             </div>
             <div className="min-w-0">
               <div className="text-2xl font-semibold leading-none">{metrics.streakDays}</div>
-              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Current streak</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">
+                Current streak
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-4 px-5 py-4">
@@ -244,7 +381,9 @@ function DashboardMetrics({ metrics }: { metrics: UserInterviewMetrics }) {
             </div>
             <div className="min-w-0">
               <div className="text-2xl font-semibold leading-none">{metrics.longestStreak}</div>
-              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Longest streak</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">
+                Longest streak
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-4 px-5 py-4">
@@ -255,7 +394,9 @@ function DashboardMetrics({ metrics }: { metrics: UserInterviewMetrics }) {
               <div className="text-2xl font-semibold leading-none">
                 {getRollingActiveDays(metrics.activityDays)}
               </div>
-              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Active days</div>
+              <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">
+                Active days
+              </div>
             </div>
           </div>
         </div>

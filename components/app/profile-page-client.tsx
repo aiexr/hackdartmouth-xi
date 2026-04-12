@@ -13,6 +13,7 @@ type UserProfile = {
   email: string;
   name: string;
   image: string;
+  targetRole: string | null;
   bio: string | null;
   hasResumeContext?: boolean;
 };
@@ -156,6 +157,7 @@ function ProfileStats({
   signedIn: boolean;
 }) {
   const profileBio = profile?.bio || null;
+  const targetRole = profile?.targetRole || null;
   const hasResumeContext = Boolean(profile?.hasResumeContext);
 
   const subtitle = !metrics.hasSession
@@ -182,11 +184,21 @@ function ProfileStats({
         </p>
       )}
 
-      {profileBio && (
+      {(targetRole || profileBio) && (
         <Card>
-          <CardContent className="p-6">
-            <h2 className="mb-3">About</h2>
-            <p className="text-sm leading-relaxed text-base-content/60">{profileBio}</p>
+          <CardContent className="space-y-4 p-6">
+            <h2>About</h2>
+            {targetRole && (
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-[0.16em] text-base-content/45">
+                  Target role
+                </p>
+                <p className="text-sm text-base-content/75">{targetRole}</p>
+              </div>
+            )}
+            {profileBio && (
+              <p className="text-sm leading-relaxed text-base-content/60">{profileBio}</p>
+            )}
           </CardContent>
         </Card>
       )}

@@ -3,16 +3,20 @@
 import type { CSSProperties, RefObject } from "react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowRight,
   Bot,
+  Braces,
   Calendar,
   Flame,
   Home,
+  Network,
   Play,
   Settings,
   Target,
   TrendingUp,
   Trophy,
   User,
+  Users,
 } from "lucide-react";
 import { ActivityCalendar } from "@/components/app/activity-calendar";
 import { ThemeLogo } from "@/components/app/theme-logo";
@@ -39,6 +43,59 @@ const navigation = [
   { label: "LLM", icon: Bot, active: false },
   { label: "Settings", icon: Settings, active: false },
 ];
+
+const previewSuggestedScenarios = [
+  {
+    title: "Code Two Sum live",
+    categoryLabel: "Technical",
+    reason: "Starter coding warm-up",
+    trackLabel: "Technical Coding",
+    focusLabel: "Hash maps",
+    meta: "Foundations / 18 min",
+    icon: Braces,
+    iconClass: "text-emerald-500",
+  },
+  {
+    title: "Validate parentheses with a stack",
+    categoryLabel: "Technical",
+    reason: "Starter coding warm-up",
+    trackLabel: "Technical Coding",
+    focusLabel: "Stacks",
+    meta: "Foundations / 18 min",
+    icon: Braces,
+    iconClass: "text-emerald-500",
+  },
+  {
+    title: "Design a URL shortener",
+    categoryLabel: "System Design",
+    reason: "Starter architecture rep",
+    trackLabel: "System Design",
+    focusLabel: "Storage design",
+    meta: "Foundations / 22 min",
+    icon: Network,
+    iconClass: "text-amber-500",
+  },
+  {
+    title: "Design a feature flag platform",
+    categoryLabel: "System Design",
+    reason: "Starter architecture rep",
+    trackLabel: "System Design",
+    focusLabel: "Control planes",
+    meta: "Growth / 24 min",
+    icon: Network,
+    iconClass: "text-amber-500",
+  },
+  {
+    title: "Tell me about yourself for a staff-level role",
+    categoryLabel: "Behavioral",
+    reason: "Recommended first behavioral prompt",
+    trackLabel: "Staff Software Engineer",
+    focusLabel: "Narrative",
+    meta: "Foundations / 8 min",
+    icon: Users,
+    iconClass: "text-violet-700",
+  },
+] as const;
 
 export function DashboardPreview({ className, avatarUrl }: DashboardPreviewProps) {
   const activityDays = useMemo(() => buildPreviewActivityDays(), []);
@@ -103,16 +160,40 @@ export function DashboardPreview({ className, avatarUrl }: DashboardPreviewProps
             <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
               <Card className="overflow-hidden">
                 <CardContent className="p-7 md:p-8">
-                  <div className="mt-5">
-                    <h1 className="max-w-2xl">Start practicing your interviewing skills.</h1>
-                    <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
-                      Practice behavioral, technical, and system design interviews with instant feedback.
-                    </p>
-                    <div className="mt-6 flex flex-wrap gap-3">
-                      <Button size="lg" className="cursor-default text-white">
-                        <Play className="w-4 h-4" />
-                        Start quick practice
+                  <div className="space-y-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                          <Target className="size-4" />
+                          Suggested next reps
+                        </div>
+                        <h1 className="mt-3 max-w-2xl">Suggested scenarios</h1>
+                      </div>
+                      <Button variant="outline" size="sm" className="cursor-default">
+                        Browse all practice
                       </Button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {previewSuggestedScenarios.slice(0, 3).map((scenario) => (
+                        <div
+                          key={scenario.title}
+                          className="group flex items-start justify-between gap-4 rounded-none border border-base-300 bg-base-100 p-4 text-left transition"
+                        >
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div className="flex size-9 shrink-0 items-center justify-center border border-base-300 bg-base-200/40">
+                              <scenario.icon className={cn("size-4", scenario.iconClass)} />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="text-base leading-6">{scenario.title}</h3>
+                              <p className="mt-1 text-sm leading-6 text-base-content/60">
+                                {scenario.reason}
+                              </p>
+                            </div>
+                          </div>
+                          <ArrowRight className="mt-1 size-4 shrink-0 text-base-content/30" />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </CardContent>

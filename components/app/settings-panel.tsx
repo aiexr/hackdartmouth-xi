@@ -7,6 +7,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 
+const aboutContributors = [
+  { name: "Luis Aguero", href: "https://github.com/luisagd" },
+  { name: "Benjamin Lin", href: "https://github.com/search?q=Benjamin+Lin&type=users" },
+  { name: "Alexander Rodriguez", href: "https://github.com/aiexr" },
+  { name: "Kaydan Tran", href: "https://github.com/kaydantran" },
+] as const;
+
 function SettingsPanelSkeleton() {
   return (
     <div className="space-y-8 animate-pulse">
@@ -259,7 +266,25 @@ export function SettingsPanel() {
             </button>
             <h2 className="mb-3 text-lg font-semibold">About</h2>
             <p className="text-sm text-base-content/70">
-              Built by Luis Aguero, Benjamin Lin, Alexander Rodriguez, and Kaydan Tran.
+              Built by{" "}
+              {aboutContributors.map((contributor, index) => (
+                <span key={contributor.name}>
+                  {index > 0
+                    ? index === aboutContributors.length - 1
+                      ? ", and "
+                      : ", "
+                    : ""}
+                  <a
+                    href={contributor.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline decoration-base-content/30 underline-offset-2 transition hover:text-base-content"
+                  >
+                    {contributor.name}
+                  </a>
+                </span>
+              ))}
+              .
             </p>
           </div>
         </div>

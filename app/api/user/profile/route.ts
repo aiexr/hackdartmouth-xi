@@ -49,13 +49,14 @@ export async function PATCH(request: Request) {
       rawBody && typeof rawBody === "object"
         ? (rawBody as Record<string, unknown>)
         : {};
-    const { name, bio, focusTrack, preferences, weeklyGoal, resumeExtractedText } = body;
+    const { name, bio, focusTrack, targetRole, preferences, weeklyGoal, resumeExtractedText } = body;
 
     const updates: Record<string, unknown> = {};
 
     if (name !== undefined) updates.name = name;
     if (bio !== undefined) updates.bio = bio;
     if (focusTrack !== undefined) updates.focusTrack = focusTrack;
+    if (targetRole !== undefined) updates.targetRole = targetRole;
     if (resumeExtractedText !== undefined) updates.resumeExtractedText = resumeExtractedText;
     let parsedWeeklyGoal: number | undefined;
     if (typeof weeklyGoal === "number" && Number.isFinite(weeklyGoal)) {

@@ -1,12 +1,13 @@
 import "server-only";
 
-import { scenarios } from "@/data/scenarios";
+import { scenarios, type Scenario } from "@/data/scenarios";
 import { env } from "@/lib/env";
 import { UserModel } from "@/lib/models/User";
 import { getMongoDb } from "@/lib/mongodb";
 
 type InterviewRecord = {
   scenarioId?: string | null;
+  type?: string | null;
   status?: string | null;
   overallScore?: number | null;
   gradingResult?: {
@@ -42,6 +43,20 @@ type ProfileStat = {
   accent: string;
 };
 
+type ScenarioCategory = Scenario["category"];
+
+type SuggestedScenarioMetric = {
+  id: string;
+  title: string;
+  category: ScenarioCategory;
+  trackLabel: string;
+  difficulty: Scenario["difficulty"];
+  duration: string;
+  focusLabel: string;
+  href: string;
+  reason: string;
+};
+
 export type ActivityDay = {
   date: string; // YYYY-MM-DD
   count: number;
@@ -61,6 +76,7 @@ export type UserInterviewMetrics = {
   streakDays: number;
   longestStreak: number;
   activityDays: ActivityDay[];
+  suggestedScenarios: SuggestedScenarioMetric[];
   goals: GoalMetric[];
   improvements: ImprovementMetric[];
   profileStats: ProfileStat[];
@@ -69,6 +85,53 @@ export type UserInterviewMetrics = {
 
 const scenarioById = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
 const DEFAULT_WEEKLY_TARGET = 4;
+const CATEGORY_ORDER: ScenarioCategory[] = ["technical", "system-design", "behavioral"];
+const DIFFICULTY_RANK: Record<Scenario["difficulty"], number> = {
+  Foundations: 0,
+  Growth: 1,
+  Stretch: 2,
+};
+const STARTER_SCENARIO_IDS = [
+  "technical-two-sum",
+  "technical-valid-parentheses",
+  "system-url-shortener",
+  "system-feature-flags",
+  "staff-swe-story",
+] as const;
+const CATEGORY_RECOMMENDATION_POOLS: Record<ScenarioCategory, string[]> = {
+  technical: [
+    "technical-two-sum",
+    "technical-valid-parentheses",
+    "technical-buy-sell-stock",
+    "technical-merge-intervals",
+    "technical-number-of-islands",
+    "technical-top-k-frequent",
+    "technical-lru-cache",
+    "technical-word-ladder",
+    "technical-coin-change",
+  ],
+  "system-design": [
+    "system-url-shortener",
+    "system-feature-flags",
+    "system-resume-ingestion",
+    "system-realtime-chat",
+    "system-collaborative-editor",
+    "system-ai-grading-pipeline",
+    "system-live-interview-platform",
+    "system-news-feed-ranking",
+    "staff-swe-system-design-intro",
+  ],
+  behavioral: [
+    "staff-swe-story",
+    "staff-swe-mentorship",
+    "staff-swe-conflict",
+    "staff-swe-technical-disagreement",
+    "pm-product-sense",
+    "pm-prioritization",
+    "consulting-market-sizing",
+    "consulting-synthesis",
+  ],
+};
 
 function toDate(value: Date | string | null | undefined) {
   if (!value) {
@@ -248,6 +311,225 @@ function buildImprovements(interviews: InterviewRecord[]) {
   return [];
 }
 
+function getInterviewCategory(interview: InterviewRecord): ScenarioCategory | null {
+  const scenario = interview.scenarioId ? scenarioById.get(interview.scenarioId) : null;
+  if (scenario) {
+    return scenario.category;
+  }
+
+  if (
+    interview.type === "behavioral" ||
+    interview.type === "technical" ||
+    interview.type === "system-design"
+  ) {
+    return interview.type;
+  }
+
+  return null;
+}
+
+function getOrderedCategoryScenarios(category: ScenarioCategory) {
+  const pool = CATEGORY_RECOMMENDATION_POOLS[category];
+  const seen = new Set<string>();
+  const ordered: Scenario[] = [];
+
+  for (const scenarioId of pool) {
+    const scenario = scenarioById.get(scenarioId);
+    if (!scenario || seen.has(scenario.id)) {
+      continue;
+    }
+
+    ordered.push(scenario);
+    seen.add(scenario.id);
+  }
+
+  const remaining = scenarios
+    .filter((scenario) => scenario.category === category && !seen.has(scenario.id))
+    .sort((left, right) => {
+      const difficultyDiff =
+        DIFFICULTY_RANK[left.difficulty] - DIFFICULTY_RANK[right.difficulty];
+      if (difficultyDiff !== 0) {
+        return difficultyDiff;
+      }
+
+      return left.title.localeCompare(right.title);
+    });
+
+  return [...ordered, ...remaining];
+}
+
+function toSuggestedScenarioMetric(scenario: Scenario, reason: string): SuggestedScenarioMetric {
+  return {
+    id: scenario.id,
+    title: scenario.title,
+    category: scenario.category,
+    trackLabel: scenario.trackLabel,
+    difficulty: scenario.difficulty,
+    duration: scenario.duration,
+    focusLabel: scenario.focus[0] ?? scenario.trackLabel,
+    href: `/practice/${scenario.id}`,
+    reason,
+  };
+}
+
+function buildStarterSuggestedScenarios() {
+  return STARTER_SCENARIO_IDS.map((scenarioId) => {
+    const scenario = scenarioById.get(scenarioId);
+    if (!scenario) {
+      return null;
+    }
+
+    const reason =
+      scenario.category === "technical"
+        ? "Starter coding warm-up"
+        : scenario.category === "system-design"
+          ? "Starter architecture rep"
+          : "Recommended first behavioral prompt";
+
+    return toSuggestedScenarioMetric(scenario, reason);
+  }).filter((scenario): scenario is SuggestedScenarioMetric => Boolean(scenario));
+}
+
+function buildSuggestedScenarios(
+  interviews: InterviewRecord[],
+  gradedInterviews: InterviewRecord[],
+) {
+  if (!interviews.length) {
+    return buildStarterSuggestedScenarios();
+  }
+
+  const categoryCounts: Record<ScenarioCategory, number> = {
+    technical: 0,
+    "system-design": 0,
+    behavioral: 0,
+  };
+  const categoryScores: Record<ScenarioCategory, number[]> = {
+    technical: [],
+    "system-design": [],
+    behavioral: [],
+  };
+  const scenarioUsageCounts = new Map<string, number>();
+
+  for (const interview of interviews) {
+    const category = getInterviewCategory(interview);
+    if (category) {
+      categoryCounts[category] += 1;
+    }
+
+    if (interview.scenarioId && scenarioById.has(interview.scenarioId)) {
+      scenarioUsageCounts.set(
+        interview.scenarioId,
+        (scenarioUsageCounts.get(interview.scenarioId) ?? 0) + 1,
+      );
+    }
+  }
+
+  for (const interview of gradedInterviews) {
+    const category = getInterviewCategory(interview);
+    if (!category || typeof interview.overallScore !== "number") {
+      continue;
+    }
+
+    categoryScores[category].push(interview.overallScore);
+  }
+
+  const rankedCategories = [...CATEGORY_ORDER].sort((left, right) => {
+    const countDiff = categoryCounts[left] - categoryCounts[right];
+    if (countDiff !== 0) {
+      return countDiff;
+    }
+
+    const leftAverage = average(categoryScores[left]);
+    const rightAverage = average(categoryScores[right]);
+
+    if (leftAverage === null && rightAverage !== null) {
+      return -1;
+    }
+
+    if (leftAverage !== null && rightAverage === null) {
+      return 1;
+    }
+
+    if (leftAverage !== null && rightAverage !== null && leftAverage !== rightAverage) {
+      return leftAverage - rightAverage;
+    }
+
+    return CATEGORY_ORDER.indexOf(left) - CATEGORY_ORDER.indexOf(right);
+  });
+
+  const recentScenarioIds = new Set(
+    interviews
+      .slice(0, 3)
+      .map((interview) => interview.scenarioId)
+      .filter((scenarioId): scenarioId is string => Boolean(scenarioId && scenarioById.has(scenarioId))),
+  );
+  const pickedScenarioIds = new Set<string>();
+  const suggestions: SuggestedScenarioMetric[] = [];
+  const targetSlots = [2, 2, 1];
+
+  const pickCategorySuggestions = (category: ScenarioCategory, limit: number) => {
+    if (limit <= 0) {
+      return [];
+    }
+
+    const averageScore = average(categoryScores[category]);
+    const reason =
+      categoryCounts[category] === 0
+        ? "Fresh lane to unlock"
+        : averageScore !== null && averageScore < 85
+          ? "Worth another rep based on recent scores"
+          : "Recommended to keep your mix balanced";
+    const orderedScenarios = getOrderedCategoryScenarios(category);
+    const primary = orderedScenarios.filter(
+      (scenario) => !pickedScenarioIds.has(scenario.id) && !recentScenarioIds.has(scenario.id),
+    );
+    const fallback = orderedScenarios.filter((scenario) => !pickedScenarioIds.has(scenario.id));
+    const candidates = primary.length >= limit ? primary : fallback;
+
+    return candidates
+      .slice()
+      .sort((left, right) => {
+        const usageDiff =
+          (scenarioUsageCounts.get(left.id) ?? 0) - (scenarioUsageCounts.get(right.id) ?? 0);
+        if (usageDiff !== 0) {
+          return usageDiff;
+        }
+
+        return orderedScenarios.findIndex((scenario) => scenario.id === left.id) -
+          orderedScenarios.findIndex((scenario) => scenario.id === right.id);
+      })
+      .slice(0, limit)
+      .map((scenario) => toSuggestedScenarioMetric(scenario, reason));
+  };
+
+  rankedCategories.forEach((category, index) => {
+    const nextSuggestions = pickCategorySuggestions(category, targetSlots[index] ?? 1);
+    for (const suggestion of nextSuggestions) {
+      pickedScenarioIds.add(suggestion.id);
+      suggestions.push(suggestion);
+    }
+  });
+
+  if (suggestions.length < 5) {
+    for (const category of rankedCategories) {
+      const remaining = pickCategorySuggestions(category, 5 - suggestions.length);
+      for (const suggestion of remaining) {
+        if (pickedScenarioIds.has(suggestion.id)) {
+          continue;
+        }
+
+        pickedScenarioIds.add(suggestion.id);
+        suggestions.push(suggestion);
+        if (suggestions.length === 5) {
+          return suggestions;
+        }
+      }
+    }
+  }
+
+  return suggestions;
+}
+
 export async function getUserInterviewMetrics(
   userEmail?: string | null,
 ): Promise<UserInterviewMetrics> {
@@ -268,6 +550,7 @@ export async function getUserInterviewMetrics(
       streakDays: 0,
       longestStreak: 0,
       activityDays: getActivityDays([]),
+      suggestedScenarios: buildStarterSuggestedScenarios(),
       goals: [
         {
           label: `Complete ${DEFAULT_WEEKLY_TARGET} interviews this week`,
@@ -312,6 +595,7 @@ export async function getUserInterviewMetrics(
       streakDays: 0,
       longestStreak: 0,
       activityDays: getActivityDays([]),
+      suggestedScenarios: buildStarterSuggestedScenarios(),
       goals: [
         {
           label: `Complete ${DEFAULT_WEEKLY_TARGET} interviews this week`,
@@ -379,6 +663,7 @@ export async function getUserInterviewMetrics(
   const streakDays = getCurrentStreak(completedSessions);
   const longestStreak = getLongestStreak(completedSessions);
   const activityDays = getActivityDays(completedSessions);
+  const suggestedScenarios = buildSuggestedScenarios(rawInterviews, gradedSessions);
 
   return {
     hasSession: true,
@@ -394,6 +679,7 @@ export async function getUserInterviewMetrics(
     streakDays,
     longestStreak,
     activityDays,
+    suggestedScenarios,
     goals: [
       {
         label: `Complete ${weeklyTarget} interviews this week`,

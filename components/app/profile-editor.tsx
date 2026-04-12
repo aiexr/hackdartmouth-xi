@@ -45,6 +45,10 @@ function toUser(value: Record<string, unknown>): User {
       typeof value.focusTrack === "string" || value.focusTrack === null
         ? value.focusTrack
         : null,
+    targetRole:
+      typeof value.targetRole === "string" || value.targetRole === null
+        ? value.targetRole
+        : null,
     bio: typeof value.bio === "string" || value.bio === null ? value.bio : null,
     resumeExtractedText:
       typeof value.resumeExtractedText === "string" || value.resumeExtractedText === null
@@ -137,6 +141,7 @@ export function ProfileEditor() {
     name: "",
     bio: "",
     focusTrack: "",
+    targetRole: "",
     weeklyGoal: 4,
   });
 
@@ -153,6 +158,7 @@ export function ProfileEditor() {
           name: parsedUser.name || "",
           bio: parsedUser.bio || "",
           focusTrack: parsedUser.focusTrack || "",
+          targetRole: parsedUser.targetRole || "",
           weeklyGoal: parsedUser.preferences.weeklyGoal || 4,
         });
       } catch (err) {
@@ -166,7 +172,7 @@ export function ProfileEditor() {
   }, []);
 
   const handleInputChange = (
-    field: "name" | "bio" | "focusTrack",
+    field: "name" | "bio" | "focusTrack" | "targetRole",
     value: string
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -196,6 +202,7 @@ export function ProfileEditor() {
           name: formData.name,
           bio: formData.bio,
           focusTrack: formData.focusTrack,
+          targetRole: formData.targetRole,
           weeklyGoal: formData.weeklyGoal,
         }),
       });
@@ -262,6 +269,19 @@ export function ProfileEditor() {
             />
             <p className="text-xs text-base-content/60">
               {formData.bio.length}/256 characters
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Target Role</label>
+            <Input
+              value={formData.targetRole}
+              onChange={(e) => handleInputChange("targetRole", e.target.value)}
+              placeholder="Product manager, software engineer, quant, etc."
+              disabled={saving}
+            />
+            <p className="text-xs text-base-content/60">
+              Add the role you&apos;re currently preparing for.
             </p>
           </div>
 
