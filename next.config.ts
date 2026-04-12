@@ -3,6 +3,9 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  turbopack: {
+    root: process.cwd(),
+  },
 };
 
 initOpenNextCloudflareForDev();

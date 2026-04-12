@@ -20,6 +20,13 @@ function parseHasResumeContext(value: Record<string, unknown>): boolean {
   return value.hasResumeContext === true;
 }
 
+function parseErrorMessage(value: unknown, fallback: string): string {
+  const payload = asRecord(value);
+  return typeof payload.error === "string" && payload.error.trim().length > 0
+    ? payload.error
+    : fallback;
+}
+
 function toUser(value: Record<string, unknown>): User {
   const preferences = asRecord(value.preferences);
 
@@ -153,7 +160,7 @@ export function ProfileEditor() {
 
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
-        throw new Error(payload?.error || "Failed to upload resume");
+        throw new Error(parseErrorMessage(payload, "Failed to upload resume"));
       }
 
       const payload = asRecord(await res.json());
