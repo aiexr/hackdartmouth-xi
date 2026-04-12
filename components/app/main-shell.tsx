@@ -1,5 +1,6 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useTransition, useState } from "react";
@@ -56,6 +57,16 @@ export function MainShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
+    if (status !== "authenticated") {
+      return;
+    }
+
+    for (const item of navigation) {
+      router.prefetch(item.href);
+    }
+  }, [router, status]);
+
+  useEffect(() => {
     if (status !== "unauthenticated" || pathname === "/") {
       return;
     }
@@ -70,6 +81,26 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     startTransition(() => {
       router.push(href);
     });
+  };
+
+  const prefetchRoute = (href: string) => {
+    router.prefetch(href);
+  };
+
+  const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    navigateTo(href);
   };
 
   const activeHref = pendingHref ?? pathname;
@@ -93,10 +124,13 @@ export function MainShell({ children }: { children: React.ReactNode }) {
             const isSpinning = pendingHref === item.href && isPending;
 
             return (
-              <button
+              <Link
                 key={item.href}
-                type="button"
-                onClick={() => navigateTo(item.href)}
+                href={item.href}
+                prefetch
+                onClick={(event) => handleNavClick(event, item.href)}
+                onMouseEnter={() => prefetchRoute(item.href)}
+                onFocus={() => prefetchRoute(item.href)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
@@ -110,7 +144,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                   <item.icon className="size-4 shrink-0" />
                 )}
                 {item.label}
-              </button>
+              </Link>
             );
           })}
         </nav>
@@ -179,10 +213,13 @@ export function MainShell({ children }: { children: React.ReactNode }) {
               const isSpinning = pendingHref === item.href && isPending;
 
               return (
-                <button
+                <Link
                   key={item.href}
-                  type="button"
-                  onClick={() => navigateTo(item.href)}
+                  href={item.href}
+                  prefetch
+                  onClick={(event) => handleNavClick(event, item.href)}
+                  onMouseEnter={() => prefetchRoute(item.href)}
+                  onFocus={() => prefetchRoute(item.href)}
                   className={cn(
                     "flex min-w-14 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[0.7rem] font-medium transition-colors",
                     isActive
@@ -196,7 +233,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                     <item.icon className="size-5" />
                   )}
                   {item.label}
-                </button>
+                </Link>
               );
             })}
           </nav>
