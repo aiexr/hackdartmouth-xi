@@ -73,20 +73,11 @@ export async function generateMetadata(): Promise<Metadata> {
       url: "/",
       siteName: "LeetSpeak",
       type: "website",
-      images: [
-        {
-          url: "/opengraph-image",
-          width: 1200,
-          height: 630,
-          alt: "LeetSpeak social preview",
-        },
-      ],
     },
     twitter: {
       card: "summary_large_image",
       title: "LeetSpeak",
       description: "Speak your way through interviews.",
-      images: ["/opengraph-image"],
     },
   };
 }

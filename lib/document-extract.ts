@@ -1,8 +1,10 @@
 import "server-only";
 
+import { spawnSync } from "child_process";
 import { writeFile, unlink } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { pathToFileURL } from "url";
 
 import mammoth from "mammoth";
 // @ts-ignore - pdf-text-extract doesn't have @types package
@@ -11,12 +13,27 @@ import extract from "pdf-text-extract";
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_EXTRACTED_LENGTH = 8000; // Char limit for prompt injection
+let hasCheckedPdfToTextBinary = false;
+let hasPdfToTextBinary = false;
 
 export type ExtractedDocument = {
   text: string;
   filename: string;
   extracted_length: number;
 };
+
+function canUsePdfToTextBinary() {
+  if (hasCheckedPdfToTextBinary) {
+    return hasPdfToTextBinary;
+  }
+
+  hasCheckedPdfToTextBinary = true;
+
+  const result = spawnSync("pdftotext", ["-v"], { stdio: "ignore" });
+  hasPdfToTextBinary = !result.error;
+
+  return hasPdfToTextBinary;
+}
 
 async function extractPdfWithPdfToText(buffer: Buffer): Promise<string> {
   // pdf-text-extract requires a file path, not a Buffer
@@ -47,32 +64,76 @@ async function extractPdfWithPdfToText(buffer: Buffer): Promise<string> {
   }
 }
 
-async function extractPdfWithPdfParse(buffer: Buffer): Promise<string> {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
+async function extractPdfWithPdfJs(buffer: Buffer): Promise<string> {
+  const pdfjsPath = join(process.cwd(), "node_modules/pdfjs-dist/legacy/build/pdf.mjs");
+  const workerPath = join(process.cwd(), "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs");
+  const pdfjs = (await import(
+    /* webpackIgnore: true */
+    pathToFileURL(pdfjsPath).href
+  )) as typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+  const workerModule = (await import(
+    /* webpackIgnore: true */
+    pathToFileURL(workerPath).href
+  )) as {
+    WorkerMessageHandler: unknown;
+  };
+
+  (globalThis as typeof globalThis & {
+    pdfjsWorker?: { WorkerMessageHandler?: unknown };
+  }).pdfjsWorker = {
+    WorkerMessageHandler: workerModule.WorkerMessageHandler,
+  };
+
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(buffer),
+    isEvalSupported: false,
+    useSystemFonts: true,
+  });
 
   try {
-    const result = await parser.getText();
-    return result.text || "";
+    const document = await loadingTask.promise;
+    const pages: string[] = [];
+
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+
+      try {
+        const content = await page.getTextContent();
+        const pageText = content.items
+          .map((item) => ("str" in item ? item.str : ""))
+          .join(" ");
+
+        pages.push(pageText);
+      } finally {
+        page.cleanup();
+      }
+    }
+
+    return pages.join("\n");
   } finally {
-    await parser.destroy();
+    await loadingTask.destroy();
   }
 }
 
-function shouldFallbackToPdfParse(error: unknown) {
+function shouldFallbackToPdfJs(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return /spawn\s+pdftotext\s+enoent|pdftotext.*not found|enoent/i.test(message);
 }
 
 async function extractPdf(buffer: Buffer): Promise<string> {
+  // Avoid crashing the process when pdf-text-extract spawns a missing binary.
+  if (!canUsePdfToTextBinary()) {
+    return extractPdfWithPdfJs(buffer);
+  }
+
   try {
     return await extractPdfWithPdfToText(buffer);
   } catch (error) {
-    if (!shouldFallbackToPdfParse(error)) {
+    if (!shouldFallbackToPdfJs(error)) {
       throw error;
     }
 
-    return extractPdfWithPdfParse(buffer);
+    return extractPdfWithPdfJs(buffer);
   }
 }
 
