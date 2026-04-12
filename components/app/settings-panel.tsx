@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Moon, Trash2 } from "lucide-react";
+import { Moon, Trash2, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ export function SettingsPanel() {
   const [darkMode, setDarkMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   // Sync with persisted preference on mount
   useEffect(() => {
@@ -123,6 +125,68 @@ export function SettingsPanel() {
           </CardContent>
         </Card>
       </div>
+      {/* Footer */}
+      <div className="flex items-center gap-3 pt-2">
+        <Button variant="outline" size="sm" onClick={() => setShowAbout(true)}>
+          About
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setShowPrivacy(true)}>
+          Privacy
+        </Button>
+      </div>
+
+      {/* About modal */}
+      {showAbout && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setShowAbout(false)}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-lg bg-base-100 p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute right-4 top-4 text-base-content/40 hover:text-base-content"
+              onClick={() => setShowAbout(false)}
+            >
+              <X className="size-4" />
+            </button>
+            <h2 className="mb-3 text-lg font-semibold">About</h2>
+            <p className="text-sm text-base-content/70">
+              Built by Luis Aguero, Benjamin Lin, Alexander Rodriguez, and Kaydan Tran.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy modal */}
+      {showPrivacy && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setShowPrivacy(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-lg bg-base-100 p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute right-4 top-4 text-base-content/40 hover:text-base-content"
+              onClick={() => setShowPrivacy(false)}
+            >
+              <X className="size-4" />
+            </button>
+            <h2 className="mb-3 text-lg font-semibold">Privacy</h2>
+            <div className="space-y-3 text-sm text-base-content/70">
+              <p>
+                This application collects your name and email address through Google Sign-In solely to identify your account and associate your interview sessions with your profile. Practice session transcripts, AI-generated feedback, and any resume text you upload are stored securely in our database and are used exclusively to personalize your coaching experience — they are never sold or shared with third parties.
+              </p>
+              <p>
+                Resume content is processed at upload time to extract plain text; the original file is discarded immediately and only the extracted text is retained. Interview audio and video are processed in real time through our AI provider integrations and are not stored after a session ends. You may delete all locally stored preferences and session data at any time using the "Delete user data" option above.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

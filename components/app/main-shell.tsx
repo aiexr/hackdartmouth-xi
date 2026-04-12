@@ -10,17 +10,39 @@ import {
   Loader2,
   Play,
   Settings,
-  Sparkles,
   User,
 } from "lucide-react";
 import { ThemeLogo } from "@/components/app/theme-logo";
 import { cn } from "@/lib/utils";
 
+function WhistleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      {/* Whistle body with rounded right cap */}
+      <path d="M2 9h12a3 3 0 0 1 0 6H2z" />
+      {/* Mouthpiece tube */}
+      <path d="M17 10.5h5v3h-5" />
+      {/* Pea inside body */}
+      <circle cx="8" cy="12" r="1.5" />
+    </svg>
+  );
+}
+
 const navigation = [
   { href: "/", label: "Home", icon: Home },
   { href: "/practice", label: "Practice", icon: Play },
   { href: "/profile", label: "Profile", icon: User },
-  { href: "/coach", label: "Coach", icon: Sparkles },
+  { href: "/coach", label: "Coach", icon: WhistleIcon },
   { href: "/llm", label: "LLM", icon: Bot },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

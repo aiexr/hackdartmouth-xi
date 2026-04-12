@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   FileText,
   Loader2,
   MessageCircleMore,
   Send,
-  Sparkles,
+  User,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -178,6 +179,7 @@ function CoachAvatarIcon() {
 }
 
 export function CoachConversation() {
+  const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "coach",
@@ -280,14 +282,23 @@ export function CoachConversation() {
                   className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
                 >
                   {isUser ? (
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-none bg-primary text-xs font-semibold text-primary-content">
-                      Y
-                    </div>
+                    session?.user?.image ? (
+                      <img
+                        src={session.user.image}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="size-9 shrink-0 rounded-full ring-2 ring-border"
+                      />
+                    ) : (
+                      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-content">
+                        <User className="size-4" />
+                      </div>
+                    )
                   ) : (
                     <CoachAvatarIcon />
                   )}
                   <div
-                    className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
+                    className={`max-w-[85%] rounded-none px-4 py-3 text-sm leading-6 ${
                       isUser
                         ? "whitespace-pre-wrap bg-primary text-primary-content"
                         : "bg-base-200/75"
@@ -302,7 +313,7 @@ export function CoachConversation() {
             {loading && (
               <div className="flex gap-3">
                 <CoachAvatarIcon />
-                <div className="flex items-center gap-2 rounded-3xl bg-base-200/75 px-4 py-3 text-sm text-base-content/60">
+                <div className="flex items-center gap-2 rounded-none bg-base-200/75 px-4 py-3 text-sm text-base-content/60">
                   <Loader2 className="size-4 animate-spin" />
                   Thinking...
                 </div>
@@ -323,15 +334,6 @@ export function CoachConversation() {
           </Button>
         </form>
 
-        <div className="border-t border-border/70 bg-linear-to-r from-violet-50 to-indigo-50 px-5 py-3 text-sm text-violet-900/80">
-          <span className="inline-flex items-center gap-2 font-medium">
-            <Sparkles className="size-4 text-violet-500" />
-            Tip
-          </span>
-          <span className="ml-2">
-            Upload your resume on the Profile page first so the coach can give you specific feedback.
-          </span>
-        </div>
       </Card>
     </div>
   );

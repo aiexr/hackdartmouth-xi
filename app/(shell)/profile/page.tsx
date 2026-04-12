@@ -1,12 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Award, Briefcase, Edit3, Flame, Target, TrendingUp, User, type LucideIcon } from "lucide-react";
-
-const achievementIcons: Record<string, LucideIcon> = {
-  flame: Flame,
-  target: Target,
-  "trending-up": TrendingUp,
-};
+import { Briefcase, Edit3, User } from "lucide-react";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
 import { UserModel } from "@/lib/models";
@@ -29,19 +23,28 @@ async function ProfileStats({ email }: { email?: string | null }) {
   const hasResumeContext = Boolean(dbUser?.resumeExtractedText?.trim());
 
   const subtitle = !metrics.hasSession
-    ? "Sign in to save interviews and unlock profile progress."
-    : !metrics.databaseReady
-      ? "MongoDB is not configured yet, so profile stats are waiting on persistence."
-      : metrics.completedSessions
-        ? `${metrics.completedSessions} completed practice loops`
-        : "No completed interview loops yet";
+    ? "Sign in to track your interview progress."
+    : metrics.completedSessions > 0
+      ? `${metrics.completedSessions} completed session${metrics.completedSessions !== 1 ? "s" : ""}`
+      : null;
+
+  const stats = [
+    { label: "Sessions", value: metrics.totalSessions > 0 ? `${metrics.totalSessions}` : "—", accent: "text-primary" },
+    { label: "Avg Score", value: metrics.averageScore !== null ? `${metrics.averageScore}` : "—", accent: "text-emerald-500" },
+    { label: "Best Score", value: metrics.bestScore !== null ? `${metrics.bestScore}` : "—", accent: "text-amber-500" },
+    { label: "Day Streak", value: metrics.streakDays > 0 ? `${metrics.streakDays}` : "—", accent: "text-orange-500" },
+    { label: "Best Streak", value: metrics.longestStreak > 0 ? `${metrics.longestStreak}` : "—", accent: "" },
+    { label: "This Week", value: `${metrics.weeklyCompleted}/${metrics.weeklyTarget}`, accent: "text-indigo-500" },
+  ];
 
   return (
     <>
-      <p className="mt-2 flex items-center gap-2 text-sm text-base-content/60">
-        <Briefcase className="size-4" />
-        {subtitle}
-      </p>
+      {subtitle && (
+        <p className="flex items-center gap-2 text-sm text-base-content/60">
+          <Briefcase className="size-4" />
+          {subtitle}
+        </p>
+      )}
 
       {profileBio && (
         <Card>
@@ -54,40 +57,13 @@ async function ProfileStats({ email }: { email?: string | null }) {
 
       <ResumeUploaderCard initialHasResumeContext={hasResumeContext} />
 
-      <div className="grid gap-4 md:grid-cols-4">
-        {metrics.profileStats.map((item) => (
-          <Card key={item.label}>
-            <CardContent className="p-5 text-center">
-              <div className={`text-3xl font-semibold ${item.accent}`}>{item.value}</div>
-              <p className="mt-2 text-sm text-base-content/60">{item.label}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div>
-        <div className="mb-4 flex items-center gap-2">
-          <Award className="size-5 text-amber-500" />
-          <h2>Achievements</h2>
-        </div>
-        <div className="grid gap-4 md:grid-cols-4">
-          {metrics.achievements.map((achievement) => (
-            <Card key={achievement.title}>
-              <CardContent className="p-5 text-center">
-                {(() => {
-                  const Icon = achievementIcons[achievement.icon] ?? Award;
-                  return (
-                    <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-amber-50">
-                      <Icon className="size-6 text-amber-500" />
-                    </div>
-                  );
-                })()}
-                <h3 className="mt-4 text-base">{achievement.title}</h3>
-                <p className="mt-1 text-sm leading-6 text-base-content/60">
-                  {achievement.description}
-                </p>
-              </CardContent>
-            </Card>
+      <div className="rounded-none border border-border bg-base-100">
+        <div className="grid grid-cols-3 divide-x divide-y divide-border sm:grid-cols-6 sm:divide-y-0">
+          {stats.map(({ label, value, accent }) => (
+            <div key={label} className="px-4 py-5 text-center">
+              <div className={`text-2xl font-semibold ${accent}`}>{value}</div>
+              <div className="mt-1 text-xs text-base-content/60">{label}</div>
+            </div>
           ))}
         </div>
       </div>
@@ -99,12 +75,8 @@ function ProfileStatsSkeleton() {
   return (
     <>
       <div className="h-4 w-48 rounded bg-base-300/50 animate-pulse" />
-      <div className="grid gap-4 md:grid-cols-4 animate-pulse">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-24 rounded border border-border bg-base-200/30" />
-        ))}
-      </div>
-      <div className="h-40 rounded border border-border bg-base-200/30 animate-pulse" />
+      <div className="h-24 rounded border border-border bg-base-200/30 animate-pulse" />
+      <div className="h-20 rounded border border-border bg-base-200/30 animate-pulse" />
     </>
   );
 }
@@ -113,7 +85,7 @@ export default async function ProfilePage() {
   const session = await getOptionalServerSession().catch(() => null);
 
   const profileName = session?.user?.name ?? "Guest user";
-  const profileActionHref = session?.user ? "/settings" : "/auth/sign-in";
+  const profileActionHref = session?.user ? "#profile-editor" : "/auth/sign-in";
   const profileActionLabel = session?.user ? "Edit profile" : "Sign in";
 
   return (
@@ -148,13 +120,7 @@ export default async function ProfilePage() {
           <ProfileStats email={session?.user?.email} />
         </Suspense>
 
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-semibold">Profile Information</h2>
-            <p className="mt-2 text-sm text-base-content/60">
-              Update your display name and bio from your profile page.
-            </p>
-          </div>
+        <div id="profile-editor" className="space-y-4 scroll-mt-8">
           <ProfileEditor />
         </div>
       </div>

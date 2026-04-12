@@ -272,7 +272,7 @@ export async function getUserInterviewMetrics(
       achievements: [
         { icon: "flame", title: "No streak yet", description: "Complete a practice loop to start building momentum." },
         { icon: "target", title: "First score pending", description: "Finish one graded interview to unlock score tracking." },
-        { icon: "trending-up", title: "Progress starts here", description: "Dashboard goals will fill in as interview history lands in MongoDB." },
+        { icon: "trending-up", title: "Progress starts here", description: "Complete a graded interview to start tracking progress." },
       ],
     };
   }
@@ -312,7 +312,7 @@ export async function getUserInterviewMetrics(
       achievements: [
         { icon: "flame", title: "No streak yet", description: "Complete a practice loop to start building momentum." },
         { icon: "target", title: "First score pending", description: "Finish one graded interview to unlock score tracking." },
-        { icon: "trending-up", title: "Progress starts here", description: "Dashboard goals will fill in as interview history lands in MongoDB." },
+        { icon: "trending-up", title: "Progress starts here", description: "Complete a graded interview to start tracking progress." },
       ],
     };
   }
@@ -402,7 +402,7 @@ export async function getUserInterviewMetrics(
         description:
           bestScore === null
             ? "Finish a graded interview to surface your strongest attempt."
-            : "Top scored mock interview recorded in MongoDB.",
+            : "Your strongest interview session.",
       },
       {
         icon: "trending-up",

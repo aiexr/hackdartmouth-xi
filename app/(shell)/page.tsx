@@ -16,6 +16,7 @@ import { ActivityCalendar } from "@/components/app/activity-calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { LandingPage } from "@/components/app/landing-page";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 25;
@@ -30,9 +31,9 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
   );
   const loopCount = `${metrics.weeklyCompleted}/${metrics.weeklyTarget}`;
   const weeklyCopy = !metrics.hasSession
-    ? "Sign in to sync interview history and see weekly progress from MongoDB."
+    ? "Sign in to track your practice history and progress."
     : !metrics.databaseReady
-      ? "MongoDB is not configured yet, so progress data is waiting on the backend."
+      ? "Progress data is unavailable right now."
       : metrics.weeklyCompleted
         ? metrics.remainingLoops
           ? `${metrics.remainingLoops} more interview ${
@@ -85,10 +86,12 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
               <p className="text-sm leading-6 text-base-content/60">
                 {weeklyCopy}
               </p>
-              <div className="inline-flex items-center gap-2 rounded-none bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
-                <Zap className="size-4" />
-                {streakLabel}
-              </div>
+              {metrics.streakDays > 0 && (
+                <div className="inline-flex items-center gap-2 rounded-none bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
+                  <Zap className="size-4" />
+                  {streakLabel}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -96,7 +99,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
         <div className="rounded-none border border-border bg-base-100 p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-base-content">
             <TrendingUp className="size-4" />
-            Current goals
+            Starter goals
           </div>
           <div className="mt-4 space-y-4">
             {metrics.goals.map((goal) => (
@@ -114,7 +117,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
         </div>
       </div>
 
-      <section className="col-span-full grid items-stretch gap-4 md:grid-cols-[minmax(0,3fr)_minmax(220px,1fr)]">
+      <section className="col-span-full grid items-stretch gap-4 md:grid-cols-[minmax(0,3fr)_minmax(160px,160px)]">
         <div className="min-w-0">
           <ActivityCalendar
             activityDays={metrics.activityDays}
@@ -198,6 +201,10 @@ function MetricsSkeleton() {
 
 export default async function DashboardPage() {
   const session = await getOptionalServerSession().catch(() => null);
+
+  if (!session) {
+    return <LandingPage />;
+  }
 
   return (
       <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
