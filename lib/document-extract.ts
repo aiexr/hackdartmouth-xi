@@ -1,11 +1,18 @@
 import "server-only";
 
-import { writeFile, unlink } from "fs/promises";
 import mammoth from "mammoth";
-import { tmpdir } from "os";
-import { join } from "path";
-// @ts-ignore - pdf-text-extract doesn't have @types package
-import extract from "pdf-text-extract";
+import type { TextItem } from "pdfjs-dist/types/src/display/api";
+
+type PdfJsWorkerGlobal = typeof globalThis & {
+  pdfjsWorker?: {
+    WorkerMessageHandler: unknown;
+  };
+};
+
+type PdfJsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+
+let mammothModulePromise: Promise<typeof import("mammoth")> | null = null;
+let pdfJsModulePromise: Promise<PdfJsModule> | null = null;
 
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -17,35 +24,141 @@ export type ExtractedDocument = {
   extracted_length: number;
 };
 
-async function extractPdf(buffer: Buffer): Promise<string> {
-  // pdf-text-extract requires a file path, not a Buffer.
-  const tempPath = join(
-    tmpdir(),
-    `pdf-extract-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`,
-  );
+class MinimalDOMMatrix {
+  a = 1;
+  b = 0;
+  c = 0;
+  d = 1;
+  e = 0;
+  f = 0;
 
-  try {
-    await writeFile(tempPath, buffer);
+  constructor(init?: Iterable<number> | ArrayLike<number>) {
+    if (!init) {
+      return;
+    }
 
-    const text = await new Promise<string>((resolve, reject) => {
-      extract(tempPath, { splitPages: false }, (err: Error | null, pages: string[]) => {
-        if (err) {
-          reject(new Error(`PDF extraction error: ${err.message}`));
-          return;
-        }
-
-        resolve((pages || []).join("\n"));
-      });
-    });
-
-    return text;
-  } finally {
-    try {
-      await unlink(tempPath);
-    } catch {
-      // Ignore cleanup errors.
+    const values = Array.from(init).map((value) => Number(value));
+    if (values.length >= 6) {
+      [this.a, this.b, this.c, this.d, this.e, this.f] = values;
     }
   }
+
+  multiplySelf(): this {
+    return this;
+  }
+
+  preMultiplySelf(): this {
+    return this;
+  }
+
+  translate(x = 0, y = 0): this {
+    this.e += Number(x);
+    this.f += Number(y);
+    return this;
+  }
+
+  scale(scaleX = 1, scaleY = scaleX): this {
+    this.a *= Number(scaleX);
+    this.d *= Number(scaleY);
+    return this;
+  }
+
+  invertSelf(): this {
+    return this;
+  }
+}
+
+function ensurePdfJsGlobals() {
+  const globalScope = globalThis as typeof globalThis & {
+    DOMMatrix?: typeof DOMMatrix;
+    navigator?: {
+      language?: string;
+      platform?: string;
+      userAgent?: string;
+    };
+  };
+
+  if (!globalScope.DOMMatrix) {
+    globalScope.DOMMatrix = MinimalDOMMatrix as unknown as typeof DOMMatrix;
+  }
+
+  if (!globalScope.navigator?.language) {
+    globalScope.navigator = {
+      language: "en-US",
+      platform: "",
+      userAgent: "Cloudflare-Workers",
+    } as Navigator;
+  }
+}
+
+function loadMammoth() {
+  if (!mammothModulePromise) {
+    mammothModulePromise = import("mammoth");
+  }
+
+  return mammothModulePromise;
+}
+
+async function loadPdfJs() {
+  if (!pdfJsModulePromise) {
+    pdfJsModulePromise = (async () => {
+      ensurePdfJsGlobals();
+
+      const [pdfModule, workerModule] = await Promise.all([
+        import("pdfjs-dist/legacy/build/pdf.mjs"),
+        import("pdfjs-dist/legacy/build/pdf.worker.mjs"),
+      ]);
+
+      // Force pdf.js to stay in-process so it doesn't spin up a separate
+      // worker bundle with a mismatched version in worker runtimes.
+      (globalThis as PdfJsWorkerGlobal).pdfjsWorker ??= {
+        WorkerMessageHandler: workerModule.WorkerMessageHandler,
+      };
+
+      return pdfModule;
+    })();
+  }
+
+  return pdfJsModulePromise;
+}
+
+async function extractPdf(buffer: Buffer): Promise<string> {
+  const { getDocument } = await loadPdfJs();
+  const doc = await getDocument({
+    data: new Uint8Array(buffer),
+    useSystemFonts: true,
+    isEvalSupported: false,
+    disableFontFace: true,
+  }).promise;
+
+  const parts: string[] = [];
+  try {
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .filter((item): item is TextItem => "str" in item)
+        .map((item) => item.str)
+        .join(" ");
+      if (pageText.trim()) {
+        parts.push(pageText);
+      }
+    }
+  } finally {
+    await doc.destroy().catch(() => undefined);
+  }
+
+  return parts.join("\n");
+}
+
+function normalizeExtractedText(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+
+  if (normalized.length <= MAX_EXTRACTED_LENGTH) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, MAX_EXTRACTED_LENGTH)}\n[... document truncated for context length ...]`;
 }
 
 export async function extractDocumentText(
@@ -71,7 +184,8 @@ export async function extractDocumentText(
     if (ext === ".pdf") {
       text = await extractPdf(buffer);
     } else if (ext === ".docx") {
-      const result = await mammoth.extractRawText({ buffer });
+      const loadedMammoth = await loadMammoth();
+      const result = await loadedMammoth.extractRawText({ buffer });
       text = result.value || "";
     }
 
@@ -79,14 +193,7 @@ export async function extractDocumentText(
       throw new Error("No text extracted from document");
     }
 
-    text = text
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, MAX_EXTRACTED_LENGTH);
-
-    if (text.length >= MAX_EXTRACTED_LENGTH) {
-      text += "\n[... document truncated for context length ...]";
-    }
+    text = normalizeExtractedText(text);
 
     return {
       text,
