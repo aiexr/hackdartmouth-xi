@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Briefcase, Edit3, User } from "lucide-react";
 import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
-import { UserModel } from "@/lib/models";
+import { InterviewModel, UserModel } from "@/lib/models";
+import { ProfileHistory } from "@/components/app/profile-history";
 import { ProfileEditor } from "@/components/app/profile-editor";
 import { ResumeUploaderCard } from "@/components/app/resume-uploader-card";
 import { Card, CardContent } from "@/components/ui/card";
@@ -81,6 +82,63 @@ function ProfileStatsSkeleton() {
   );
 }
 
+async function ProfileHistorySection({ email }: { email?: string | null }) {
+  if (!email) {
+    return <ProfileHistory signedIn={false} sessions={[]} />;
+  }
+
+  const interviews = await InterviewModel.getInterviewsByUser(email).catch(() => []);
+
+  const sessions = interviews
+    .filter((interview) => {
+      const status = String(interview.status ?? "").toLowerCase();
+      return Boolean(interview.completedAt) || status === "completed" || status === "graded";
+    })
+    .sort((left, right) => {
+      const leftTime = new Date(left.completedAt ?? left.createdAt).getTime();
+      const rightTime = new Date(right.completedAt ?? right.createdAt).getTime();
+      return rightTime - leftTime;
+    })
+    .map((interview) => ({
+      id:
+        interview._id
+          ? String(interview._id)
+          : `${interview.createdAt?.toISOString?.() ?? "session"}-${interview.scenarioId ?? "unknown"}`,
+      scenarioId: interview.scenarioId ?? null,
+      completedAt: interview.completedAt ? interview.completedAt.toISOString() : null,
+      createdAt: interview.createdAt ? interview.createdAt.toISOString() : null,
+      overallScore: typeof interview.overallScore === "number" ? interview.overallScore : null,
+      transcript: Array.isArray(interview.transcript)
+        ? interview.transcript.map((entry, index) => ({
+            id: `${interview._id ? String(interview._id) : "session"}-${index}`,
+            role: typeof entry.role === "string" ? entry.role : "interviewer",
+            content: typeof entry.content === "string" ? entry.content : "",
+            timestamp:
+              typeof entry.timestamp === "string"
+                ? entry.timestamp
+                : entry.timestamp instanceof Date
+                  ? entry.timestamp.toISOString()
+                  : null,
+          }))
+        : [],
+    }));
+
+  return <ProfileHistory signedIn sessions={sessions} />;
+}
+
+function ProfileHistorySkeleton() {
+  return (
+    <div className="rounded-none border border-border bg-base-100 p-6">
+      <div className="h-6 w-28 animate-pulse rounded-none bg-base-300/55" />
+      <div className="mt-2 h-4 w-80 animate-pulse rounded-none bg-base-300/40" />
+      <div className="mt-6 space-y-4">
+        <div className="h-56 animate-pulse rounded-none border border-border bg-base-200/40" />
+        <div className="h-56 animate-pulse rounded-none border border-border bg-base-200/40" />
+      </div>
+    </div>
+  );
+}
+
 export default async function ProfilePage() {
   const session = await getOptionalServerSession().catch(() => null);
 
@@ -123,6 +181,10 @@ export default async function ProfilePage() {
         <div id="profile-editor" className="space-y-4 scroll-mt-8">
           <ProfileEditor />
         </div>
+
+        <Suspense fallback={<ProfileHistorySkeleton />}>
+          <ProfileHistorySection email={session?.user?.email} />
+        </Suspense>
       </div>
   );
 }
