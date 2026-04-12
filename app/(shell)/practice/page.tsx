@@ -128,7 +128,7 @@ export default function PracticePage() {
               >
                 <meta.icon className="size-4" />
                 {meta.label}
-                <span className="badge badge-neutral text-[0.65rem]">{roundCounts[round]}</span>
+                <span className="badge border-none bg-transparent text-[0.65rem] text-inherit">{roundCounts[round]}</span>
               </button>
             );
           })}
