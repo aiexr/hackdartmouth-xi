@@ -38,6 +38,7 @@ type InterviewRecord = {
   transcript?: unknown[];
   overallScore?: number | null;
   letterGrade?: string | null;
+  gradingError?: string | null;
   createdAt?: string | null;
   completedAt?: string | null;
 };
@@ -303,6 +304,7 @@ function buildSessions(interviews: InterviewRecord[]) {
           ? Math.max(0, Math.min(100, Math.round(interview.overallScore)))
           : null;
       const letterGrade = typeof interview.letterGrade === "string" ? interview.letterGrade : null;
+      const gradingError = typeof interview.gradingError === "string" ? interview.gradingError : null;
       const interviewId =
         typeof interview._id === "string"
           ? interview._id
@@ -319,6 +321,7 @@ function buildSessions(interviews: InterviewRecord[]) {
         createdAt: interview.createdAt ?? null,
         overallScore,
         letterGrade,
+        gradingError,
         transcriptCount,
         reviewHref: `/review/${scenarioId ?? "interview"}?interviewId=${interviewId}`,
       };

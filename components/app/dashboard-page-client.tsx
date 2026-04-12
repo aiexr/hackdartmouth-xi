@@ -296,7 +296,6 @@ function DashboardMetrics({ metrics }: { metrics: UserInterviewMetrics }) {
         <div className="min-w-0">
           <ActivityCalendar
             activityDays={metrics.activityDays}
-            totalSessions={metrics.completedSessions}
           />
         </div>
         <div className="flex flex-col divide-y divide-base-300/70 border border-border bg-base-100">
