@@ -52,14 +52,51 @@ export async function PATCH(request: Request) {
       rawBody && typeof rawBody === "object"
         ? (rawBody as Record<string, unknown>)
         : {};
-    const { name, bio, focusTrack, preferences } = body;
+    const { name, bio, focusTrack, preferences, weeklyGoal } = body;
 
     const updates: Record<string, unknown> = {};
 
     if (name !== undefined) updates.name = name;
     if (bio !== undefined) updates.bio = bio;
     if (focusTrack !== undefined) updates.focusTrack = focusTrack;
-    if (preferences !== undefined) updates.preferences = preferences;
+    let parsedWeeklyGoal: number | undefined;
+    if (typeof weeklyGoal === "number" && Number.isFinite(weeklyGoal)) {
+      parsedWeeklyGoal = Math.min(30, Math.max(1, Math.round(weeklyGoal)));
+    }
+
+    if (preferences !== undefined || parsedWeeklyGoal !== undefined) {
+      let user = await UserModel.getUserByEmail(session.user.email);
+      if (!user) {
+        user = await UserModel.findOrCreateUser(
+          session.user.email,
+          session.user.name ?? "",
+          session.user.image ?? "",
+          "google",
+        );
+      }
+
+      const basePreferences =
+        user.preferences ?? {
+          voiceId: null,
+          feedbackStyle: "structured" as const,
+          practiceReminders: true,
+          weeklyGoal: 4,
+        };
+
+      const mergedPreferences =
+        preferences && typeof preferences === "object"
+          ? {
+              ...basePreferences,
+              ...(preferences as Record<string, unknown>),
+            }
+          : { ...basePreferences };
+
+      if (parsedWeeklyGoal !== undefined) {
+        mergedPreferences.weeklyGoal = parsedWeeklyGoal;
+      }
+
+      updates.preferences = mergedPreferences;
+    }
 
     const updatedUser = await UserModel.updateUserProfile(session.user.email, updates as any);
 

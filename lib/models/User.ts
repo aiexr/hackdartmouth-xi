@@ -47,7 +47,7 @@ export class UserModel {
         voiceId: null,
         feedbackStyle: "structured",
         practiceReminders: true,
-        weeklyGoal: 3,
+        weeklyGoal: 4,
       },
       createdAt: new Date(),
       updatedAt: new Date(),

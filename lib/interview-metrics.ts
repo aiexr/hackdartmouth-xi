@@ -2,6 +2,7 @@ import "server-only";
 
 import { scenarios } from "@/data/scenarios";
 import { env } from "@/lib/env";
+import { UserModel } from "@/lib/models/User";
 import { getMongoDb } from "@/lib/mongodb";
 
 type InterviewRecord = {
@@ -67,6 +68,7 @@ export type UserInterviewMetrics = {
 };
 
 const scenarioById = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
+const DEFAULT_WEEKLY_TARGET = 4;
 
 function toDate(value: Date | string | null | undefined) {
   if (!value) {
@@ -254,13 +256,17 @@ export async function getUserInterviewMetrics(
       averageScore: null,
       bestScore: null,
       weeklyCompleted: 0,
-      weeklyTarget: 4,
-      remainingLoops: 4,
+      weeklyTarget: DEFAULT_WEEKLY_TARGET,
+      remainingLoops: DEFAULT_WEEKLY_TARGET,
       streakDays: 0,
       longestStreak: 0,
       activityDays: getActivityDays([]),
       goals: [
-        { label: "Complete 4 practice loops this week", current: 0, total: 4 },
+        {
+          label: `Complete ${DEFAULT_WEEKLY_TARGET} practice loops this week`,
+          current: 0,
+          total: DEFAULT_WEEKLY_TARGET,
+        },
         { label: "Hit a 90+ score once", current: 0, total: 90 },
       ],
       improvements: [],
@@ -294,13 +300,17 @@ export async function getUserInterviewMetrics(
       averageScore: null,
       bestScore: null,
       weeklyCompleted: 0,
-      weeklyTarget: 4,
-      remainingLoops: 4,
+      weeklyTarget: DEFAULT_WEEKLY_TARGET,
+      remainingLoops: DEFAULT_WEEKLY_TARGET,
       streakDays: 0,
       longestStreak: 0,
       activityDays: getActivityDays([]),
       goals: [
-        { label: "Complete 4 practice loops this week", current: 0, total: 4 },
+        {
+          label: `Complete ${DEFAULT_WEEKLY_TARGET} practice loops this week`,
+          current: 0,
+          total: DEFAULT_WEEKLY_TARGET,
+        },
         { label: "Hit a 90+ score once", current: 0, total: 90 },
       ],
       improvements: [],
@@ -345,7 +355,15 @@ export async function getUserInterviewMetrics(
     return completedAt ? completedAt >= start : false;
   }).length;
 
-  const weeklyTarget = 4;
+  const dbUser = await withTimeout(
+    UserModel.getUserByEmail(userEmail),
+    3000,
+    "User profile query timed out.",
+  ).catch(() => null);
+  const weeklyTarget = Math.max(
+    1,
+    Math.round(dbUser?.preferences?.weeklyGoal ?? DEFAULT_WEEKLY_TARGET),
+  );
   const bestScore = gradedSessions.length
     ? Math.max(...gradedSessions.map((interview) => interview.overallScore))
     : null;
@@ -370,7 +388,11 @@ export async function getUserInterviewMetrics(
     longestStreak,
     activityDays,
     goals: [
-      { label: "Complete 4 practice loops this week", current: weeklyCompleted, total: weeklyTarget },
+      {
+        label: `Complete ${weeklyTarget} practice loops this week`,
+        current: weeklyCompleted,
+        total: weeklyTarget,
+      },
       { label: "Hit a 90+ score once", current: Math.min(bestScore ?? 0, 90), total: 90 },
     ],
     improvements: buildImprovements(gradedSessions),
