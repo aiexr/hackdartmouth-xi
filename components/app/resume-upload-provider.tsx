@@ -4,6 +4,10 @@ import { createContext, useCallback, useContext, useRef, useState } from "react"
 
 const MAX_RESUME_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const RESUME_ALLOWED_EXTENSIONS = [".pdf", ".docx"] as const;
+const RESUME_UPLOAD_ENDPOINTS = [
+  "/api/user/profile/document",
+  "/api/user/profile/resume",
+] as const;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -12,6 +16,22 @@ function asRecord(value: unknown): Record<string, unknown> {
 function getFileExtension(fileName: string): string {
   const dotIndex = fileName.lastIndexOf(".");
   return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : "";
+}
+
+function isBlockedOrNetworkError(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    error.name === "TypeError" &&
+    (message.includes("failed to fetch") ||
+      message.includes("load failed") ||
+      message.includes("networkerror") ||
+      message.includes("blocked by client") ||
+      message.includes("err_blocked_by_client"))
+  );
 }
 
 type ResumeUploadContextValue = {
@@ -86,19 +106,46 @@ export function ResumeUploadProvider({ children }: { children: React.ReactNode }
       try {
         const formData = new FormData();
         formData.append("resume", file);
-        const res = await fetch("/api/user/profile/resume", {
-          method: "POST",
-          body: formData,
-          signal: controller.signal,
-        });
-
-        const raw = await res.text();
+        let res: Response | null = null;
         let parsed: unknown = null;
+        let lastError: unknown = null;
 
-        try {
-          parsed = raw ? JSON.parse(raw) : null;
-        } catch {
-          parsed = raw;
+        for (const endpoint of RESUME_UPLOAD_ENDPOINTS) {
+          try {
+            res = await fetch(endpoint, {
+              method: "POST",
+              body: formData,
+              signal: controller.signal,
+            });
+
+            const raw = await res.text();
+            try {
+              parsed = raw ? JSON.parse(raw) : null;
+            } catch {
+              parsed = raw;
+            }
+
+            if (res.status === 404 || res.status === 405) {
+              continue;
+            }
+
+            break;
+          } catch (error) {
+            lastError = error;
+
+            if (!isBlockedOrNetworkError(error)) {
+              throw error;
+            }
+          }
+        }
+
+        if (!res) {
+          throw (
+            lastError ??
+            new Error(
+              "The upload request was blocked before it reached the server. Try disabling content blockers for this site and upload again.",
+            )
+          );
         }
 
         if (!res.ok) {
@@ -126,7 +173,11 @@ export function ResumeUploadProvider({ children }: { children: React.ReactNode }
         successTimerRef.current = setTimeout(() => setResumeSuccess(false), 3000);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
-        setResumeError(err instanceof Error ? err.message : "Failed to upload resume");
+        setResumeError(
+          err instanceof Error
+            ? err.message
+            : "Failed to upload resume",
+        );
         setResumeFile(null);
       } finally {
         setUploadingResume(false);

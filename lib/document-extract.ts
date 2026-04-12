@@ -1,18 +1,33 @@
 import "server-only";
 
-import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
-
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_EXTRACTED_LENGTH = 8000; // Char limit for prompt injection
 let pdfWorkerReady: Promise<void> | null = null;
+let pdfParseModulePromise: Promise<typeof import("pdf-parse")> | null = null;
+let mammothModulePromise: Promise<typeof import("mammoth")> | null = null;
 
 export type ExtractedDocument = {
   text: string;
   filename: string;
   extracted_length: number;
 };
+
+function loadPdfParse() {
+  if (!pdfParseModulePromise) {
+    pdfParseModulePromise = import("pdf-parse");
+  }
+
+  return pdfParseModulePromise;
+}
+
+function loadMammoth() {
+  if (!mammothModulePromise) {
+    mammothModulePromise = import("mammoth");
+  }
+
+  return mammothModulePromise;
+}
 
 async function ensurePdfJsWorker() {
   const workerState = globalThis as typeof globalThis & {
@@ -42,6 +57,7 @@ async function ensurePdfJsWorker() {
 }
 
 async function extractPdf(buffer: Buffer): Promise<string> {
+  const { PDFParse } = await loadPdfParse();
   await ensurePdfJsWorker();
 
   const parser = new PDFParse({
@@ -95,6 +111,7 @@ export async function extractDocumentText(
       text = await extractPdf(buffer);
     } else if (ext === ".docx") {
       // Extract Word doc using mammoth
+      const mammoth = await loadMammoth();
       const result = await mammoth.extractRawText({ buffer });
       text = result.value || "";
     }
