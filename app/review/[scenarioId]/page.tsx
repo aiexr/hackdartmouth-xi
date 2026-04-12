@@ -583,27 +583,22 @@ export default async function ReviewPage({
                     key={`${line.time}-${line.speaker}-${line.text}`}
                     className={`rounded-none border px-4 py-3 ${
                       line.highlight === "strength"
-                        ? "border-emerald-200/70 bg-emerald-50"
+                        ? "border-emerald-500/35 bg-emerald-500/10"
                         : line.highlight === "improve"
-                          ? "border-amber-200/70 bg-amber-50"
+                          ? "border-amber-500/35 bg-amber-500/10"
                           : "border-border bg-base-200/45"
                     }`}
                   >
-                    <div className="flex items-start gap-4">
-                      <span className="pt-1 text-xs font-medium text-base-content/60">
-                        {line.time}
-                      </span>
-                      <div className="flex-1">
-                        <div className="mb-1 text-xs font-medium text-base-content/60">
-                          {line.speaker}
-                        </div>
-                        <p className="text-sm leading-6">{line.text}</p>
-                        {line.note ? (
-                          <p className="mt-2 text-sm leading-6 text-base-content/60">
-                            {line.note}
-                          </p>
-                        ) : null}
+                    <div className="flex-1">
+                      <div className="mb-1 text-xs font-medium text-base-content/60">
+                        {line.speaker}
                       </div>
+                      <p className="text-sm leading-6">{line.text}</p>
+                      {line.note ? (
+                        <p className="mt-2 text-sm leading-6 text-base-content/60">
+                          {line.note}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 ))

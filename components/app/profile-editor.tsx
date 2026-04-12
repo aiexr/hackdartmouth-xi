@@ -52,7 +52,7 @@ function toUser(value: Record<string, unknown>): User {
       weeklyGoal:
         typeof preferences.weeklyGoal === "number"
           ? (preferences.weeklyGoal as number)
-          : 3,
+          : 4,
     },
     createdAt:
       value.createdAt instanceof Date
@@ -84,6 +84,7 @@ export function ProfileEditor() {
     name: "",
     bio: "",
     focusTrack: "",
+    weeklyGoal: 4,
   });
 
   useEffect(() => {
@@ -99,6 +100,7 @@ export function ProfileEditor() {
           name: parsedUser.name || "",
           bio: parsedUser.bio || "",
           focusTrack: parsedUser.focusTrack || "",
+          weeklyGoal: parsedUser.preferences.weeklyGoal || 4,
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -111,10 +113,18 @@ export function ProfileEditor() {
   }, []);
 
   const handleInputChange = (
-    field: keyof typeof formData,
+    field: "name" | "bio" | "focusTrack",
     value: string
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setError(null);
+    setSuccess(false);
+  };
+
+  const handleWeeklyGoalChange = (value: string) => {
+    const parsed = Number.parseInt(value, 10);
+    const bounded = Number.isFinite(parsed) ? Math.min(30, Math.max(1, parsed)) : 1;
+    setFormData((prev) => ({ ...prev, weeklyGoal: bounded }));
     setError(null);
     setSuccess(false);
   };
@@ -129,7 +139,12 @@ export function ProfileEditor() {
       const res = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          bio: formData.bio,
+          focusTrack: formData.focusTrack,
+          weeklyGoal: formData.weeklyGoal,
+        }),
       });
 
       if (!res.ok) throw new Error("Failed to update profile");
@@ -200,6 +215,21 @@ export function ProfileEditor() {
             />
             <p className="text-xs text-base-content/60">
               {formData.bio.length}/256 characters
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Weekly Practice Goal (loops)</label>
+            <Input
+              type="number"
+              min={1}
+              max={30}
+              value={formData.weeklyGoal}
+              onChange={(e) => handleWeeklyGoalChange(e.target.value)}
+              disabled={saving}
+            />
+            <p className="text-xs text-base-content/60">
+              This controls your dashboard weekly loop target.
             </p>
           </div>
 

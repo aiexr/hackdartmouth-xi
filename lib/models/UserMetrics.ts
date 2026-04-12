@@ -62,7 +62,7 @@ export class UserMetricsModel {
       averageScore: null,
       bestScore: null,
       weeklyCompleted: 0,
-      weeklyTarget: 3,
+      weeklyTarget: 4,
       lastWeekReset: new Date(),
       streakDays: 0,
       lastSessionDate: null,
