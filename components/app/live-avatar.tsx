@@ -31,6 +31,8 @@ export type LiveAvatarHandle = {
 
 type LiveAvatarProps = {
   tone?: string;
+  interviewerId?: string;
+  interviewerName?: string;
   compact?: boolean;
   showStartButton?: boolean;
   keepLargeLayout?: boolean;
@@ -91,6 +93,8 @@ function augmentInternalPromptWithSessionProfile(
 
 export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function LiveAvatar({
   tone = "neutral",
+  interviewerId,
+  interviewerName,
   compact = false,
   showStartButton = true,
   keepLargeLayout = false,
@@ -285,6 +289,10 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   }, [promptRequest, status]);
 
   const startSession = useCallback(async () => {
+    if (status !== "idle" || sessionRef.current) {
+      return;
+    }
+
     setError(null);
     sessionEndDeliveredRef.current = false;
     wasConnectedRef.current = false;
@@ -298,7 +306,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       const res = await fetch("/api/session/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "video", tone }),
+        body: JSON.stringify({ mode: "video", tone, interviewerId, interviewerName }),
       });
 
       if (!res.ok) {
@@ -384,19 +392,32 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
         updateTranscript("interviewer", event.text, false);
       });
 
-      if (avatarVideoRef.current) {
-        session.attach(avatarVideoRef.current);
-      }
-
       await session.start();
     } catch (err) {
+      if (sessionRef.current) {
+        try {
+          await sessionRef.current.stop();
+        } catch {
+          // session may already be gone
+        }
+      }
       sessionProfileRef.current = { candidateName: "", resumeContext: "" };
       sessionRef.current = null;
       const message = err instanceof Error ? err.message : "Failed to start session";
       setError(message);
       updateStatus("idle");
     }
-  }, [emitSessionEnd, flushPartial, updateStatus, updateTranscript, startUserCamera]);
+  }, [
+    emitSessionEnd,
+    flushPartial,
+    interviewerId,
+    interviewerName,
+    startUserCamera,
+    status,
+    tone,
+    updateStatus,
+    updateTranscript,
+  ]);
 
   const stopSession = useCallback(async () => {
     if (userStreamRef.current) {

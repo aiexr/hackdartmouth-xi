@@ -8,6 +8,8 @@ import { useSession } from "next-auth/react";
 import { createPortal } from "react-dom";
 import {
   Braces,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   FileText,
   Lightbulb,
@@ -33,6 +35,12 @@ import { LiveAvatar, type LiveAvatarHandle, type TranscriptEntry } from "@/compo
 import { VoiceCall, type VoiceCallHandle } from "@/components/app/voice-call";
 import { CodeRunner } from "@/components/app/code-runner";
 import { Progress } from "@/components/ui/progress";
+import {
+  generatedInterviewers,
+  getInterviewerById,
+  getInterviewerByName,
+  type InterviewerProfile,
+} from "@/lib/interviewers";
 import { cn } from "@/lib/utils";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
@@ -73,6 +81,8 @@ type PersistedPracticeState = {
   seconds?: number;
   interviewMode?: InterviewMode;
   interviewTone?: InterviewTone;
+  interviewerId?: string;
+  interviewerName?: string;
   transcript?: TranscriptEntry[];
   editorContent?: string;
   interviewId?: string;
@@ -83,6 +93,7 @@ type PersistedPracticeState = {
 const PRACTICE_STATE_TTL_MS = 24 * 60 * 60 * 1000;
 const EDITOR_CONTEXT_MAX_LINES = 80;
 const EDITOR_CONTEXT_MAX_CHARS = 3200;
+const INTERVIEWER_CAROUSEL_SLOT_COUNT = 5;
 const INTERNAL_PROMPT_MARKER = "[[internal-interviewer-context]]";
 const GRACEFUL_END_MESSAGE = "Thank you for your time today. I'm going to end the interview here now.";
 const INTERVIEWER_CLOSING_DELAY_MIN_MS = 3200;
@@ -234,9 +245,43 @@ function formatEndingCountdown(msRemaining: number) {
   return `${secondsRemaining.toFixed(1)}s`;
 }
 
-function buildInitialInterviewerPrompt(scenario: Scenario, candidateName?: string | null) {
+function getInterviewerDisplayName(interviewer: Pick<InterviewerProfile, "name" | "liveAvatar">) {
+  return interviewer.name;
+}
+
+function getTranscriptTimestampMs(entry: Pick<TranscriptEntry, "timestamp">) {
+  if (entry.timestamp instanceof Date) {
+    return entry.timestamp.getTime();
+  }
+
+  return new Date(entry.timestamp).getTime();
+}
+
+function getStableInterviewerIndex(seed: string, count: number) {
+  if (count <= 0) {
+    return 0;
+  }
+
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+
+  return hash % count;
+}
+
+function buildInitialInterviewerPrompt(
+  scenario: Scenario,
+  interviewer: Pick<InterviewerProfile, "name" | "role" | "liveAvatar">,
+  candidateName?: string | null,
+) {
   const sharedContext = [
-    `You are ${scenario.interviewer}, a ${scenario.interviewerRole}, conducting a ${scenario.category} mock interview.`,
+    `You are ${getInterviewerDisplayName(interviewer)}, conducting a ${scenario.category} mock interview.`,
+    `Your name is exactly "${getInterviewerDisplayName(interviewer)}".`,
+    `Your role/title is exactly "${interviewer.role}".`,
+    "Never introduce yourself with any other name, title, or persona.",
+    "Never claim to be the scenario-authored interviewer if it differs from your assigned identity.",
+    "If you refer to yourself, use only your assigned name and role.",
     `Scenario title: ${scenario.title}`,
     `Scenario pattern: ${scenario.pattern}`,
     `Primary prompt: ${scenario.prompt}`,
@@ -329,12 +374,21 @@ export function PracticeSession({
     typeof session?.user?.name === "string"
       ? session.user.name.replace(/\s+/g, " ").trim().split(" ")[0] ?? ""
       : "";
+  const availableInterviewers = generatedInterviewers;
+  const defaultInterviewer = useMemo(
+    () =>
+      availableInterviewers[
+        getStableInterviewerIndex(scenario.id, availableInterviewers.length)
+      ] ?? availableInterviewers[0]!,
+    [availableInterviewers, scenario.id],
+  );
 
   const [panel, setPanel] = useState<PracticePanel>(isTechnical ? "hints" : "rubric");
   const [panelOpen, setPanelOpen] = useState(true);
   const [seconds, setSeconds] = useState(0);
   const [interviewMode, setInterviewMode] = useState<InterviewMode>("video");
   const [interviewTone, setInterviewTone] = useState<InterviewTone>("neutral");
+  const [selectedInterviewerId, setSelectedInterviewerId] = useState(defaultInterviewer.id);
   const [sessionState, setSessionState] = useState<
     "idle" | "connecting" | "connected" | "ended"
   >("idle");
@@ -372,6 +426,77 @@ export function PracticeSession({
   const sessionEndHandledRef = useRef(false);
   const interviewStartRequestRef = useRef<Promise<string | null> | null>(null);
   const transcriptPersistRequestRef = useRef<Promise<void> | null>(null);
+  const restoredPracticeStateRef = useRef<PersistedPracticeState | null>(null);
+  const activeSessionTranscriptStartRef = useRef<number | null>(null);
+  const selectedInterviewer = useMemo(
+    () => getInterviewerById(selectedInterviewerId, availableInterviewers) ?? defaultInterviewer,
+    [availableInterviewers, defaultInterviewer, selectedInterviewerId],
+  );
+  const selectedInterviewerIndex = useMemo(() => {
+    const index = availableInterviewers.findIndex(
+      (interviewer) => interviewer.id === selectedInterviewer.id,
+    );
+
+    return index >= 0 ? index : 0;
+  }, [availableInterviewers, selectedInterviewer.name]);
+  const visibleCarouselSlotCount = Math.min(
+    availableInterviewers.length,
+    INTERVIEWER_CAROUSEL_SLOT_COUNT,
+  );
+  const activeCarouselPosition = Math.min(
+    2,
+    Math.max(0, Math.floor(visibleCarouselSlotCount / 2)),
+  );
+  const carouselWindowStart = useMemo(() => {
+    if (availableInterviewers.length === 0) {
+      return 0;
+    }
+
+    return (
+      (selectedInterviewerIndex - activeCarouselPosition + availableInterviewers.length) %
+      availableInterviewers.length
+    );
+  }, [activeCarouselPosition, availableInterviewers.length, selectedInterviewerIndex]);
+  const visibleInterviewerSlots = useMemo(() => {
+    if (availableInterviewers.length === 0 || visibleCarouselSlotCount === 0) {
+      return [];
+    }
+
+    return Array.from({ length: visibleCarouselSlotCount }, (_, position) => {
+      const interviewerIndex = (carouselWindowStart + position) % availableInterviewers.length;
+
+      return {
+        interviewer: availableInterviewers[interviewerIndex]!,
+        interviewerIndex,
+        isActive: position === activeCarouselPosition,
+      };
+    });
+  }, [
+    activeCarouselPosition,
+    availableInterviewers,
+    carouselWindowStart,
+    visibleCarouselSlotCount,
+  ]);
+
+  useEffect(() => {
+    if (getInterviewerById(selectedInterviewerId, availableInterviewers)) {
+      return;
+    }
+
+    setSelectedInterviewerId(defaultInterviewer.id);
+  }, [availableInterviewers, defaultInterviewer.id, selectedInterviewerId]);
+
+  const cycleInterviewer = useCallback((direction: -1 | 1) => {
+    if (availableInterviewers.length === 0) {
+      return;
+    }
+
+    const nextIndex =
+      (selectedInterviewerIndex + direction + availableInterviewers.length) %
+      availableInterviewers.length;
+
+    setSelectedInterviewerId(availableInterviewers[nextIndex]!.id);
+  }, [availableInterviewers, selectedInterviewerIndex]);
 
   const clearEndingCountdown = useCallback(() => {
     endingCountdownDeadlineRef.current = null;
@@ -459,9 +584,24 @@ export function PracticeSession({
         const fresh = !saved.savedAt || Date.now() - saved.savedAt < PRACTICE_STATE_TTL_MS;
 
         if (fresh) {
+          restoredPracticeStateRef.current = saved;
           if (typeof saved.seconds === "number") setSeconds(saved.seconds);
           if (saved.interviewMode) setInterviewMode(saved.interviewMode);
           if (saved.interviewTone) setInterviewTone(saved.interviewTone);
+          if (
+            typeof saved.interviewerId === "string" &&
+            getInterviewerById(saved.interviewerId, availableInterviewers)
+          ) {
+            setSelectedInterviewerId(saved.interviewerId);
+          } else if (
+            typeof saved.interviewerName === "string" &&
+            getInterviewerByName(saved.interviewerName, availableInterviewers)
+          ) {
+            setSelectedInterviewerId(
+              getInterviewerByName(saved.interviewerName, availableInterviewers)?.id ??
+                defaultInterviewer.id,
+            );
+          }
           if (typeof saved.editorContent === "string" && isTechnical) {
             setEditorContent(saved.editorContent);
           }
@@ -510,6 +650,8 @@ export function PracticeSession({
         seconds,
         interviewMode,
         interviewTone,
+        interviewerId: selectedInterviewer.id,
+        interviewerName: selectedInterviewer.name,
         transcript: persistableTranscript,
         editorContent: isTechnical ? editorContent : undefined,
         interviewId: activeInterviewId ?? undefined,
@@ -526,6 +668,8 @@ export function PracticeSession({
     isGrading,
     interviewMode,
     interviewTone,
+    selectedInterviewer.id,
+    selectedInterviewer.name,
     isTechnical,
     activeInterviewId,
     persistedTranscriptIds,
@@ -552,6 +696,9 @@ export function PracticeSession({
             type: scenario.category,
             difficulty: scenario.difficulty,
             scenarioId: scenario.id,
+            interviewerId: selectedInterviewer.id,
+            interviewerName: selectedInterviewer.name,
+            interviewerRole: selectedInterviewer.role,
           }),
         });
 
@@ -584,6 +731,9 @@ export function PracticeSession({
     scenario.category,
     scenario.difficulty,
     scenario.id,
+    selectedInterviewer.id,
+    selectedInterviewer.name,
+    selectedInterviewer.role,
     session?.user?.email,
     sessionState,
   ]);
@@ -642,6 +792,10 @@ export function PracticeSession({
       sessionStartRef.current = Date.now();
     }
 
+    if (activeSessionTranscriptStartRef.current === null) {
+      activeSessionTranscriptStartRef.current = Date.now();
+    }
+
     const timer = window.setInterval(() => {
       setSeconds((value) => value + 1);
     }, 1000);
@@ -657,9 +811,11 @@ export function PracticeSession({
     initialPromptSentRef.current = true;
     setInterviewerPrompt({
       id: `${scenario.id}-opening`,
-      text: wrapInternalPrompt(buildInitialInterviewerPrompt(scenario, candidateName)),
+      text: wrapInternalPrompt(
+        buildInitialInterviewerPrompt(scenario, selectedInterviewer, candidateName),
+      ),
     });
-  }, [candidateName, scenario, sessionState]);
+  }, [candidateName, scenario, selectedInterviewer, sessionState]);
 
   useEffect(() => {
     if (!endingCountdownDeadline || sessionState !== "connected") {
@@ -681,6 +837,7 @@ export function PracticeSession({
     if (sessionState === "idle") {
       initialPromptSentRef.current = false;
       sessionStartRef.current = null;
+      activeSessionTranscriptStartRef.current = null;
       lastModeratedTurnIdRef.current = null;
       moderationEndingRef.current = false;
       pendingGracefulEndRef.current = false;
@@ -720,7 +877,12 @@ export function PracticeSession({
 
     const latestUserTurn = [...transcript]
       .reverse()
-      .find((entry) => entry.role === "user" && !entry.partial);
+      .find(
+        (entry) =>
+          entry.role === "user" &&
+          !entry.partial &&
+          getTranscriptTimestampMs(entry) >= (activeSessionTranscriptStartRef.current ?? 0),
+      );
 
     if (!latestUserTurn) {
       return;
@@ -789,7 +951,12 @@ export function PracticeSession({
 
     const latestInterviewerTurn = [...transcript]
       .reverse()
-      .find((entry) => entry.role === "interviewer" && !entry.partial);
+      .find(
+        (entry) =>
+          entry.role === "interviewer" &&
+          !entry.partial &&
+          getTranscriptTimestampMs(entry) >= (activeSessionTranscriptStartRef.current ?? 0),
+      );
 
     if (!latestInterviewerTurn) {
       return;
@@ -911,6 +1078,9 @@ export function PracticeSession({
               type: scenario.category,
               difficulty: scenario.difficulty,
               scenarioId: scenario.id,
+              interviewerId: selectedInterviewer.id,
+              interviewerName: selectedInterviewer.name,
+              interviewerRole: selectedInterviewer.role,
             }),
           });
           const startPayload = asRecord(await startRes.json().catch(() => null));
@@ -969,6 +1139,9 @@ export function PracticeSession({
       scenario.category,
       scenario.difficulty,
       scenario.id,
+      selectedInterviewer.id,
+      selectedInterviewer.name,
+      selectedInterviewer.role,
       storageKey,
     ],
   );
@@ -997,6 +1170,8 @@ export function PracticeSession({
     interviewMode === "video" ? (
       <LiveAvatar
         ref={avatarRef}
+        interviewerId={selectedInterviewer.id}
+        interviewerName={selectedInterviewer.name}
         compact={hasSplitView && (sessionState === "connected" || sessionState === "ended")}
         showStartButton={false}
         keepLargeLayout={isBehavioral}
@@ -1019,6 +1194,115 @@ export function PracticeSession({
         onInterviewerSpeakingChange={setIsInterviewerSpeaking}
       />
     );
+  const showCenteredInterviewerCarousel =
+    interviewMode === "video" && (sessionState === "idle" || sessionState === "connecting");
+  const showInterviewerHydrationState =
+    showCenteredInterviewerCarousel && !hydrated;
+  const interviewerCarousel = (
+    <div className="w-full space-y-4">
+      <p className="text-center text-sm font-medium text-base-content/60">
+        Select your interviewer
+      </p>
+      <div className="relative mx-auto w-full overflow-visible px-14 sm:px-16">
+        <button
+          type="button"
+          onClick={() => cycleInterviewer(-1)}
+          disabled={sessionState !== "idle" || availableInterviewers.length <= 1}
+          className={cn(
+            "absolute left-2 top-1/2 z-30 flex size-11 -translate-y-1/2 items-center justify-center rounded-none border shadow-lg shadow-base-content/10 transition sm:left-3",
+            sessionState === "idle" && availableInterviewers.length > 1
+              ? "border-border bg-base-100 text-base-content hover:bg-base-200"
+              : "border-base-300 bg-base-200 text-base-content/35",
+          )}
+          title="Previous interviewer"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+
+        <div
+          className="grid gap-2 sm:gap-3"
+          style={{
+            gridTemplateColumns: visibleInterviewerSlots
+              .map((slot) => (slot.isActive ? "minmax(0,1fr)" : "3.5rem"))
+              .join(" "),
+          }}
+        >
+          {visibleInterviewerSlots.map(({ interviewer, interviewerIndex, isActive }, index) => {
+            if (isActive) {
+              return (
+                <article
+                  key={interviewer.name}
+                  className="relative min-h-[22rem] overflow-hidden rounded-none border border-border bg-base-100 shadow-xl shadow-base-content/5"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={interviewer.avatar}
+                    alt={`${interviewer.name} headshot`}
+                    className="h-full w-full object-cover"
+                  />
+
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+
+                  <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 p-5 sm:p-6">
+                    <div className="max-w-xl text-left text-white">
+                      <p className="text-[clamp(1.8rem,4vw,2.8rem)] font-semibold leading-[0.95] tracking-[-0.05em]">
+                        {getInterviewerDisplayName(interviewer)}
+                      </p>
+                    </div>
+
+                    <div className="shrink-0 border border-white/20 bg-black/25 px-3 py-2 text-sm font-medium text-white/85">
+                      {interviewerIndex + 1} of {availableInterviewers.length}
+                    </div>
+                  </div>
+                </article>
+              );
+            }
+
+            return (
+              <button
+                key={`${interviewer.name}-${index}`}
+                type="button"
+                onClick={() => setSelectedInterviewerId(interviewer.id)}
+                disabled={sessionState !== "idle"}
+                className={cn(
+                  "group relative min-h-[22rem] overflow-hidden rounded-none border border-border bg-base-100 transition-transform enabled:hover:-translate-y-0.5",
+                  sessionState !== "idle" && "cursor-not-allowed opacity-70",
+                )}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={interviewer.avatar}
+                  alt={`${interviewer.name} headshot`}
+                  className="h-full w-full object-cover"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-80 transition-opacity group-hover:opacity-95" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 text-left">
+                  <p className="text-sm font-semibold text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)]">
+                    {getInterviewerDisplayName(interviewer)}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => cycleInterviewer(1)}
+          disabled={sessionState !== "idle" || availableInterviewers.length <= 1}
+          className={cn(
+            "absolute right-2 top-1/2 z-30 flex size-11 -translate-y-1/2 items-center justify-center rounded-none border transition sm:right-3",
+            sessionState === "idle" && availableInterviewers.length > 1
+              ? "border-border bg-base-100 text-base-content hover:bg-base-200"
+              : "border-base-300 bg-base-200 text-base-content/35",
+          )}
+          title="Next interviewer"
+        >
+          <ChevronRight className="size-5" />
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-base-200">
@@ -1089,16 +1373,18 @@ export function PracticeSession({
         {(sessionState === "idle" || sessionState === "connecting") && (
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:justify-center">
           <section className="flex flex-col items-center px-6 py-10 text-center">
-            <div className="max-w-xl space-y-3">
-              <p className="text-sm font-medium text-base-content/60">
-                {scenario.interviewer} · {scenario.interviewerRole}
-              </p>
-              <h1 className="text-2xl md:text-3xl">{sessionTitle}</h1>
-              <p className="text-base leading-7 text-base-content/60">
-                {scenario.prompt}
-              </p>
+            <div className="w-full max-w-5xl space-y-5">
+              <div className="mx-auto max-w-xl space-y-3">
+                <p className="text-sm font-medium text-base-content/60">
+                  {hydrated ? getInterviewerDisplayName(selectedInterviewer) : "Restoring selection..."}
+                </p>
+                <h1 className="text-2xl md:text-3xl">{sessionTitle}</h1>
+                <p className="text-base leading-7 text-base-content/60">
+                  {scenario.prompt}
+                </p>
+              </div>
               {isTechnical && codingProblem && (
-                <div className="mt-4 max-h-60 w-full overflow-y-auto rounded-none border border-border bg-base-100/60 p-4 text-left">
+                <div className="mx-auto mt-4 max-h-60 w-full max-w-3xl overflow-y-auto rounded-none border border-border bg-base-100/60 p-4 text-left">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="text-xs font-semibold">{codingProblem.sourceTitle}</span>
                     {codingProblem.sourceDifficulty && (
@@ -1206,16 +1492,20 @@ export function PracticeSession({
                 <button
                   type="button"
                   onClick={() => avatarRef.current?.start()}
-                  disabled={sessionState !== "idle"}
+                  disabled={sessionState !== "idle" || !hydrated}
                   className={cn(
                     "mt-3 flex items-center gap-2 rounded-none px-6 py-3 text-sm font-medium transition",
-                    sessionState === "idle"
+                    sessionState === "idle" && hydrated
                       ? "bg-primary text-primary-content shadow-lg shadow-primary/25 hover:bg-primary/90"
                       : "bg-base-300 text-base-content/50",
                   )}
                 >
                   <Phone className="size-4" />
-                  {sessionState === "connecting" ? "Connecting..." : "Start Interview"}
+                  {sessionState === "connecting"
+                    ? "Connecting..."
+                    : hydrated
+                      ? "Start Interview"
+                      : "Restoring..."}
                 </button>
               )}
             </div>
@@ -1227,7 +1517,8 @@ export function PracticeSession({
         {/* Media surface — keep mounted across state changes to avoid teardown/reconnect loops */}
         <div
           className={cn(
-            "z-20 overflow-hidden transition-all duration-500 ease-out",
+            "relative z-20 transition-all duration-500 ease-out",
+            showCenteredInterviewerCarousel ? "overflow-visible" : "overflow-hidden",
             (sessionState === "idle" || sessionState === "connecting") &&
               cn(
                 "w-full px-6 pt-6 pb-6 lg:self-center",
@@ -1255,7 +1546,27 @@ export function PracticeSession({
               "absolute inset-x-0 top-0 mx-auto w-full max-w-3xl p-6",
           )}
         >
-          {mediaSurface}
+          <div
+            className={cn(
+              showCenteredInterviewerCarousel && "pointer-events-none invisible",
+            )}
+            aria-hidden={showCenteredInterviewerCarousel}
+          >
+            {mediaSurface}
+          </div>
+          {showInterviewerHydrationState && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-center text-base-content/60">
+                <Loader2 className="size-6 animate-spin" />
+                <p className="text-sm font-medium">Restoring interviewer...</p>
+              </div>
+            </div>
+          )}
+          {showCenteredInterviewerCarousel && hydrated && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              {interviewerCarousel}
+            </div>
+          )}
         </div>
 
         {/* Active session layout — only once connected */}

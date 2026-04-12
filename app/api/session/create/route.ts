@@ -1,29 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOptionalServerSession } from "@/lib/auth";
+import {
+  generatedInterviewers,
+  getInterviewerById,
+  getInterviewerByName,
+} from "@/lib/interviewers";
 import { UserModel } from "@/lib/models";
 
 const LIVEAVATAR_API = "https://api.liveavatar.com";
-
-const AVATAR_POOL = [
-  { id: "cd1d101c-9273-431b-8069-63beef736bec", name: "Judy HR" },
-  { id: "65f9e3c9-d48b-4118-b73a-4ae2e3cbb8f0", name: "June HR" },
-  { id: "9650a758-1085-4d49-8bf3-f347565ec229", name: "Silas HR" },
-  { id: "0930fd59-c8ad-434d-ad53-b391a1768720", name: "Dexter Lawyer" },
-  { id: "513fd1b7-7ef9-466d-9af2-344e51eeb833", name: "Ann Therapist" },
-  { id: "7b888024-f8c9-4205-95e1-78ce01497bda", name: "Shawn Therapist" },
-  { id: "6e32f90a-f566-45be-9ec7-a5f6999ee606", name: "Judy Lawyer" },
-  { id: "b6c94c07-e4e5-483e-8bec-e838d5910b7d", name: "Judy Teacher" },
-];
 
 const TONE_CONTEXTS: Record<string, string> = {
   friendly: "58af8f44-e220-4da2-af71-5628613ca96b",
   neutral: "30b7e11a-bc17-460c-8ec2-a0de663ef512",
   tough: "d7fef5ad-ba75-4a37-af5f-4c37c5f04ce6",
 };
-
-function pickRandomAvatar() {
-  return AVATAR_POOL[Math.floor(Math.random() * AVATAR_POOL.length)];
-}
 
 function summarizeResumeText(resumeText: string | null | undefined) {
   if (!resumeText) {
@@ -62,6 +52,10 @@ export async function POST(req: NextRequest) {
       : {};
   const mode = body.mode === "call" ? "call" : "video";
   const tone = typeof body.tone === "string" ? body.tone : "neutral";
+  const interviewerId =
+    typeof body.interviewerId === "string" ? body.interviewerId.trim() : "";
+  const interviewerName =
+    typeof body.interviewerName === "string" ? body.interviewerName.trim() : "";
   const session = await getOptionalServerSession();
   const user = session?.user?.email ? await UserModel.getUserByEmail(session.user.email) : null;
   const resumeContext = summarizeResumeText(user?.resumeExtractedText);
@@ -70,11 +64,25 @@ export async function POST(req: NextRequest) {
   );
 
   if (mode === "video") {
-    const avatar = pickRandomAvatar();
+    const interviewer = interviewerId
+      ? getInterviewerById(interviewerId)
+      : getInterviewerByName(interviewerName);
+    const fallbackInterviewer = generatedInterviewers[0] ?? null;
+    const resolvedInterviewer = interviewer ?? fallbackInterviewer;
+    const avatar = resolvedInterviewer?.liveAvatar;
+
+    if (!avatar) {
+      return NextResponse.json(
+        { error: "No LiveAvatar interviewer is configured" },
+        { status: 500 },
+      );
+    }
+
     const sessionBody = {
       mode: "FULL",
       avatar_id: avatar.id,
       avatar_persona: {
+        ...(avatar.defaultVoice?.id ? { voice_id: avatar.defaultVoice.id } : {}),
         context_id: TONE_CONTEXTS[tone] ?? TONE_CONTEXTS.neutral,
         language: "en",
       },
@@ -108,6 +116,8 @@ export async function POST(req: NextRequest) {
       ...data,
       interviewMode: "video",
       avatarName: avatar.name,
+      avatarPreviewUrl: avatar.previewUrl ?? null,
+      avatarVoiceName: avatar.defaultVoice?.name ?? null,
       candidateName,
       resumeContext,
     });

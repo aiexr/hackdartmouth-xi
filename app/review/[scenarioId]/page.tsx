@@ -24,6 +24,9 @@ export const dynamic = "force-dynamic";
 type PersistedInterview = {
   scenarioId?: string | null;
   type?: string | null;
+  interviewerId?: string | null;
+  interviewerName?: string | null;
+  interviewerRole?: string | null;
   overallScore?: number | null;
   letterGrade?: string | null;
   gradingError?: string | null;
@@ -245,7 +248,11 @@ export default async function ReviewPage({
   );
   const hasKnownScenario = scenario.id === scenarioId;
   const displayTitle = hasKnownScenario ? scenario.title : formatScenarioTitleFromId(scenarioId);
-  const interviewerName = hasKnownScenario ? scenario.interviewer : "Interviewer";
+  const interviewerName = isNonEmptyString(interview?.interviewerName)
+    ? interview.interviewerName
+    : hasKnownScenario
+      ? scenario.interviewer
+      : "Interviewer";
   const practiceHref = getPracticeHref(scenarioId, interview?.type);
   const showStaticReview = hasKnownScenario && !hasPersistedReview && !persistedReviewLoadFailed;
   const showReviewContent = hasPersistedReview || showStaticReview;

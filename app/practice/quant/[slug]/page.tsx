@@ -4,16 +4,7 @@ import { use, useMemo } from "react";
 import { PracticeSession } from "@/components/app/practice-session";
 import { quantProblemsBySlug } from "@/data/quant-problems";
 import type { Scenario } from "@/data/scenarios";
-
-const AVATAR_MARCUS =
-  "https://images.unsplash.com/photo-1762522927402-f390672558d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600";
-const AVATAR_SARAH =
-  "https://images.unsplash.com/photo-1770058428154-9eee8a6a1fbb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600";
-
-const INTERVIEWERS = [
-  { name: "Marcus Rivera", role: "Senior Engineer", avatar: AVATAR_MARCUS },
-  { name: "Sarah Chen", role: "Engineering Manager", avatar: AVATAR_SARAH },
-];
+import { generatedInterviewers } from "@/lib/interviewers";
 
 const FOLLOW_UPS_BY_CATEGORY: Record<string, string[]> = {
   probability: [
@@ -49,7 +40,7 @@ export default function QuantPracticePage({
   const scenario = useMemo<Scenario | null>(() => {
     if (!problem) return null;
 
-    const interviewer = INTERVIEWERS[problem.order % INTERVIEWERS.length]!;
+    const interviewer = generatedInterviewers[problem.order % generatedInterviewers.length]!;
     const followUps = FOLLOW_UPS_BY_CATEGORY[problem.category] ?? FOLLOW_UPS_BY_CATEGORY.general;
 
     return {

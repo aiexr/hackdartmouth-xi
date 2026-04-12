@@ -5,16 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { PracticeSession } from "@/components/app/practice-session";
 import type { Scenario } from "@/data/scenarios";
-
-const AVATAR_MARCUS =
-  "https://images.unsplash.com/photo-1762522927402-f390672558d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600";
-const AVATAR_SARAH =
-  "https://images.unsplash.com/photo-1770058428154-9eee8a6a1fbb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600";
-
-const INTERVIEWERS = [
-  { name: "Marcus Rivera", role: "Senior Engineer", avatar: AVATAR_MARCUS },
-  { name: "Sarah Chen", role: "Engineering Manager", avatar: AVATAR_SARAH },
-];
+import { generatedInterviewers } from "@/lib/interviewers";
 
 type LcProblem = {
   questionFrontendId: string;
@@ -177,7 +168,8 @@ export default function LcPracticePage({
         if (scaffold.error) throw new Error(scaffold.error);
         if (cancelled) return;
 
-        const interviewer = INTERVIEWERS[Math.floor(Math.random() * INTERVIEWERS.length)]!;
+        const interviewer =
+          generatedInterviewers[Math.floor(Math.random() * generatedInterviewers.length)]!;
         const examples = parseExamples(plain);
         const constraints = parseConstraints(plain);
         const duration =

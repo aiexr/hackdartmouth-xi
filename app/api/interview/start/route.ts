@@ -17,8 +17,12 @@ export async function POST(req: NextRequest) {
     type?: string;
     difficulty?: string;
     scenarioId?: string | null;
+    interviewerId?: string | null;
+    interviewerName?: string | null;
+    interviewerRole?: string | null;
   };
-  const { type, difficulty, scenarioId } = body;
+  const { type, difficulty, scenarioId, interviewerId, interviewerName, interviewerRole } =
+    body;
 
   const interview = {
     userId: session.user.email,
@@ -27,6 +31,9 @@ export async function POST(req: NextRequest) {
     type: type ?? "behavioral",
     difficulty: difficulty ?? "medium",
     scenarioId: scenarioId ?? null,
+    interviewerId: interviewerId ?? null,
+    interviewerName: interviewerName ?? null,
+    interviewerRole: interviewerRole ?? null,
     status: "in_progress",
     transcript: [],
     overallScore: null,
