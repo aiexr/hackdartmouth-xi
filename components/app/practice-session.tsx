@@ -383,6 +383,8 @@ function buildInitialInterviewerPrompt(
       }
     }
     sharedContext.push(
+      "Keep this round focused on the candidate's live problem solving, code, testing instinct, debugging, and complexity tradeoffs.",
+      "Treat any resume or background context as secondary. Do not spend time asking about the candidate's background unless they explicitly bring it up or it is directly relevant to the code discussion.",
       "The candidate may share scratchpad or code editor snapshots from the app. Treat those snapshots as the current source of truth.",
       "Never claim you cannot access the candidate's scratchpad or code editor.",
     );
