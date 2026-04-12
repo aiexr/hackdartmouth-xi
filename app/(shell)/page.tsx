@@ -289,19 +289,11 @@ export default async function DashboardPage() {
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="overflow-hidden">
           <CardContent className="p-7 md:p-8">
-            <div className="space-y-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                    <Target className="size-4" />
-                    Suggested next reps
-                  </div>
-                  <h1 className="mt-3 max-w-2xl">
-                    Start with three strong interview reps.
-                  </h1>
-                  <p className="mt-3 max-w-2xl text-base text-base-content/60 md:text-lg">
-                    These stay visible even on a brand-new account, so you always have a clear place to start.
-                  </p>
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <Target className="size-4" />
+                  Suggested next reps
                 </div>
                 <Button asChild variant="outline" size="sm">
                   <Link href="/practice">Browse all practice</Link>
@@ -326,25 +318,11 @@ export default async function DashboardPage() {
                         <p className="mt-1 text-sm leading-6 text-base-content/60">
                           {scenario.reason}
                         </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.12em] text-base-content/45">
-                          <span>{scenario.trackLabel}</span>
-                          <span>-</span>
-                          <span>{scenario.meta}</span>
-                        </div>
                       </div>
                     </div>
                     <ArrowRight className="mt-1 size-4 shrink-0 text-base-content/30 transition group-hover:text-primary" />
                   </Link>
                 ))}
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Button asChild size="lg" className="text-white">
-                  <Link href={`/practice/${dashboardSuggestedScenarios[0].id}`}>
-                    <Play className="w-4 h-4" />
-                    Start quick practice
-                  </Link>
-                </Button>
               </div>
             </div>
           </CardContent>
