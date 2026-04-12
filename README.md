@@ -1,6 +1,6 @@
 # Deployment
 
-https://hackdartmouth-xi.alex-6e4.workers.dev
+https://leetspeak.live/
 
 ---
 

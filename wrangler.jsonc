@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "keep_vars": true,
   "vars": {
-    "NEXTAUTH_URL": "https://hackdartmouth-xi.alex-6e4.workers.dev",
+    "NEXTAUTH_URL": "https://leetspeak.live/",
     "NEXTJS_ENV": "production"
   },
   "assets": {
