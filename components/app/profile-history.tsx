@@ -55,10 +55,18 @@ function formatEndedAt(
 
 function getSessionStatus(session: HistorySession) {
   if (session.overallScore !== null) {
+    const badgeClassName =
+      session.overallScore >= 85
+        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-600"
+        : session.overallScore >= 70
+          ? "border-sky-500/20 bg-sky-500/10 text-sky-600"
+          : session.overallScore >= 55
+            ? "border-amber-500/20 bg-amber-500/10 text-amber-600"
+            : "border-rose-500/20 bg-rose-500/10 text-rose-600";
+
     return {
       badgeLabel: `${session.overallScore}`,
-      badgeClassName:
-        "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
+      badgeClassName,
       summary: session.scoreDelta === null
         ? "Performance grading available"
         : `${session.scoreDelta > 0 ? "+" : ""}${session.scoreDelta} vs last attempt`,

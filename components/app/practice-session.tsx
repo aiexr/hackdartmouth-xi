@@ -1227,7 +1227,7 @@ export function PracticeSession({
           onClick={() => cycleInterviewer(-1)}
           disabled={sessionState !== "idle" || availableInterviewers.length <= 1}
           className={cn(
-            "absolute left-2 top-1/2 z-30 flex size-11 -translate-y-1/2 items-center justify-center rounded-none border shadow-lg shadow-base-content/10 transition sm:left-3",
+            "absolute left-2 top-1/2 z-30 flex size-11 -translate-y-1/2 items-center justify-center rounded-none border transition sm:left-3",
             sessionState === "idle" && availableInterviewers.length > 1
               ? "border-border bg-base-100 text-base-content hover:bg-base-200"
               : "border-base-300 bg-base-200 text-base-content/35",
@@ -1542,7 +1542,7 @@ export function PracticeSession({
         {/* Media surface — keep mounted across state changes to avoid teardown/reconnect loops */}
         <div
           className={cn(
-            "relative z-20 transition-all duration-500 ease-out",
+            "relative z-20 transition-[max-width,margin,padding] duration-300 ease-in-out",
             showCenteredInterviewerCarousel ? "overflow-visible" : "overflow-hidden",
             (sessionState === "idle" || sessionState === "connecting") &&
               cn(
@@ -1746,7 +1746,7 @@ export function PracticeSession({
 
         <aside
           className={cn(
-            "flex min-h-0 flex-col border-t border-border bg-base-100/85 backdrop-blur transition-all duration-200 lg:border-l lg:border-t-0",
+            "flex min-h-0 flex-col overflow-hidden border-t border-border bg-base-100/85 backdrop-blur transition-[width] duration-300 ease-in-out lg:border-l lg:border-t-0",
             panelOpen ? "lg:w-[24rem] lg:overflow-y-auto" : "lg:w-10",
           )}
         >

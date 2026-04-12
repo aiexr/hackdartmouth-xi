@@ -18,6 +18,11 @@ export default function AuthPopupHandoffPage() {
   const router = useRouter();
   const [stage, setStage] = useState<"compact" | "expanded">("compact");
   const [geometry, setGeometry] = useState<PreviewGeometry | null>(null);
+  const [canUseClientGeometry, setCanUseClientGeometry] = useState(false);
+
+  useLayoutEffect(() => {
+    setCanUseClientGeometry(true);
+  }, []);
 
   useLayoutEffect(() => {
     try {
@@ -67,7 +72,7 @@ export default function AuthPopupHandoffPage() {
     <div className="fixed inset-0 overflow-hidden bg-background">
       <div
         className="absolute overflow-hidden transition-[top,left,width,height,transform] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-        style={getHandoffStyle(stage, geometry)}
+        style={getHandoffStyle(stage, geometry, canUseClientGeometry)}
       >
         <ScaledDashboardPreview className="max-w-none" />
       </div>
@@ -78,6 +83,7 @@ export default function AuthPopupHandoffPage() {
 function getHandoffStyle(
   stage: "compact" | "expanded",
   geometry: PreviewGeometry | null,
+  canUseClientGeometry: boolean,
 ) {
   if (stage === "expanded") {
     return {
@@ -89,7 +95,7 @@ function getHandoffStyle(
     };
   }
 
-  if (typeof window === "undefined") {
+  if (!canUseClientGeometry || typeof window === "undefined") {
     return {
       top: "12vh",
       left: "52vw",
