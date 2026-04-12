@@ -123,6 +123,13 @@ function toUser(value: Record<string, unknown>): User {
               Math.max(WEEKLY_GOAL_MIN, Math.round(preferences.weeklyGoal as number)),
             )
           : 4,
+      interviewWrapUpMinutes:
+        preferences.interviewWrapUpMinutes === null
+          ? null
+          : typeof preferences.interviewWrapUpMinutes === "number" &&
+              Number.isFinite(preferences.interviewWrapUpMinutes)
+            ? Math.max(1, Math.min(60, Math.round(preferences.interviewWrapUpMinutes as number)))
+            : null,
     },
     favorites,
     createdAt:

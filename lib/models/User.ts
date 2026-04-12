@@ -16,6 +16,7 @@ export interface User {
     feedbackStyle: "detailed" | "concise" | "structured";
     practiceReminders: boolean;
     weeklyGoal: number;
+    interviewWrapUpMinutes: number | null;
   };
   favorites: FavoriteItem[];
   createdAt: Date;
@@ -49,6 +50,7 @@ export class UserModel {
             feedbackStyle: "structured",
             practiceReminders: true,
             weeklyGoal: 4,
+            interviewWrapUpMinutes: null,
           },
           favorites: [],
           createdAt: now,
@@ -98,6 +100,7 @@ export class UserModel {
             feedbackStyle: "structured",
             practiceReminders: true,
             weeklyGoal: 4,
+            interviewWrapUpMinutes: null,
           },
           favorites: [],
           createdAt: now,

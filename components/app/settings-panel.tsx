@@ -2,10 +2,66 @@
 
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
-import { Loader2, Moon, Trash2, X } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  Moon,
+  RotateCcw,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+const INTERVIEW_WRAP_UP_MIN = 1;
+const INTERVIEW_WRAP_UP_MAX = 60;
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+async function readApiError(response: Response, fallback: string) {
+  const raw = await response.text();
+  const trimmed = raw.trim();
+
+  if (!trimmed) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    const payload = asRecord(parsed);
+    if (typeof payload.error === "string" && payload.error.trim()) {
+      return payload.error.trim();
+    }
+  } catch {
+    // Ignore JSON parsing failures and fall back to raw text below.
+  }
+
+  return trimmed.slice(0, 240) || fallback;
+}
+
+function normalizeInterviewWrapUpMinutes(value: unknown) {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(
+      INTERVIEW_WRAP_UP_MIN,
+      Math.min(INTERVIEW_WRAP_UP_MAX, Math.round(value)),
+    );
+  }
+
+  return null;
+}
 
 function SettingsPanelSkeleton() {
   return (
@@ -45,6 +101,29 @@ function SettingsPanelSkeleton() {
         </Card>
       </div>
 
+      <div className="space-y-4">
+        <div className="h-7 w-24 rounded-none bg-base-300/45" />
+        <Card className="bg-base-100/80">
+          <CardContent className="py-5 pr-5 pl-8">
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="size-11 rounded-none bg-base-300/45" />
+                <div className="min-w-0 flex-1 space-y-3">
+                  <div className="h-5 w-52 rounded-none bg-base-300/50" />
+                  <div className="h-4 w-full rounded-none bg-base-300/35" />
+                  <div className="h-4 w-5/6 rounded-none bg-base-300/35" />
+                </div>
+              </div>
+              <div className="h-10 w-36 rounded-none bg-base-300/45" />
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-28 rounded-none bg-base-300/45" />
+                <div className="h-9 w-32 rounded-none bg-base-300/45" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex items-center gap-3 pt-2">
         <div className="h-9 w-20 rounded-none bg-base-300/45" />
         <div className="h-9 w-20 rounded-none bg-base-300/45" />
@@ -61,6 +140,14 @@ function SettingsPanelSkeleton() {
 export function SettingsPanel() {
   const [hydrated, setHydrated] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [preferencesLoading, setPreferencesLoading] = useState(true);
+  const [interviewWrapUpMinutes, setInterviewWrapUpMinutes] = useState("");
+  const [savedInterviewWrapUpMinutes, setSavedInterviewWrapUpMinutes] = useState<number | null>(
+    null,
+  );
+  const [interviewError, setInterviewError] = useState<string | null>(null);
+  const [interviewSuccess, setInterviewSuccess] = useState(false);
+  const [isSavingInterviewPreference, setIsSavingInterviewPreference] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -81,7 +168,69 @@ export function SettingsPanel() {
     setHydrated(true);
   }, []);
 
-  if (!hydrated) {
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadInterviewPreference() {
+      setPreferencesLoading(true);
+      setInterviewError(null);
+
+      try {
+        const response = await fetch("/api/user/profile", {
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            await readApiError(response, "Failed to load interview settings."),
+          );
+        }
+
+        const payload = asRecord(await response.json());
+        const preferences = asRecord(payload.preferences);
+        const wrapUpMinutes = normalizeInterviewWrapUpMinutes(
+          preferences.interviewWrapUpMinutes,
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        setSavedInterviewWrapUpMinutes(wrapUpMinutes);
+        setInterviewWrapUpMinutes(wrapUpMinutes === null ? "" : String(wrapUpMinutes));
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setSavedInterviewWrapUpMinutes(null);
+        setInterviewWrapUpMinutes("");
+        setInterviewError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load interview settings.",
+        );
+      } finally {
+        if (!cancelled) {
+          setPreferencesLoading(false);
+        }
+      }
+    }
+
+    void loadInterviewPreference();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated]);
+
+  if (!hydrated || preferencesLoading) {
     return <SettingsPanelSkeleton />;
   }
 
@@ -94,6 +243,81 @@ export function SettingsPanel() {
       document.documentElement.setAttribute("data-theme", "corporate");
       localStorage.setItem("theme", "corporate");
     }
+  }
+
+  function handleInterviewWrapUpChange(value: string) {
+    setInterviewWrapUpMinutes(value);
+    setInterviewError(null);
+    setInterviewSuccess(false);
+  }
+
+  async function persistInterviewWrapUpPreference(value: number | null) {
+    setInterviewError(null);
+    setInterviewSuccess(false);
+    setIsSavingInterviewPreference(true);
+
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          preferences: {
+            interviewWrapUpMinutes: value,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          await readApiError(response, "Failed to update interview settings."),
+        );
+      }
+
+      const payload = asRecord(await response.json());
+      const preferences = asRecord(payload.preferences);
+      const nextWrapUpMinutes = normalizeInterviewWrapUpMinutes(
+        preferences.interviewWrapUpMinutes,
+      );
+
+      setSavedInterviewWrapUpMinutes(nextWrapUpMinutes);
+      setInterviewWrapUpMinutes(
+        nextWrapUpMinutes === null ? "" : String(nextWrapUpMinutes),
+      );
+      setInterviewSuccess(true);
+      window.setTimeout(() => setInterviewSuccess(false), 3000);
+    } catch (error) {
+      setInterviewError(
+        error instanceof Error
+          ? error.message
+          : "Failed to update interview settings.",
+      );
+    } finally {
+      setIsSavingInterviewPreference(false);
+    }
+  }
+
+  async function handleSaveInterviewPreference() {
+    const trimmed = interviewWrapUpMinutes.trim();
+
+    if (!trimmed) {
+      await persistInterviewWrapUpPreference(null);
+      return;
+    }
+
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) {
+      setInterviewError("Enter a whole number between 1 and 60, or clear the field.");
+      setInterviewSuccess(false);
+      return;
+    }
+
+    await persistInterviewWrapUpPreference(parsed);
+  }
+
+  async function handleResetInterviewPreference() {
+    await persistInterviewWrapUpPreference(null);
   }
 
   async function handleDeleteData() {
@@ -151,6 +375,115 @@ export function SettingsPanel() {
               </div>
               <div className="ml-auto shrink-0 self-start">
                 <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Interview */}
+      <div>
+        <h2 className="mb-4 text-lg font-semibold">Interview</h2>
+        <Card className="bg-base-100/80">
+          <CardContent className="py-5 pr-5 pl-8">
+            <div className="space-y-5">
+              <div className="flex w-full items-start gap-4">
+                <div className="flex min-w-0 flex-1 items-start gap-4 text-left">
+                  <div className="flex size-11 items-center justify-center rounded-none bg-primary/10 text-primary">
+                    <Clock3 className="size-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base">Start wrapping up after (minutes)</h3>
+                    <p className="text-sm leading-6 text-base-content/60">
+                      Applies to both video and voice interviews. Leave this empty
+                      to use each round&apos;s suggested duration instead.
+                    </p>
+                    {savedInterviewWrapUpMinutes !== null ? (
+                      <p className="mt-2 text-sm leading-6 text-base-content/55">
+                        Current saved default: {savedInterviewWrapUpMinutes} minute
+                        {savedInterviewWrapUpMinutes === 1 ? "" : "s"}.
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-sm leading-6 text-base-content/55">
+                        Current saved default: use the round&apos;s suggested duration.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-w-xs space-y-2">
+                <label
+                  htmlFor="interview-wrap-up-minutes"
+                  className="text-[11px] font-semibold uppercase tracking-[0.16em] text-base-content/55"
+                >
+                  Wrap-Up Threshold
+                </label>
+                <Input
+                  id="interview-wrap-up-minutes"
+                  type="number"
+                  min={INTERVIEW_WRAP_UP_MIN}
+                  max={INTERVIEW_WRAP_UP_MAX}
+                  inputMode="numeric"
+                  value={interviewWrapUpMinutes}
+                  onChange={(event) => handleInterviewWrapUpChange(event.target.value)}
+                  disabled={isSavingInterviewPreference}
+                  placeholder="Use round default"
+                />
+                <p className="text-xs text-base-content/55">
+                  Values are saved as whole minutes and clamped to 1-60.
+                </p>
+              </div>
+
+              {interviewError ? (
+                <div className="flex items-start gap-3 rounded-none border border-red-200 bg-red-50 p-4">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600" />
+                  <p className="text-sm text-red-800">{interviewError}</p>
+                </div>
+              ) : null}
+
+              {interviewSuccess ? (
+                <div className="flex items-start gap-3 rounded-none border border-green-200 bg-green-50 p-4">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-600" />
+                  <p className="text-sm text-green-800">
+                    Interview wrap-up preference saved.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={() => void handleSaveInterviewPreference()}
+                  disabled={isSavingInterviewPreference}
+                  className="gap-2"
+                >
+                  {isSavingInterviewPreference ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="size-4" />
+                      Save Preference
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleResetInterviewPreference()}
+                  disabled={
+                    isSavingInterviewPreference ||
+                    (savedInterviewWrapUpMinutes === null &&
+                      interviewWrapUpMinutes.trim() === "")
+                  }
+                  className="gap-2"
+                >
+                  <RotateCcw className="size-4" />
+                  Use Round Default
+                </Button>
               </div>
             </div>
           </CardContent>

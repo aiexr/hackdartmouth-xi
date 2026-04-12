@@ -2,6 +2,66 @@ import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 import { UserModel, type User } from "@/lib/models";
 
+const WEEKLY_GOAL_MIN = 1;
+const WEEKLY_GOAL_MAX = 30;
+const INTERVIEW_WRAP_UP_MIN = 1;
+const INTERVIEW_WRAP_UP_MAX = 60;
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function sanitizePreferences(
+  preferences: User["preferences"] | Record<string, unknown> | null | undefined,
+): User["preferences"] {
+  const raw = asRecord(preferences);
+
+  return {
+    voiceId:
+      typeof raw.voiceId === "string" || raw.voiceId === null
+        ? (raw.voiceId as string | null)
+        : null,
+    feedbackStyle:
+      raw.feedbackStyle === "detailed" ||
+      raw.feedbackStyle === "concise" ||
+      raw.feedbackStyle === "structured"
+        ? (raw.feedbackStyle as User["preferences"]["feedbackStyle"])
+        : "structured",
+    practiceReminders:
+      typeof raw.practiceReminders === "boolean"
+        ? raw.practiceReminders
+        : true,
+    weeklyGoal:
+      typeof raw.weeklyGoal === "number" && Number.isFinite(raw.weeklyGoal)
+        ? Math.min(WEEKLY_GOAL_MAX, Math.max(WEEKLY_GOAL_MIN, Math.round(raw.weeklyGoal)))
+        : 4,
+    interviewWrapUpMinutes:
+      raw.interviewWrapUpMinutes === null
+        ? null
+        : typeof raw.interviewWrapUpMinutes === "number" &&
+            Number.isFinite(raw.interviewWrapUpMinutes)
+          ? Math.min(
+              INTERVIEW_WRAP_UP_MAX,
+              Math.max(INTERVIEW_WRAP_UP_MIN, Math.round(raw.interviewWrapUpMinutes)),
+            )
+          : null,
+  };
+}
+
+function validateInterviewWrapUpPreference(value: unknown) {
+  if (
+    value !== undefined &&
+    value !== null &&
+    (typeof value !== "number" || !Number.isFinite(value))
+  ) {
+    return "Wrap-up timing must be a whole number between 1 and 60 minutes or cleared.";
+  }
+
+  return null;
+}
+
 function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUserByEmail>>) {
   if (!user) {
     return null;
@@ -10,6 +70,7 @@ function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUser
   const { resumeExtractedText, ...publicUser } = user;
   return {
     ...publicUser,
+    preferences: sanitizePreferences(user.preferences),
     hasResumeContext: Boolean(resumeExtractedText?.trim()),
   };
 }
@@ -33,12 +94,7 @@ function buildFallbackUserProfile({
     focusTrack: null,
     bio: null,
     resumeExtractedText: null,
-    preferences: {
-      voiceId: null,
-      feedbackStyle: "structured",
-      practiceReminders: true,
-      weeklyGoal: 4,
-    },
+    preferences: sanitizePreferences(null),
     favorites: [],
     createdAt: now,
     updatedAt: now,
@@ -110,6 +166,9 @@ export async function PATCH(request: Request) {
         ? (rawBody as Record<string, unknown>)
         : {};
     const { name, bio, focusTrack, preferences, weeklyGoal, resumeExtractedText } = body;
+    const rawPreferences = preferences && typeof preferences === "object"
+      ? (preferences as Record<string, unknown>)
+      : null;
 
     const updates: Record<string, unknown> = {};
 
@@ -119,7 +178,7 @@ export async function PATCH(request: Request) {
     if (resumeExtractedText !== undefined) updates.resumeExtractedText = resumeExtractedText;
     let parsedWeeklyGoal: number | undefined;
     if (typeof weeklyGoal === "number" && Number.isFinite(weeklyGoal)) {
-      parsedWeeklyGoal = Math.min(30, Math.max(1, Math.round(weeklyGoal)));
+      parsedWeeklyGoal = Math.min(WEEKLY_GOAL_MAX, Math.max(WEEKLY_GOAL_MIN, Math.round(weeklyGoal)));
     }
 
     if (preferences !== undefined || parsedWeeklyGoal !== undefined) {
@@ -130,20 +189,21 @@ export async function PATCH(request: Request) {
         "google",
       );
 
-      const basePreferences =
-        user.preferences ?? {
-          voiceId: null,
-          feedbackStyle: "structured" as const,
-          practiceReminders: true,
-          weeklyGoal: 4,
-        };
+      const basePreferences = sanitizePreferences(user.preferences);
+
+      const interviewWrapUpValidationError = validateInterviewWrapUpPreference(
+        rawPreferences?.interviewWrapUpMinutes,
+      );
+      if (interviewWrapUpValidationError) {
+        return Response.json({ error: interviewWrapUpValidationError }, { status: 400 });
+      }
 
       const mergedPreferences =
-        preferences && typeof preferences === "object"
-          ? {
+        rawPreferences
+          ? sanitizePreferences({
               ...basePreferences,
-              ...(preferences as Record<string, unknown>),
-            }
+              ...rawPreferences,
+            })
           : { ...basePreferences };
 
       if (parsedWeeklyGoal !== undefined) {

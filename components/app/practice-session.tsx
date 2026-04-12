@@ -95,11 +95,13 @@ const EDITOR_CONTEXT_MAX_LINES = 80;
 const EDITOR_CONTEXT_MAX_CHARS = 3200;
 const INTERVIEWER_CAROUSEL_SLOT_COUNT = 5;
 const INTERNAL_PROMPT_MARKER = "[[internal-interviewer-context]]";
-const PRE_END_QUESTION = "Ddo you have any questions?";
+const PRE_END_QUESTION = "Do you have any questions?";
 const GRACEFUL_END_MESSAGE = "Thank you for your time today. I'm going to end the interview here now.";
 const INTERVIEWER_CLOSING_DELAY_MIN_MS = 3200;
 const INTERVIEWER_CLOSING_DELAY_MAX_MS = 5000;
 const ENDING_COUNTDOWN_TICK_MS = 100;
+const INTERVIEW_WRAP_UP_MIN = 1;
+const INTERVIEW_WRAP_UP_MAX = 60;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"
@@ -132,6 +134,39 @@ function formatEditorSnapshotForPrompt(editorContent: string) {
   }
 
   return `${numbered.slice(0, EDITOR_CONTEXT_MAX_CHARS)}\n...[truncated]`;
+}
+
+function parseDurationMinutes(duration: string | null | undefined) {
+  if (!duration) {
+    return null;
+  }
+
+  const match = duration.match(/(\d+)/);
+  if (!match) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizeWrapUpMinutes(value: unknown) {
+  if (value === null) {
+    return null;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(
+      INTERVIEW_WRAP_UP_MIN,
+      Math.min(INTERVIEW_WRAP_UP_MAX, Math.round(value)),
+    );
+  }
+
+  return null;
+}
+
+function normalizeTranscriptText(text: string) {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
 }
 
 function hashPromptKey(text: string) {
@@ -258,6 +293,17 @@ function getTranscriptTimestampMs(entry: Pick<TranscriptEntry, "timestamp">) {
   return new Date(entry.timestamp).getTime();
 }
 
+function hasInterviewerAskedFinalQuestion(transcript: TranscriptEntry[]) {
+  const normalizedFinalQuestion = normalizeTranscriptText(PRE_END_QUESTION);
+
+  return transcript.some(
+    (entry) =>
+      entry.role === "interviewer" &&
+      !entry.partial &&
+      normalizeTranscriptText(entry.content).includes(normalizedFinalQuestion),
+  );
+}
+
 function getStableInterviewerIndex(seed: string, count: number) {
   if (count <= 0) {
     return 0;
@@ -362,7 +408,7 @@ export function PracticeSession({
   scenario: Scenario;
   displayTitle?: string;
 }) {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const storageKey = `practice-state:${scenario.id}`;
   const isTechnical = scenario.category === "technical";
@@ -371,6 +417,10 @@ export function PracticeSession({
   const hasSplitView = isTechnical || isSystemDesign;
   const codingProblem = scenario.codingProblem;
   const isQuantProblem = codingProblem?.source === "BrainStellar";
+  const scenarioDurationMinutes = useMemo(
+    () => parseDurationMinutes(scenario.duration),
+    [scenario.duration],
+  );
   const candidateName =
     typeof session?.user?.name === "string"
       ? session.user.name.replace(/\s+/g, " ").trim().split(" ")[0] ?? ""
@@ -409,6 +459,9 @@ export function PracticeSession({
   const [endingCountdownMsRemaining, setEndingCountdownMsRemaining] = useState<number | null>(null);
   const [activeInterviewId, setActiveInterviewId] = useState<string | null>(null);
   const [persistedTranscriptIds, setPersistedTranscriptIds] = useState<string[]>([]);
+  const [savedInterviewWrapUpMinutes, setSavedInterviewWrapUpMinutes] = useState<
+    number | null | undefined
+  >(undefined);
   const whiteboardRef = useRef<WhiteboardHandle | null>(null);
   const avatarRef = useRef<LiveAvatarHandle | null>(null);
   const voiceCallRef = useRef<VoiceCallHandle | null>(null);
@@ -422,6 +475,7 @@ export function PracticeSession({
   const moderationEndingRef = useRef(false);
   const pendingGracefulEndRef = useRef(false);
   const endingCountdownDeadlineRef = useRef<number | null>(null);
+  const timedWrapUpPromptSentRef = useRef(false);
   const savedCodeVersionRef = useRef(0);
   const lastInterviewerClosureTurnIdRef = useRef<string | null>(null);
   const sessionEndHandledRef = useRef(false);
@@ -433,6 +487,13 @@ export function PracticeSession({
     () => getInterviewerById(selectedInterviewerId, availableInterviewers) ?? defaultInterviewer,
     [availableInterviewers, defaultInterviewer, selectedInterviewerId],
   );
+  const effectiveInterviewWrapUpMinutes = useMemo(() => {
+    if (savedInterviewWrapUpMinutes === undefined) {
+      return null;
+    }
+
+    return savedInterviewWrapUpMinutes ?? scenarioDurationMinutes;
+  }, [savedInterviewWrapUpMinutes, scenarioDurationMinutes]);
   const selectedInterviewerIndex = useMemo(() => {
     const index = availableInterviewers.findIndex(
       (interviewer) => interviewer.id === selectedInterviewer.id,
@@ -576,6 +637,47 @@ export function PracticeSession({
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (sessionStatus === "loading") {
+      return;
+    }
+
+    if (!session?.user?.email) {
+      setSavedInterviewWrapUpMinutes(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSavedInterviewWrapUpMinutes(undefined);
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/user/profile", {
+          headers: {
+            Accept: "application/json",
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to load interview settings.");
+        }
+
+        const payload = asRecord(await response.json());
+        const preferences = asRecord(payload.preferences);
+        setSavedInterviewWrapUpMinutes(
+          normalizeWrapUpMinutes(preferences.interviewWrapUpMinutes),
+        );
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setSavedInterviewWrapUpMinutes(null);
+        }
+      }
+    })();
+
+    return () => controller.abort();
+  }, [session?.user?.email, sessionStatus]);
 
   useEffect(() => {
     try {
@@ -819,6 +921,53 @@ export function PracticeSession({
   }, [candidateName, scenario, selectedInterviewer, sessionState]);
 
   useEffect(() => {
+    if (
+      sessionState !== "connected" ||
+      effectiveInterviewWrapUpMinutes === null ||
+      timedWrapUpPromptSentRef.current ||
+      pendingGracefulEndRef.current ||
+      moderationEndingRef.current
+    ) {
+      return;
+    }
+
+    if (seconds < effectiveInterviewWrapUpMinutes * 60) {
+      return;
+    }
+
+    timedWrapUpPromptSentRef.current = true;
+
+    const alreadyAskedFinalQuestion = hasInterviewerAskedFinalQuestion(transcript);
+    const promptBody = alreadyAskedFinalQuestion
+      ? [
+          "The interview has reached its wrap-up time.",
+          "Do not open any new topics or ask any new substantive questions.",
+          `You have already asked the final wrap-up question: "${PRE_END_QUESTION}"`,
+          "If the candidate has not answered it yet, wait for their answer first.",
+          `Once they answer, respond briefly if needed and then say exactly: "${GRACEFUL_END_MESSAGE}"`,
+          "End immediately after that closing sentence.",
+        ].join("\n\n")
+      : [
+          "The interview has reached its wrap-up time.",
+          "Do not open any new topics or ask any new substantive questions.",
+          `Ask exactly this question now: "${PRE_END_QUESTION}"`,
+          `After the candidate answers, respond briefly if needed and then say exactly: "${GRACEFUL_END_MESSAGE}"`,
+          "Do not combine the question and the closing sentence in the same turn.",
+        ].join("\n\n");
+
+    setInterviewerPrompt({
+      id: `${scenario.id}-timed-wrap-up-${hashPromptKey(promptBody)}`,
+      text: wrapInternalPrompt(promptBody),
+    });
+  }, [
+    effectiveInterviewWrapUpMinutes,
+    scenario.id,
+    seconds,
+    sessionState,
+    transcript,
+  ]);
+
+  useEffect(() => {
     if (!endingCountdownDeadline || sessionState !== "connected") {
       return;
     }
@@ -843,6 +992,7 @@ export function PracticeSession({
       moderationEndingRef.current = false;
       pendingGracefulEndRef.current = false;
       sessionEndHandledRef.current = false;
+      timedWrapUpPromptSentRef.current = false;
       savedCodeVersionRef.current = 0;
       lastInterviewerClosureTurnIdRef.current = null;
       setInterviewerPrompt(null);

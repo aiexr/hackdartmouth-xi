@@ -10,7 +10,7 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="mt-3 max-w-2xl text-base text-base-content/60">
-            Appearance and account controls.
+            Appearance, interview preferences, and account controls.
           </p>
         </div>
 
