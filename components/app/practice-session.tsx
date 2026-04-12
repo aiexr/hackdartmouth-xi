@@ -426,7 +426,7 @@ export function PracticeSession({
     interviewMode === "video" ? (
       <LiveAvatar
         ref={hasSplitView ? avatarRef : undefined}
-        compact={hasSplitView}
+        compact={hasSplitView && (sessionState === "connected" || sessionState === "ended")}
         tone={interviewTone}
         promptRequest={interviewerPrompt}
         onTranscriptUpdate={setTranscript}
@@ -504,9 +504,10 @@ export function PracticeSession({
       </header>
 
       <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden">
-        {/* Pre-session screen (idle + connecting) */}
+        {/* Pre-session screen (idle + connecting) — media surface flows inline */}
         {(sessionState === "idle" || sessionState === "connecting") && (
-          <section className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 py-10 text-center">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <section className="flex flex-col items-center px-6 py-10 text-center">
             <div className="max-w-xl space-y-3">
               <p className="text-sm font-medium text-base-content/60">
                 {scenario.interviewer} · {scenario.interviewerRole}
@@ -598,10 +599,10 @@ export function PracticeSession({
                     type="button"
                     onClick={() => setInterviewTone(tone.id)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-none px-3 py-1.5 text-xs font-medium transition",
+                      "flex cursor-pointer items-center gap-1.5 rounded-none border px-3 py-1.5 text-xs font-medium transition",
                       interviewTone === tone.id
-                        ? "bg-neutral/10 text-base-content"
-                        : "text-base-content/60 hover:bg-base-200 hover:text-base-content",
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content",
                     )}
                     title={tone.description}
                   >
@@ -656,28 +657,28 @@ export function PracticeSession({
             </div>
 
           </section>
+
+          {/* Media surface — inline in pre-session flow, centered */}
+          <div className="mx-auto w-full max-w-2xl px-6 pb-6">
+            {mediaSurface}
+          </div>
+          </div>
         )}
 
-        {/*
-         * Media surface — ALWAYS rendered, never inside a conditional branch.
-         * Positioned via CSS based on session state.
-         */}
-        <div
-          className={cn(
-            "z-20 overflow-hidden",
-            // Idle / connecting: in-flow, pinned to bottom of the pre-session area
-            (sessionState === "idle" || sessionState === "connecting") &&
-              "absolute bottom-0 left-0 right-0 lg:right-96 mx-auto w-full max-w-2xl p-6",
-            // Connected + split-view: PiP overlay in top-left
-            (sessionState === "connected" || sessionState === "ended") && hasSplitView &&
-              "absolute left-4 top-4 w-56 border border-border bg-base-100 shadow-lg xl:w-64",
-            // Connected + behavioral: centered, top of main area
-            (sessionState === "connected" || sessionState === "ended") && !hasSplitView &&
-              "absolute inset-x-0 top-0 mx-auto w-full max-w-3xl p-6",
-          )}
-        >
-          {mediaSurface}
-        </div>
+        {/* Media surface — absolute positioned for connected/ended states */}
+        {(sessionState === "connected" || sessionState === "ended") && (
+          <div
+            className={cn(
+              "z-20 overflow-hidden",
+              hasSplitView &&
+                "absolute left-4 top-4 w-56 border border-base-300 bg-base-100 shadow-lg xl:w-64",
+              !hasSplitView &&
+                "absolute inset-x-0 top-0 mx-auto w-full max-w-3xl p-6",
+            )}
+          >
+            {mediaSurface}
+          </div>
+        )}
 
         {/* Active session layout — only once connected */}
         {(sessionState === "connected" || sessionState === "ended") && (
@@ -821,7 +822,7 @@ export function PracticeSession({
           <button
             type="button"
             onClick={() => setPanelOpen((v) => !v)}
-            className="hidden items-center justify-center border-b border-border py-2 text-base-content/60 transition hover:text-base-content lg:flex"
+            className="hidden items-center justify-center border-b border-base-300 py-2 text-base-content/60 transition hover:text-base-content lg:flex"
             title={panelOpen ? "Collapse panel" : "Expand panel"}
           >
             {panelOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
@@ -829,7 +830,7 @@ export function PracticeSession({
 
           {panelOpen && (
             <>
-              <div className="grid grid-cols-3 border-b border-border">
+              <div className="grid grid-cols-3 border-b border-base-300">
                 {[
                   { id: "rubric", label: "Rubric", icon: MessageSquareText },
                   { id: "hints", label: "Hints", icon: Lightbulb },
@@ -961,7 +962,7 @@ export function PracticeSession({
                 })}
               </div>
             ) : null}
-          </div>
+              </div>
             </>
           )}
         </aside>
