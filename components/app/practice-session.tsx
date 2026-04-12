@@ -601,7 +601,33 @@ export function PracticeSession({
               <div className="flex min-h-0 flex-1 flex-col gap-4 pl-0 xl:pl-60">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold">{scenario.title}</h2>
+                    {(codingProblem.sourceTitle || codingProblem.sourceUrl) && (
+                      <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
+                        {codingProblem.sourceUrl ? (
+                          <Link
+                            href={codingProblem.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-foreground transition hover:text-primary"
+                          >
+                            {codingProblem.source === "LeetCode" ? "LeetCode" : "Source"}
+                            {codingProblem.sourceId ? ` #${codingProblem.sourceId}` : ""}
+                          </Link>
+                        ) : (
+                          <span>
+                            {codingProblem.source === "LeetCode" ? "LeetCode" : "Source"}
+                            {codingProblem.sourceId ? ` #${codingProblem.sourceId}` : ""}
+                          </span>
+                        )}
+                        {codingProblem.sourceDifficulty && <span>{codingProblem.sourceDifficulty}</span>}
+                        {codingProblem.topicTags?.slice(0, 3).map((tag) => (
+                          <span key={tag}>{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                    <h2 className="text-lg font-semibold">
+                      {codingProblem.sourceTitle ?? scenario.title}
+                    </h2>
                     <p className="mt-1 text-sm text-muted-foreground">{codingProblem.description}</p>
                   </div>
                   <button
