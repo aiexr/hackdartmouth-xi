@@ -6,6 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Bot,
   Home,
+  Play,
   Settings,
   Sparkles,
   User,
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/practice", label: "Practice", icon: Play },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/coach", label: "Coach", icon: Sparkles },
   { href: "/llm", label: "LLM", icon: Bot },
@@ -88,7 +90,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
               </button>
               <Link
                 href="/profile"
-                className="cursor-pointer rounded-full transition-opacity hover:opacity-80"
+                className="cursor-pointer rounded-none transition-opacity hover:opacity-80"
                 title="Profile"
               >
                 {session.user.image ? (
@@ -96,10 +98,10 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                     src={session.user.image}
                     alt=""
                     referrerPolicy="no-referrer"
-                    className="size-9 rounded-full ring-2 ring-border"
+                    className="size-9 rounded-none ring-2 ring-border"
                   />
                 ) : (
-                  <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-primary/20">
+                  <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-foreground ring-2 ring-primary/20">
                     <User className="size-4" />
                   </div>
                 )}
@@ -108,10 +110,10 @@ export function MainShell({ children }: { children: React.ReactNode }) {
           ) : (
             <button
               onClick={() => signIn("google")}
-              className="cursor-pointer rounded-full transition-opacity hover:opacity-80"
+              className="cursor-pointer rounded-none transition-opacity hover:opacity-80"
               title="Sign in with Google"
             >
-              <div className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-primary/20">
+              <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-foreground ring-2 ring-primary/20">
                 <User className="size-4" />
               </div>
             </button>

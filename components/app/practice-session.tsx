@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full min-h-[24rem] items-center justify-center rounded-3xl border border-border bg-muted/30 text-sm text-muted-foreground">
+    <div className="flex h-full min-h-[24rem] items-center justify-center rounded-none border border-border bg-muted/30 text-sm text-muted-foreground">
       Loading editor...
     </div>
   ),
@@ -453,7 +453,7 @@ export function PracticeSession({
               isTechnical && "xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]",
             )}
           >
-            <div className="flex min-h-0 flex-col items-center gap-6 rounded-[28px] border border-border bg-card p-6 text-center">
+            <div className="flex min-h-0 flex-col items-center gap-6 rounded-none border border-border bg-card p-6 text-center">
               <div className="max-w-2xl space-y-3">
                 <p className="text-sm font-medium text-muted-foreground">
                   {scenario.interviewer} · {scenario.interviewerRole}
@@ -463,7 +463,7 @@ export function PracticeSession({
                   {scenario.prompt}
                 </p>
                 {sessionState === "idle" && resumed && (
-                  <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
+                  <div className="inline-flex items-center gap-2 rounded-none border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
                     Resuming your previous session · {transcript.length} saved turn
                     {transcript.length === 1 ? "" : "s"}
                   </div>
@@ -473,12 +473,12 @@ export function PracticeSession({
               {sessionState === "idle" && (
                 <div className="flex flex-col items-center gap-3">
                   {!isTechnical && (
-                    <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
+                    <div className="flex items-center gap-2 rounded-none border border-border bg-white p-1">
                       <button
                         type="button"
                         onClick={() => setInterviewMode("video")}
                         className={cn(
-                          "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                          "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
                           interviewMode === "video"
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground hover:text-foreground",
@@ -491,7 +491,7 @@ export function PracticeSession({
                         type="button"
                         onClick={() => setInterviewMode("call")}
                         className={cn(
-                          "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                          "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
                           interviewMode === "call"
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground hover:text-foreground",
@@ -504,7 +504,7 @@ export function PracticeSession({
                   )}
 
                   {isTechnical && (
-                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+                    <div className="inline-flex items-center gap-2 rounded-none border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
                       <Braces className="size-4" />
                       Technical rounds use avatar + editor mode
                     </div>
@@ -518,7 +518,7 @@ export function PracticeSession({
                         type="button"
                         onClick={() => setInterviewTone(tone.id)}
                         className={cn(
-                          "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
+                          "flex items-center gap-1.5 rounded-none px-3 py-1.5 text-xs font-medium transition",
                           interviewTone === tone.id
                             ? "bg-secondary text-secondary-foreground"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -531,7 +531,7 @@ export function PracticeSession({
                     ))}
                   </div>
 
-                  <div className="flex max-w-sm items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
+                  <div className="flex max-w-sm items-center gap-3 rounded-none border border-border bg-muted/40 px-4 py-3">
                     <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
                       <FileText className="size-4" />
                       <input
@@ -574,7 +574,7 @@ export function PracticeSession({
                   {scenario.focus.map((focus) => (
                     <span
                       key={focus}
-                      className="rounded-full border border-border bg-white/75 px-3 py-1 text-sm font-medium text-foreground/85"
+                      className="rounded-none border border-border bg-white/75 px-3 py-1 text-sm font-medium text-foreground/85"
                     >
                       {focus}
                     </span>
@@ -584,7 +584,7 @@ export function PracticeSession({
             </div>
 
             {isTechnical && codingProblem ? (
-              <div className="flex min-h-0 flex-col rounded-[28px] border border-border bg-card p-5">
+              <div className="flex min-h-0 flex-col rounded-none border border-border bg-card p-5">
                 <div className="space-y-4 border-b border-border pb-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -598,7 +598,7 @@ export function PracticeSession({
                       onClick={syncCodeWithInterviewer}
                       disabled={sessionState !== "connected"}
                       className={cn(
-                        "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition",
+                        "inline-flex items-center gap-2 rounded-none border px-4 py-2 text-sm font-medium transition",
                         sessionState === "connected"
                           ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400"
                           : "border-border bg-muted/40 text-muted-foreground",
@@ -614,7 +614,7 @@ export function PracticeSession({
                   </p>
 
                   <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-2xl bg-muted/40 p-4">
+                    <div className="rounded-none bg-muted/40 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         Examples
                       </p>
@@ -631,7 +631,7 @@ export function PracticeSession({
                       </div>
                     </div>
 
-                    <div className="rounded-2xl bg-muted/40 p-4">
+                    <div className="rounded-none bg-muted/40 p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         Constraints
                       </p>
@@ -666,11 +666,11 @@ export function PracticeSession({
                       scrollBeyondLastLine: false,
                       wordWrap: "on",
                     }}
-                    className="min-h-[26rem] overflow-hidden rounded-3xl border border-border"
+                    className="min-h-[26rem] overflow-hidden rounded-none border border-border"
                   />
                 </div>
 
-                <div className="mt-4 flex items-center justify-between rounded-2xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                <div className="mt-4 flex items-center justify-between rounded-none border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
                   <span>Current language: TypeScript</span>
                   <button
                     type="button"

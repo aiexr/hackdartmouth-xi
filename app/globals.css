@@ -27,6 +27,9 @@
   --switch-background: #d1d5db;
   --ring: #4f46e5;
   --radius: 0;
+  --radius-box: 0;
+  --radius-field: 0;
+  --radius-selector: 0;
 }
 
 @theme inline {
@@ -56,6 +59,9 @@
   --radius-md: 0px;
   --radius-lg: 0px;
   --radius-xl: 0px;
+  --radius-box: 0px;
+  --radius-field: 0px;
+  --radius-selector: 0px;
 }
 
 @layer base {

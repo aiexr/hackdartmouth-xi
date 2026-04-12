@@ -148,7 +148,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
                           width: CELL,
                           height: CELL,
                           backgroundColor: fills[intensity],
-                          borderRadius: 2,
+                          borderRadius: 0,
                         }}
                       >
                         <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-none bg-foreground px-2.5 py-1.5 text-xs font-medium text-background shadow-lg group-hover:block">
@@ -173,7 +173,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
                   width: CELL,
                   height: CELL,
                   backgroundColor: color,
-                  borderRadius: 2,
+                  borderRadius: 0,
                 }}
               />
             ))}

@@ -15,7 +15,7 @@ LeetSpeak combines the **calm, structured approach of Brilliant** with the **war
 
 3. **Accessible Depth**: Secondary elements (transcript, timer, rubric, hints) stay accessible without cluttering the experience
 
-4. **Visual Hierarchy**: Strong hierarchy with generous spacing, rounded cards, and soft contrast
+4. **Visual Hierarchy**: Strong hierarchy with generous spacing, sharp-edged containers, and soft contrast
 
 5. **Intentional Color**: Color signals progress, feedback, and state—not decoration
 
@@ -47,14 +47,14 @@ LeetSpeak combines the **calm, structured approach of Brilliant** with the **war
 ## Border Radius
 
 ### Card Radius
-- **Primary cards**: `rounded-2xl` (16px) - all major cards, panels, containers
-- **Secondary buttons**: `rounded-xl` (12px) - buttons, input fields, smaller interactive elements
-- **Pills/badges**: `rounded-full` - difficulty badges, tags, status indicators
-- **Avatars**: `rounded-full` - all avatar images
-- **Progress bars**: `rounded-full` - for the track, inherited from Progress component
+- **Primary cards**: `rounded-none` - all major cards, panels, containers
+- **Secondary buttons**: `rounded-none` - buttons, input fields, smaller interactive elements
+- **Pills/badges**: `rounded-none` - difficulty badges, tags, status indicators
+- **Avatars**: `rounded-none` - keep profile and interviewer surfaces square
+- **Progress bars**: `rounded-none` - keep the overall interface geometry consistent
 
 ### Consistency Rule
-Use `rounded-2xl` as the default for any card-like container. Only use `rounded-xl` for interactive elements that need to feel distinct from containers.
+Use `rounded-none` as the default for all containers and controls. Do not introduce curved corners unless a future design change explicitly calls for them.
 
 ---
 

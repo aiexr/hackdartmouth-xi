@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ArrowDownWideNarrow,
+  ArrowUpWideNarrow,
   BriefcaseBusiness,
   Braces,
   Network,
@@ -17,6 +19,7 @@ import { scenarios, type Scenario } from "@/data/scenarios";
 import { cn } from "@/lib/utils";
 
 type RoundType = Scenario["category"];
+type DifficultySort = "default" | "asc" | "desc";
 
 const FAVORITES_STORAGE_KEY = "practice-favorite-scenarios";
 const ROUND_ORDER: RoundType[] = [
@@ -26,74 +29,58 @@ const ROUND_ORDER: RoundType[] = [
   "product",
   "case-study",
 ];
-const DIFFICULTY_ORDER: Scenario["difficulty"][] = [
-  "Foundations",
-  "Growth",
-  "Stretch",
-];
 
-const roundMeta: Record<
-  RoundType,
-  {
-    label: string;
-    summary: string;
-    detail: string;
-    icon: typeof Users;
-    accent: string;
-    pill: string;
-  }
-> = {
-  behavioral: {
-    label: "Behavioral",
-    summary: "Classic STAR stories with a direct interviewer.",
-    detail:
-      "Avatar plus transcript only. Expect story-based prompts around leadership, conflict, mentorship, and execution.",
-    icon: Users,
-    accent: "from-sky-500/15 via-blue-500/10 to-transparent",
-    pill: "border-sky-200 bg-sky-50 text-sky-700",
-  },
-  technical: {
-    label: "Technical Coding",
-    summary: "LeetCode-style coding with live probing on code and complexity.",
-    detail:
-      "Avatar plus Monaco editor side-by-side. The interviewer can react to your current code and push on correctness, tradeoffs, and complexity.",
-    icon: Braces,
-    accent: "from-emerald-500/15 via-teal-500/10 to-transparent",
-    pill: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  },
-  "system-design": {
-    label: "System Design",
-    summary: "Scoping, architecture, and tradeoff-heavy design rounds.",
-    detail:
-      "Avatar plus transcript only for now. Start with requirements, then structure the components, data flows, bottlenecks, and failure modes.",
-    icon: Network,
-    accent: "from-violet-500/15 via-fuchsia-500/10 to-transparent",
-    pill: "border-violet-200 bg-violet-50 text-violet-700",
-  },
-  product: {
-    label: "Product & Strategy",
-    summary: "Stakeholder and executive-style product judgment rounds.",
-    detail:
-      "Avatar plus transcript only. Expect metric diagnosis, prioritization, launch calls, and strategic tradeoff discussions.",
-    icon: BriefcaseBusiness,
-    accent: "from-amber-500/15 via-orange-500/10 to-transparent",
-    pill: "border-amber-200 bg-amber-50 text-amber-700",
-  },
-  "case-study": {
-    label: "Case Study",
-    summary: "Engagement-manager-style structured business cases.",
-    detail:
-      "Avatar plus transcript only. Expect explicit structure, assumptions, synthesis, and a recommendation under pressure.",
-    icon: BriefcaseBusiness,
-    accent: "from-rose-500/15 via-pink-500/10 to-transparent",
-    pill: "border-rose-200 bg-rose-50 text-rose-700",
-  },
+const difficultyOrder: Record<Scenario["difficulty"], number> = {
+  Foundations: 0,
+  Growth: 1,
+  Stretch: 2,
 };
 
 const difficultyBadgeStyles: Record<Scenario["difficulty"], string> = {
   Foundations: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Growth: "border-amber-200 bg-amber-50 text-amber-700",
   Stretch: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+const roundMeta: Record<
+  RoundType,
+  {
+    label: string;
+    summary: string;
+    icon: typeof Users;
+    pill: string;
+  }
+> = {
+  behavioral: {
+    label: "Behavioral",
+    summary: "Stories, judgment, and communication-heavy reps.",
+    icon: Users,
+    pill: "border-sky-200 bg-sky-50 text-sky-700",
+  },
+  technical: {
+    label: "Technical Coding",
+    summary: "Code, complexity, and debugging pressure.",
+    icon: Braces,
+    pill: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  },
+  "system-design": {
+    label: "System Design",
+    summary: "Requirements, architecture, and tradeoffs.",
+    icon: Network,
+    pill: "border-violet-200 bg-violet-50 text-violet-700",
+  },
+  product: {
+    label: "Product & Strategy",
+    summary: "Metrics, prioritization, and executive calls.",
+    icon: BriefcaseBusiness,
+    pill: "border-amber-200 bg-amber-50 text-amber-700",
+  },
+  "case-study": {
+    label: "Case Study",
+    summary: "Structured business cases and synthesis.",
+    icon: BriefcaseBusiness,
+    pill: "border-rose-200 bg-rose-50 text-rose-700",
+  },
 };
 
 const scenarioNumbers = new Map(
@@ -117,10 +104,10 @@ function matchesQuery(scenario: Scenario, query: string) {
     scenario.interviewerRole,
     scenario.duration,
     scenario.category,
+    roundMeta[scenario.category].label,
     scenario.pattern,
     ...scenario.focus,
     scenario.codingProblem?.description ?? "",
-    scenario.codingProblem?.optimalApproach ?? "",
   ]
     .join(" ")
     .toLowerCase();
@@ -144,7 +131,9 @@ function DifficultyBadge({ difficulty }: { difficulty: Scenario["difficulty"] })
 export default function PracticePage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [activeRound, setActiveRound] = useState<RoundType>("behavioral");
+  const [activeRound, setActiveRound] = useState<"all" | RoundType>("all");
+  const [difficultySort, setDifficultySort] =
+    useState<DifficultySort>("default");
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [favoritesHydrated, setFavoritesHydrated] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -189,7 +178,9 @@ export default function PracticePage() {
     () =>
       ROUND_ORDER.reduce(
         (counts, round) => {
-          counts[round] = scenarios.filter((scenario) => scenario.category === round).length;
+          counts[round] = scenarios.filter(
+            (scenario) => scenario.category === round,
+          ).length;
           return counts;
         },
         {} as Record<RoundType, number>,
@@ -198,8 +189,8 @@ export default function PracticePage() {
   );
 
   const visibleScenarios = useMemo(() => {
-    return scenarios.filter((scenario) => {
-      if (scenario.category !== activeRound) {
+    const filtered = scenarios.filter((scenario) => {
+      if (activeRound !== "all" && scenario.category !== activeRound) {
         return false;
       }
 
@@ -209,27 +200,43 @@ export default function PracticePage() {
 
       return matchesQuery(scenario, normalizedQuery);
     });
-  }, [activeRound, favoriteSet, favoritesOnly, normalizedQuery]);
 
-  const scenariosByDifficulty = useMemo(
-    () =>
-      DIFFICULTY_ORDER.map((difficulty) => ({
-        difficulty,
-        scenarios: visibleScenarios
-          .filter((scenario) => scenario.difficulty === difficulty)
-          .sort(
-            (left, right) =>
-              (scenarioNumbers.get(left.id) ?? 0) - (scenarioNumbers.get(right.id) ?? 0),
-          ),
-      })),
-    [visibleScenarios],
-  );
+    if (difficultySort === "default") {
+      return filtered;
+    }
 
-  const activeMeta = roundMeta[activeRound];
+    const direction = difficultySort === "asc" ? 1 : -1;
+
+    return [...filtered].sort((left, right) => {
+      const difficultyDelta =
+        difficultyOrder[left.difficulty] - difficultyOrder[right.difficulty];
+
+      if (difficultyDelta !== 0) {
+        return difficultyDelta * direction;
+      }
+
+      return (
+        (scenarioNumbers.get(left.id) ?? 0) - (scenarioNumbers.get(right.id) ?? 0)
+      );
+    });
+  }, [activeRound, difficultySort, favoriteSet, favoritesOnly, normalizedQuery]);
+
   const totalVisible = visibleScenarios.length;
-  const favoriteCount = visibleScenarios.filter((scenario) =>
+  const savedVisibleCount = visibleScenarios.filter((scenario) =>
     favoriteSet.has(scenario.id),
   ).length;
+  const randomRowMatches =
+    !favoritesOnly &&
+    activeRound === "all" &&
+    (normalizedQuery.length === 0 ||
+      ["random", "shuffle", "surprise"].some((keyword) =>
+        keyword.includes(normalizedQuery) || normalizedQuery.includes(keyword),
+      ));
+
+  const summaryText =
+    activeRound === "all"
+      ? "Use round filters, search, favorites, and difficulty sorting to work the bank like a problem set."
+      : roundMeta[activeRound].summary;
 
   function toggleFavorite(id: string) {
     setFavoriteIds((current) =>
@@ -239,275 +246,325 @@ export default function PracticePage() {
     );
   }
 
+  function cycleDifficultySort() {
+    setDifficultySort((current) => {
+      if (current === "default") return "asc";
+      if (current === "asc") return "desc";
+      return "default";
+    });
+  }
+
+  function navigateTo(href: string) {
+    router.push(href);
+  }
+
   return (
     <MainShell>
       <div className="mx-auto max-w-7xl space-y-6 px-6 py-8 md:px-10 md:py-10">
-        <section
-          className={cn(
-            "overflow-hidden rounded-none border border-border bg-card",
-            "bg-gradient-to-br",
-            activeMeta.accent,
-          )}
-        >
-          <div className="space-y-6 p-6 md:p-8">
-            <div className="max-w-3xl space-y-3">
+        <section className="border border-border bg-card p-6 md:p-8">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl">
               <p className="text-sm font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                Practice by Round Type
+                Practice
               </p>
-              <div className="flex items-center gap-3">
-                <div className={cn("rounded-none border px-3 py-2", activeMeta.pill)}>
-                  <activeMeta.icon className="size-5" />
-                </div>
-                <div>
-                  <h1>{activeMeta.label}</h1>
-                  <p className="mt-1 text-base text-muted-foreground">
-                    {activeMeta.summary}
-                  </p>
-                </div>
+              <h1 className="mt-2">Question Bank</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                {summaryText}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="border border-border bg-background px-4 py-3">
+                <p className="text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">
+                  Scenarios
+                </p>
+                <p className="mt-1 text-2xl font-semibold">{scenarios.length}</p>
               </div>
-              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                {activeMeta.detail}
-              </p>
+              <div className="border border-border bg-background px-4 py-3">
+                <p className="text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">
+                  Visible
+                </p>
+                <p className="mt-1 text-2xl font-semibold">
+                  {totalVisible + (randomRowMatches ? 1 : 0)}
+                </p>
+              </div>
+              <div className="border border-border bg-background px-4 py-3">
+                <p className="text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">
+                  Saved
+                </p>
+                <p className="mt-1 text-2xl font-semibold">{favoriteIds.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
+            <div className="flex items-center gap-3 border border-border bg-background px-4 py-3">
+              <Search className="size-4 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search titles, tracks, interviewers, patterns, or focus areas"
+                className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                aria-label="Search scenarios"
+              />
             </div>
 
-            <div className="grid gap-3 md:grid-cols-5">
-              {ROUND_ORDER.map((round) => {
-                const meta = roundMeta[round];
-                const active = activeRound === round;
-                return (
-                  <button
-                    key={round}
-                    type="button"
-                    onClick={() => setActiveRound(round)}
-                    className={cn(
-                      "rounded-none border p-4 text-left transition",
-                      active
-                        ? "border-foreground bg-background shadow-sm"
-                        : "border-border/70 bg-background/70 hover:border-foreground/20 hover:bg-background",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <meta.icon className="mt-0.5 size-4 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {roundCounts[round]}
-                      </span>
-                    </div>
-                    <p className="mt-4 text-sm font-semibold">{meta.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      {meta.summary}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+            <button
+              type="button"
+              onClick={() => navigateTo("/practice/random")}
+              className="inline-flex items-center justify-center gap-2 border border-border bg-background px-4 py-3 text-sm font-medium transition hover:border-foreground/20 hover:bg-muted/30"
+            >
+              <Shuffle className="size-4" />
+              Question 0
+            </button>
 
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto]">
-              <label className="relative block">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder={`Search ${activeMeta.label.toLowerCase()} scenarios`}
-                  className="h-11 rounded-none border-border/70 bg-background pl-10"
-                  aria-label="Search scenarios"
-                />
-              </label>
+            <button
+              type="button"
+              onClick={() => setFavoritesOnly((value) => !value)}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 border px-4 py-3 text-sm font-medium transition",
+                favoritesOnly
+                  ? "border-amber-300 bg-amber-50 text-amber-700"
+                  : "border-border bg-background hover:border-foreground/20 hover:bg-muted/30",
+              )}
+            >
+              <Star className={cn("size-4", favoritesOnly && "fill-current")} />
+              Favorites only
+            </button>
+          </div>
 
-              <button
-                type="button"
-                onClick={() => router.push("/practice/random")}
-                className="inline-flex items-center justify-center gap-2 rounded-none border border-border/70 bg-background px-4 py-2 text-sm font-medium transition hover:border-foreground/20 hover:bg-background/95"
-              >
-                <Shuffle className="size-4" />
-                Random
-              </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(["all", ...ROUND_ORDER] as const).map((round) => {
+              const active = activeRound === round;
+              const Icon = round === "all" ? Shuffle : roundMeta[round].icon;
+              const count = round === "all" ? scenarios.length : roundCounts[round];
+              const label = round === "all" ? "All" : roundMeta[round].label;
 
-              <button
-                type="button"
-                onClick={() => setFavoritesOnly((value) => !value)}
-                className={cn(
-                  "inline-flex items-center justify-center gap-2 rounded-none border px-4 py-2 text-sm font-medium transition",
-                  favoritesOnly
-                    ? "border-amber-300 bg-amber-50 text-amber-700"
-                    : "border-border/70 bg-background hover:border-foreground/20 hover:bg-background/95",
-                )}
-              >
-                <Star
+              return (
+                <button
+                  key={round}
+                  type="button"
+                  onClick={() => setActiveRound(round)}
                   className={cn(
-                    "size-4",
-                    favoritesOnly && "fill-current",
+                    "inline-flex items-center gap-2 border px-4 py-2 text-sm transition",
+                    active
+                      ? "border-foreground bg-background"
+                      : "border-border bg-background text-muted-foreground hover:border-foreground/20 hover:text-foreground",
                   )}
-                />
-                Favorites
-              </button>
-            </div>
+                >
+                  <Icon className="size-4" />
+                  <span>{label}</span>
+                  <span className="border border-border bg-muted/40 px-2 py-0.5 text-[0.72rem] text-inherit">
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
-          <section className="space-y-4">
-            {scenariosByDifficulty.map(({ difficulty, scenarios: difficultyScenarios }) => (
-              <div
-                key={difficulty}
-                className="rounded-none border border-border bg-card p-5 md:p-6"
-              >
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl">{difficulty}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {difficulty === "Foundations"
-                        ? "Core reps with straightforward prompts and expected structure."
-                        : difficulty === "Growth"
-                          ? "More ambiguity, follow-up pressure, and broader tradeoffs."
-                          : "Stretch rounds where depth, control, and prioritization matter."}
+        <section className="overflow-hidden border border-border bg-card">
+          <div className="grid grid-cols-[2.75rem_3rem_minmax(0,1fr)_7rem] items-center gap-3 border-b border-border px-4 py-3 text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground md:grid-cols-[2.75rem_3rem_minmax(0,1.7fr)_8rem_9rem_7rem_5.5rem]">
+            <span className="sr-only">Favorite</span>
+            <span>#</span>
+            <span>Title</span>
+            <span className="hidden md:block">Type</span>
+            <span className="hidden md:block">Pattern</span>
+            <button
+              type="button"
+              onClick={cycleDifficultySort}
+              className="inline-flex items-center gap-1 text-left text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground transition hover:text-foreground"
+            >
+              <span>Difficulty</span>
+              {difficultySort === "asc" ? (
+                <ArrowUpWideNarrow className="size-3.5" />
+              ) : difficultySort === "desc" ? (
+                <ArrowDownWideNarrow className="size-3.5" />
+              ) : (
+                <ArrowUpWideNarrow className="size-3.5 opacity-50" />
+              )}
+            </button>
+            <span className="hidden md:block">Time</span>
+          </div>
+
+          <ul className="divide-y divide-border">
+            {randomRowMatches ? (
+              <li>
+                <div
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => navigateTo("/practice/random")}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      navigateTo("/practice/random");
+                    }
+                  }}
+                  className="grid cursor-pointer grid-cols-[2.75rem_3rem_minmax(0,1fr)_7rem] items-center gap-3 bg-muted/20 px-4 py-4 transition-colors hover:bg-muted/35 md:grid-cols-[2.75rem_3rem_minmax(0,1.7fr)_8rem_9rem_7rem_5.5rem]"
+                >
+                  <span className="flex items-center justify-center text-primary">
+                    <Shuffle className="size-4" />
+                  </span>
+                  <span className="text-sm text-muted-foreground">0</span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">Random scenario</p>
+                    <p className="mt-1 text-[0.82rem] text-muted-foreground">
+                      Surprise pick from the full bank without previewing the title first.
                     </p>
                   </div>
-                  <DifficultyBadge difficulty={difficulty} />
+                  <span className="hidden text-sm text-muted-foreground md:block">
+                    Mixed
+                  </span>
+                  <span className="hidden text-sm text-muted-foreground md:block">
+                    Surprise
+                  </span>
+                  <span className="inline-flex items-center border border-border bg-background px-2.5 py-1 text-[0.7rem] font-medium text-muted-foreground">
+                    Mixed
+                  </span>
+                  <span className="hidden text-sm text-muted-foreground md:block">
+                    Varies
+                  </span>
                 </div>
+              </li>
+            ) : null}
 
-                {difficultyScenarios.length === 0 ? (
-                  <div className="rounded-none border border-dashed border-border bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
-                    No {difficulty.toLowerCase()} scenarios match the current filters.
-                  </div>
-                ) : (
-                  <div className="grid gap-3">
-                    {difficultyScenarios.map((scenario) => {
-                      const isFavorite = favoriteSet.has(scenario.id);
-                      const preview =
-                        scenario.category === "technical"
-                          ? scenario.codingProblem?.description ?? scenario.prompt
-                          : scenario.prompt;
+            {visibleScenarios.length === 0 && !randomRowMatches ? (
+              <li className="px-6 py-10 text-center">
+                <p>No scenarios match this view.</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Clear the search, switch the round filter, or save a few favorites first.
+                </p>
+              </li>
+            ) : null}
 
-                      return (
-                        <button
-                          key={scenario.id}
-                          type="button"
-                          onClick={() => router.push(`/practice/${scenario.id}`)}
-                          className="group rounded-none border border-border bg-background p-4 text-left transition hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-sm"
+            {visibleScenarios.map((scenario) => {
+              const isFavorite = favoriteSet.has(scenario.id);
+
+              return (
+                <li key={scenario.id}>
+                  <div
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => navigateTo(`/practice/${scenario.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        navigateTo(`/practice/${scenario.id}`);
+                      }
+                    }}
+                    className="grid cursor-pointer grid-cols-[2.75rem_3rem_minmax(0,1fr)_7rem] items-center gap-3 px-4 py-4 transition-colors hover:bg-muted/30 md:grid-cols-[2.75rem_3rem_minmax(0,1.7fr)_8rem_9rem_7rem_5.5rem]"
+                  >
+                    <span className="flex items-center justify-center">
+                      <button
+                        type="button"
+                        aria-label={
+                          isFavorite
+                            ? `Remove ${scenario.title} from favorites`
+                            : `Add ${scenario.title} to favorites`
+                        }
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleFavorite(scenario.id);
+                        }}
+                        onKeyDown={(event) => event.stopPropagation()}
+                        className={cn(
+                          "inline-flex size-8 items-center justify-center border transition",
+                          isFavorite
+                            ? "border-amber-300 bg-amber-50 text-amber-600"
+                            : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                        )}
+                      >
+                        <Star className={cn("size-4", isFavorite && "fill-current")} />
+                      </button>
+                    </span>
+
+                    <span className="text-sm text-muted-foreground">
+                      {scenarioNumbers.get(scenario.id)}
+                    </span>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{scenario.title}</p>
+                      <p className="mt-1 truncate text-[0.82rem] text-muted-foreground">
+                        {scenario.trackLabel} · {scenario.interviewer} · {scenario.interviewerRole}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-2 md:hidden">
+                        <span
+                          className={cn(
+                            "border px-2 py-0.5 text-[0.7rem] font-medium",
+                            roundMeta[scenario.category].pill,
+                          )}
                         >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs font-medium text-muted-foreground">
-                                  #{scenarioNumbers.get(scenario.id)}
-                                </span>
-                                <span
-                                  className={cn(
-                                    "rounded-none border px-2 py-0.5 text-[0.7rem] font-medium",
-                                    roundMeta[scenario.category].pill,
-                                  )}
-                                >
-                                  {roundMeta[scenario.category].label}
-                                </span>
-                                <span className="rounded-none border border-border bg-muted/50 px-2 py-0.5 text-[0.7rem] text-muted-foreground">
-                                  {formatPattern(scenario.pattern)}
-                                </span>
-                              </div>
+                          {roundMeta[scenario.category].label}
+                        </span>
+                        <span className="border border-border bg-muted/40 px-2 py-0.5 text-[0.7rem] text-muted-foreground">
+                          {formatPattern(scenario.pattern)}
+                        </span>
+                        <span className="text-[0.78rem] text-muted-foreground">
+                          {scenario.duration}
+                        </span>
+                      </div>
+                    </div>
 
-                              <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <h3 className="text-base font-semibold">{scenario.title}</h3>
-                                <DifficultyBadge difficulty={scenario.difficulty} />
-                              </div>
+                    <span
+                      className={cn(
+                        "hidden w-fit border px-2 py-0.5 text-[0.7rem] font-medium md:inline-flex",
+                        roundMeta[scenario.category].pill,
+                      )}
+                    >
+                      {roundMeta[scenario.category].label}
+                    </span>
 
-                              <p className="mt-1 text-sm text-muted-foreground">
-                                {scenario.interviewer} · {scenario.interviewerRole} ·{" "}
-                                {scenario.duration}
-                              </p>
+                    <span className="hidden text-sm text-muted-foreground md:block">
+                      {formatPattern(scenario.pattern)}
+                    </span>
 
-                              <p className="mt-3 text-sm leading-6 text-foreground/85">
-                                {preview}
-                              </p>
+                    <DifficultyBadge difficulty={scenario.difficulty} />
 
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {scenario.focus.slice(0, 3).map((focus) => (
-                                  <span
-                                    key={focus}
-                                    className="rounded-none border border-border bg-muted/40 px-2.5 py-1 text-[0.7rem] text-muted-foreground"
-                                  >
-                                    {focus}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              aria-label={
-                                isFavorite
-                                  ? `Remove ${scenario.title} from favorites`
-                                  : `Add ${scenario.title} to favorites`
-                              }
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggleFavorite(scenario.id);
-                              }}
-                              className={cn(
-                                "rounded-none border p-2 transition",
-                                isFavorite
-                                  ? "border-amber-300 bg-amber-50 text-amber-600"
-                                  : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground",
-                              )}
-                            >
-                              <Star className={cn("size-4", isFavorite && "fill-current")} />
-                            </button>
-                          </div>
-                        </button>
-                      );
-                    })}
+                    <span className="hidden text-sm text-muted-foreground md:block">
+                      {scenario.duration}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
-          </section>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
-          <aside className="space-y-4">
-            <div className="rounded-none border border-border bg-card p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Active Queue
-              </p>
-              <h2 className="mt-2 text-xl">{activeMeta.label}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {activeMeta.detail}
-              </p>
-              <div className="mt-5 space-y-3">
-                <div className="rounded-none bg-muted/50 p-4">
-                  <p className="text-xs text-muted-foreground">Visible scenarios</p>
-                  <p className="mt-1 text-2xl font-semibold">{totalVisible}</p>
-                </div>
-                <div className="rounded-none bg-muted/50 p-4">
-                  <p className="text-xs text-muted-foreground">Favorites in this round</p>
-                  <p className="mt-1 text-2xl font-semibold">{favoriteCount}</p>
-                </div>
-                <div className="rounded-none bg-muted/50 p-4">
-                  <p className="text-xs text-muted-foreground">Round total</p>
-                  <p className="mt-1 text-2xl font-semibold">
-                    {roundCounts[activeRound]}
-                  </p>
-                </div>
-              </div>
-            </div>
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="border border-border bg-card p-4">
+            <p className="text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">
+              Active Filter
+            </p>
+            <p className="mt-2 text-lg font-semibold">
+              {activeRound === "all" ? "All Rounds" : roundMeta[activeRound].label}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {activeRound === "all"
+                ? "Everything in one queue so you can scan and choose fast."
+                : roundMeta[activeRound].summary}
+            </p>
+          </div>
 
-            <div className="rounded-none border border-border bg-card p-5">
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Difficulty Flow
-              </p>
-              <div className="mt-4 space-y-3 text-sm text-muted-foreground">
-                <p>
-                  <span className="font-medium text-foreground">Foundations</span>:
-                  establish the base structure and core mental model.
-                </p>
-                <p>
-                  <span className="font-medium text-foreground">Growth</span>: handle
-                  ambiguity, probing, and more moving pieces.
-                </p>
-                <p>
-                  <span className="font-medium text-foreground">Stretch</span>: defend
-                  tradeoffs under pressure and keep the answer sharp.
-                </p>
-              </div>
-            </div>
-          </aside>
-        </div>
+          <div className="border border-border bg-card p-4">
+            <p className="text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">
+              Visible Favorites
+            </p>
+            <p className="mt-2 text-lg font-semibold">{savedVisibleCount}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Star rows to build a short list of repeat reps.
+            </p>
+          </div>
+
+          <div className="border border-border bg-card p-4">
+            <p className="text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">
+              Difficulty Flow
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sort difficulty to move from foundations into stretch rounds without losing the
+              scenario numbers.
+            </p>
+          </div>
+        </section>
       </div>
     </MainShell>
   );
