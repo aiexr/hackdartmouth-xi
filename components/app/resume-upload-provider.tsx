@@ -1,13 +1,11 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { extractDocumentTextInBrowser } from "@/lib/client-document-extract";
 
 const MAX_RESUME_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const RESUME_ALLOWED_EXTENSIONS = [".pdf", ".docx"] as const;
-const RESUME_UPLOAD_ENDPOINTS = [
-  "/api/user/profile/document",
-  "/api/user/profile/resume",
-] as const;
+const PROFILE_UPDATE_ENDPOINT = "/api/user/profile";
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -16,22 +14,6 @@ function asRecord(value: unknown): Record<string, unknown> {
 function getFileExtension(fileName: string): string {
   const dotIndex = fileName.lastIndexOf(".");
   return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : "";
-}
-
-function isBlockedOrNetworkError(error: unknown) {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  const message = error.message.toLowerCase();
-  return (
-    error.name === "TypeError" &&
-    (message.includes("failed to fetch") ||
-      message.includes("load failed") ||
-      message.includes("networkerror") ||
-      message.includes("blocked by client") ||
-      message.includes("err_blocked_by_client"))
-  );
 }
 
 type ResumeUploadContextValue = {
@@ -104,48 +86,30 @@ export function ResumeUploadProvider({ children }: { children: React.ReactNode }
 
     const run = async () => {
       try {
-        const formData = new FormData();
-        formData.append("resume", file);
-        let res: Response | null = null;
-        let parsed: unknown = null;
-        let lastError: unknown = null;
+        const extracted = await extractDocumentTextInBrowser(file);
 
-        for (const endpoint of RESUME_UPLOAD_ENDPOINTS) {
-          try {
-            res = await fetch(endpoint, {
-              method: "POST",
-              body: formData,
-              signal: controller.signal,
-            });
-
-            const raw = await res.text();
-            try {
-              parsed = raw ? JSON.parse(raw) : null;
-            } catch {
-              parsed = raw;
-            }
-
-            if (res.status === 404 || res.status === 405) {
-              continue;
-            }
-
-            break;
-          } catch (error) {
-            lastError = error;
-
-            if (!isBlockedOrNetworkError(error)) {
-              throw error;
-            }
-          }
+        if (controller.signal.aborted) {
+          return;
         }
 
-        if (!res) {
-          throw (
-            lastError ??
-            new Error(
-              "The upload request was blocked before it reached the server. Try disabling content blockers for this site and upload again.",
-            )
-          );
+        const res = await fetch(PROFILE_UPDATE_ENDPOINT, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            resumeExtractedText: extracted.text,
+          }),
+          signal: controller.signal,
+        });
+
+        const raw = await res.text();
+        let parsed: unknown = null;
+        try {
+          parsed = raw ? JSON.parse(raw) : null;
+        } catch {
+          parsed = raw;
         }
 
         if (!res.ok) {

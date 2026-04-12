@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { Bot, FileText, Loader2, Send, X } from "lucide-react";
+import { extractDocumentTextInBrowser } from "@/lib/client-document-extract";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -147,24 +148,12 @@ export default function LlmTestPage() {
     setDocumentResult(null);
 
     try {
-      const formData = new FormData();
-      formData.append("file", documentFile);
-
-      const res = await fetch("/api/document/extract", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = asRecord(await res.json());
-
-      if (!res.ok) {
-        setDocumentError(typeof data?.error === "string" ? data.error : "Extraction failed.");
-        return;
-      }
-
-      setDocumentResult(toDocumentTestResponse(data));
-    } catch {
-      setDocumentError("Request failed. Check network and try again.");
+      const extracted = await extractDocumentTextInBrowser(documentFile);
+      setDocumentResult(toDocumentTestResponse(asRecord(extracted)));
+    } catch (error) {
+      setDocumentError(
+        error instanceof Error ? error.message : "Request failed. Check network and try again.",
+      );
     } finally {
       setIsDocumentLoading(false);
     }
