@@ -1,6 +1,6 @@
 import { getOptionalServerSession } from "@/lib/auth";
 import { getOptionalMongoDb } from "@/lib/mongodb";
-import { UserModel } from "@/lib/models";
+import { UserModel, type User } from "@/lib/models";
 
 function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUserByEmail>>) {
   if (!user) {
@@ -14,6 +14,37 @@ function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUser
   };
 }
 
+function buildFallbackUserProfile({
+  email,
+  name,
+  image,
+}: {
+  email: string;
+  name?: string | null;
+  image?: string | null;
+}): User {
+  const now = new Date();
+
+  return {
+    email,
+    name: name ?? "",
+    image: image ?? "",
+    provider: "google",
+    focusTrack: null,
+    bio: null,
+    resumeExtractedText: null,
+    preferences: {
+      voiceId: null,
+      feedbackStyle: "structured",
+      practiceReminders: true,
+      weeklyGoal: 4,
+    },
+    favorites: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export async function GET() {
   const session = await getOptionalServerSession();
 
@@ -22,17 +53,41 @@ export async function GET() {
   }
 
   try {
-    const user = await UserModel.findOrCreateUser(
-      session.user.email,
-      session.user.name ?? "",
-      session.user.image ?? "",
-      "google",
-    );
+    const db = await getOptionalMongoDb();
+    if (!db) {
+      return Response.json(
+        sanitizeUserForClient(
+          buildFallbackUserProfile({
+            email: session.user.email,
+            name: session.user.name,
+            image: session.user.image,
+          }),
+        ),
+      );
+    }
+
+    const existingUser = await UserModel.getUserByEmail(session.user.email);
+    const user =
+      existingUser ??
+      (await UserModel.findOrCreateUser(
+        session.user.email,
+        session.user.name ?? "",
+        session.user.image ?? "",
+        "google",
+      ));
 
     return Response.json(sanitizeUserForClient(user));
   } catch (error) {
     console.error("Failed to fetch user profile:", error);
-    return Response.json({ error: "Failed to fetch profile" }, { status: 500 });
+    return Response.json(
+      sanitizeUserForClient(
+        buildFallbackUserProfile({
+          email: session.user.email,
+          name: session.user.name,
+          image: session.user.image,
+        }),
+      ),
+    );
   }
 }
 
@@ -41,6 +96,11 @@ export async function PATCH(request: Request) {
 
   if (!session?.user?.email) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const db = await getOptionalMongoDb();
+  if (!db) {
+    return Response.json({ error: "Database not configured" }, { status: 503 });
   }
 
   try {

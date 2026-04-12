@@ -15,6 +15,28 @@ function asRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
+async function readApiError(response: Response, fallback: string) {
+  const raw = await response.text();
+  const parsed = raw ? (() => {
+    try {
+      return JSON.parse(raw) as unknown;
+    } catch {
+      return raw;
+    }
+  })() : null;
+
+  const payload = asRecord(parsed);
+  if (typeof payload.error === "string" && payload.error.trim()) {
+    return payload.error;
+  }
+
+  if (typeof parsed === "string" && parsed.trim()) {
+    return parsed.trim();
+  }
+
+  return fallback;
+}
+
 function toUser(value: Record<string, unknown>): User {
   const preferences = asRecord(value.preferences);
   const favorites = Array.isArray(value.favorites)
@@ -144,7 +166,9 @@ export function ProfileEditor() {
     const fetchProfile = async () => {
       try {
         const res = await fetch("/api/user/profile");
-        if (!res.ok) throw new Error("Failed to fetch profile");
+        if (!res.ok) {
+          throw new Error(await readApiError(res, "Failed to fetch profile"));
+        }
 
         const data = asRecord(await res.json());
         const parsedUser = toUser(data);
@@ -200,7 +224,9 @@ export function ProfileEditor() {
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to update profile");
+      if (!res.ok) {
+        throw new Error(await readApiError(res, "Failed to update profile"));
+      }
 
       const data = asRecord(await res.json());
       setUser(toUser(data));

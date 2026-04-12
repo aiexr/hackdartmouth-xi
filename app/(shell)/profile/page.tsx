@@ -103,7 +103,7 @@ async function ProfileStats({ email }: { email?: string | null }) {
         </Card>
       )}
 
-      <ResumeUploaderCard initialHasResumeContext={hasResumeContext} />
+      {email ? <ResumeUploaderCard initialHasResumeContext={hasResumeContext} /> : null}
 
       <div className="rounded-none border border-border bg-base-100">
         <div className="grid grid-cols-3 divide-x divide-y divide-border sm:grid-cols-6 sm:divide-y-0">
@@ -126,6 +126,24 @@ function ProfileStatsSkeleton() {
       <div className="h-24 rounded border border-border bg-base-200/30 animate-pulse" />
       <div className="h-20 rounded border border-border bg-base-200/30 animate-pulse" />
     </>
+  );
+}
+
+function ProfileGuestCard() {
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h2>Sign in to edit your profile</h2>
+          <p className="text-sm text-base-content/60">
+            Your bio, weekly goal, resume context, and saved history appear here once you sign in.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/">Sign in</Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -223,7 +241,7 @@ export default async function ProfilePage() {
   const session = await getOptionalServerSession().catch(() => null);
 
   const profileName = session?.user?.name ?? "Guest user";
-  const profileActionHref = session?.user ? "#profile-editor" : "/auth/sign-in";
+  const profileActionHref = session?.user ? "#profile-editor" : "/";
   const profileActionLabel = session?.user ? "Edit profile" : "Sign in";
 
   return (
@@ -259,7 +277,7 @@ export default async function ProfilePage() {
         </Suspense>
 
         <div id="profile-editor" className="space-y-4 scroll-mt-8">
-          <ProfileEditor />
+          {session?.user?.email ? <ProfileEditor /> : <ProfileGuestCard />}
         </div>
 
         <Suspense fallback={<ProfileHistorySkeleton />}>
