@@ -1,7 +1,6 @@
-import { Binary } from "mongodb";
 import { getOptionalServerSession } from "@/lib/auth";
 import { extractDocumentText } from "@/lib/document-extract";
-import { UserModel, UserResumeModel } from "@/lib/models";
+import { UserModel } from "@/lib/models";
 
 const MAX_RESUME_FILE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
@@ -11,18 +10,16 @@ function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUser
     return null;
   }
 
-  const { resumeExtractedText, resumeStorageKey, ...publicUser } = user;
-  return publicUser;
+  const { resumeExtractedText, ...publicUser } = user;
+  return {
+    ...publicUser,
+    hasResumeContext: Boolean(resumeExtractedText?.trim()),
+  };
 }
 
 function getExtension(filename: string) {
   const index = filename.lastIndexOf(".");
   return index >= 0 ? filename.slice(index).toLowerCase() : "";
-}
-
-function getContentDisposition(filename: string) {
-  const escaped = filename.replaceAll('"', "\\\"");
-  return `attachment; filename="${escaped}"`;
 }
 
 export async function GET() {
@@ -32,32 +29,13 @@ export async function GET() {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  try {
-    const resume = await UserResumeModel.getResumeByEmail(session.user.email);
-    if (!resume?.data) {
-      return Response.json({ error: "Resume not found" }, { status: 404 });
-    }
-
-    const filename = resume.fileName || "resume";
-    const contentType = resume.mimeType || "application/octet-stream";
-    const contentDisposition = getContentDisposition(filename);
-    const content = resume.data instanceof Binary ? Buffer.from(resume.data.buffer) : null;
-
-    if (!content) {
-      return Response.json({ error: "Resume not found" }, { status: 404 });
-    }
-
-    return new Response(content, {
-      headers: {
-        "Content-Type": contentType,
-        "Content-Disposition": contentDisposition,
-        "Content-Length": String(content.byteLength),
-      },
-    });
-  } catch (error) {
-    console.error("Failed to load resume:", error);
-    return Response.json({ error: "Failed to load resume" }, { status: 500 });
-  }
+  return Response.json(
+    {
+      error: "Resume file downloads are no longer available",
+      details: "Resumes are processed into text and stored in MongoDB for interview context only.",
+    },
+    { status: 410 },
+  );
 }
 
 export async function POST(request: Request) {
@@ -67,7 +45,10 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  let uploadStage = "initializing request";
+
   try {
+    uploadStage = "parsing form data";
     const formData = await request.formData();
     const resumeField = formData.get("resume");
 
@@ -89,26 +70,36 @@ export async function POST(request: Request) {
       );
     }
 
+    uploadStage = "reading upload bytes";
     const buffer = Buffer.from(await resumeField.arrayBuffer());
-    const extracted = await extractDocumentText(buffer, filename);
-    const uploadedAt = new Date();
-    const savedResume = await UserResumeModel.upsertResume(session.user.email, {
-      fileName: filename,
-      mimeType: resumeField.type || "application/octet-stream",
-      uploadedAt,
-      data: buffer,
-    });
 
-    if (!savedResume) {
-      return Response.json({ error: "Failed to save resume" }, { status: 500 });
+    uploadStage = "extracting document text";
+    let extracted: Awaited<ReturnType<typeof extractDocumentText>>;
+    try {
+      extracted = await extractDocumentText(buffer, filename);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to parse resume text";
+      return Response.json(
+        {
+          error: "Could not process this resume file",
+          details: message,
+        },
+        { status: 400 },
+      );
     }
 
+    if (!extracted.text.trim()) {
+      return Response.json(
+        {
+          error: "Could not process this resume file",
+          details: "No readable text was found in the document.",
+        },
+        { status: 400 },
+      );
+    }
+
+    uploadStage = "saving extracted resume text to database";
     const updatedUser = await UserModel.updateUserProfile(session.user.email, {
-      resumeUrl: null,
-      resumeStorageKey: null,
-      resumeFileName: filename,
-      resumeMimeType: resumeField.type || "application/octet-stream",
-      resumeUploadedAt: uploadedAt,
       resumeExtractedText: extracted.text,
     });
 
@@ -118,7 +109,7 @@ export async function POST(request: Request) {
 
     return Response.json(sanitizeUserForClient(updatedUser));
   } catch (error) {
-    console.error("Failed to upload resume:", error);
+    console.error(`Failed to upload resume at stage '${uploadStage}':`, error);
     const message = error instanceof Error ? error.message : "Failed to upload resume";
     return Response.json({ error: message }, { status: 500 });
   }

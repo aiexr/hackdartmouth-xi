@@ -366,8 +366,7 @@ This repo is an App Router Next.js app with routes rooted at `app/` (not `src/ap
 
 Overall plan (based on current app shape)
 - Auth + entry: sign in at `/auth/sign-in`, then navigate from `/`.
-- Practice loop: scenarios live under `/practice` and `/practice/[scenarioId]`, organized by five canonical round types (`behavioral`, `technical`, `system-design`, `product`, `case-study`).
-- Technical coding rounds render avatar/video alongside a Monaco editor; other rounds stay avatar + transcript focused.
+- Practice loop: scenarios live under `/practice` and `/practice/[scenarioId]`.
 - Live coaching and voice surfaces: `/coach` plus app components in `components/app/`.
 - Review and progression: results/feedback under `/review/[scenarioId]` and user state pages under `/profile` and `/settings`.
 - Integration test surface: `/llm` for LLM wiring and document extraction checks.
@@ -409,12 +408,12 @@ Common runtime envs
 - NEXTAUTH_SECRET
 - GOOGLE_CLIENT_ID
 
-Profile uploads now persist as well:
+Profile uploads now persist as text-only context:
 
 - the profile editor at `/profile` accepts a resume upload
-- the file is stored directly in MongoDB on the user profile record
-- extracted text and resume metadata are saved on the user profile for reuse in later interview grading
-- the profile page at `/profile` shows the stored resume and offers a download link
+- uploaded files are parsed and only extracted text is saved on the user profile
+- no raw resume files are persisted in app storage
+- the profile page at `/profile` shows processed resume context status only (no download link)
 - GOOGLE_CLIENT_SECRET
 - MONGODB_URI
 - MONGODB_DB_NAME

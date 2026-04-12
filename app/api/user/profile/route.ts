@@ -6,8 +6,11 @@ function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUser
     return null;
   }
 
-  const { resumeExtractedText, resumeStorageKey, ...publicUser } = user;
-  return publicUser;
+  const { resumeExtractedText, ...publicUser } = user;
+  return {
+    ...publicUser,
+    hasResumeContext: Boolean(resumeExtractedText?.trim()),
+  };
 }
 
 export async function GET() {
@@ -49,13 +52,12 @@ export async function PATCH(request: Request) {
       rawBody && typeof rawBody === "object"
         ? (rawBody as Record<string, unknown>)
         : {};
-    const { name, bio, resumeUrl, focusTrack, preferences } = body;
+    const { name, bio, focusTrack, preferences } = body;
 
     const updates: Record<string, unknown> = {};
 
     if (name !== undefined) updates.name = name;
     if (bio !== undefined) updates.bio = bio;
-    if (resumeUrl !== undefined) updates.resumeUrl = resumeUrl;
     if (focusTrack !== undefined) updates.focusTrack = focusTrack;
     if (preferences !== undefined) updates.preferences = preferences;
 

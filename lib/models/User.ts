@@ -9,11 +9,6 @@ export interface User {
   provider: string;
   focusTrack: string | null;
   bio: string | null;
-  resumeUrl: string | null;
-  resumeStorageKey: string | null;
-  resumeFileName: string | null;
-  resumeMimeType: string | null;
-  resumeUploadedAt: Date | null;
   resumeExtractedText: string | null;
   preferences: {
     voiceId: string | null;
@@ -47,11 +42,6 @@ export class UserModel {
       provider,
       focusTrack: null,
       bio: null,
-      resumeUrl: null,
-      resumeStorageKey: null,
-      resumeFileName: null,
-      resumeMimeType: null,
-      resumeUploadedAt: null,
       resumeExtractedText: null,
       preferences: {
         voiceId: null,
@@ -77,7 +67,7 @@ export class UserModel {
 
   static async updateUserProfile(
     email: string,
-    updates: Partial<Pick<User, "name" | "bio" | "resumeUrl" | "resumeStorageKey" | "resumeFileName" | "resumeMimeType" | "resumeUploadedAt" | "resumeExtractedText" | "focusTrack" | "preferences">>
+    updates: Partial<Pick<User, "name" | "bio" | "resumeExtractedText" | "focusTrack" | "preferences">>
   ): Promise<User | null> {
     const db = await getMongoDb();
     if (!db) return null;

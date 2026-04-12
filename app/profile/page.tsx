@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Award, Brain, Briefcase, Download, Edit3, Flame, FileText, Target, TrendingUp, User, type LucideIcon } from "lucide-react";
+import { Award, Brain, Briefcase, Edit3, Flame, FileText, Target, TrendingUp, User, type LucideIcon } from "lucide-react";
 
 const achievementIcons: Record<string, LucideIcon> = {
   flame: Flame,
@@ -15,7 +15,6 @@ import { ProfileEditor } from "@/components/app/profile-editor";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
 
@@ -27,15 +26,7 @@ export default async function ProfilePage() {
   const profileName = (dbUser?.name || session?.user?.name) ?? "Guest user";
   const profileBio = dbUser?.bio || null;
   const profileFocusTrack = dbUser?.focusTrack || null;
-  const profileResumeName = dbUser?.resumeFileName || dbUser?.resumeUrl || null;
-  const profileResumeDate = dbUser?.resumeUploadedAt
-    ? new Intl.DateTimeFormat(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }).format(dbUser.resumeUploadedAt)
-    : null;
-  const hasStoredResume = Boolean(dbUser?.resumeFileName && dbUser?.resumeUploadedAt);
+  const hasResumeContext = Boolean(dbUser?.resumeExtractedText?.trim());
   
   const subtitle = !metrics.hasSession
     ? "Sign in to save interviews and unlock profile progress."
@@ -60,10 +51,10 @@ export default async function ProfilePage() {
                 src={session.user.image}
                 alt={profileName}
                 referrerPolicy="no-referrer"
-                className="size-22 rounded-none object-cover ring-4 ring-primary/10"
+                className="size-22 rounded-full object-cover ring-4 ring-primary/10"
               />
             ) : (
-              <div className="flex size-22 items-center justify-center rounded-none bg-primary/10 text-primary">
+              <div className="flex size-22 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <User className="size-10" />
               </div>
             )}
@@ -92,41 +83,20 @@ export default async function ProfilePage() {
           </Card>
         )}
 
-        {profileResumeName && (
+        {hasResumeContext && (
           <Card>
-            <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <CardContent className="p-6">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <FileText className="size-4 text-primary" />
                   <h2 className="text-lg font-semibold">Resume</h2>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {profileResumeName}
-                  {profileResumeDate ? ` · Uploaded ${profileResumeDate}` : " · Stored on your profile"}
+                  Resume processed successfully.
                 </p>
-                {dbUser?.resumeUrl && !hasStoredResume && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Legacy link still available in your profile data.
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge>{hasStoredResume ? "Saved" : "Legacy"}</Badge>
-                {hasStoredResume ? (
-                  <Button asChild variant="secondary">
-                    <a href="/api/user/profile/resume" target="_blank" rel="noreferrer">
-                      <Download className="size-4" />
-                      Download
-                    </a>
-                  </Button>
-                ) : dbUser?.resumeUrl ? (
-                  <Button asChild variant="secondary">
-                    <a href={dbUser.resumeUrl} target="_blank" rel="noreferrer">
-                      <Download className="size-4" />
-                      Open link
-                    </a>
-                  </Button>
-                ) : null}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Extracted text context is stored in MongoDB for interview coaching and grading.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -186,7 +156,7 @@ export default async function ProfilePage() {
                   {(() => {
                     const Icon = achievementIcons[achievement.icon] ?? Award;
                     return (
-                      <div className="mx-auto flex size-12 items-center justify-center rounded-none bg-amber-50">
+                      <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-amber-50">
                         <Icon className="size-6 text-amber-500" />
                       </div>
                     );
