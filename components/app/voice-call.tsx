@@ -48,6 +48,7 @@ export function VoiceCall({
   const conversationRef = useRef<VoiceConversation | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const lastPromptIdRef = useRef<string | null>(null);
+  const deliveredPromptTextsRef = useRef<Set<string>>(new Set());
   const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
     user: null,
     interviewer: null,
@@ -164,6 +165,7 @@ export function VoiceCall({
         agentId,
         onConnect: () => {
           lastPromptIdRef.current = null;
+          deliveredPromptTextsRef.current.clear();
           updateStatus("connected");
         },
         onDisconnect: () => {
@@ -225,7 +227,12 @@ export function VoiceCall({
       return;
     }
 
+    if (deliveredPromptTextsRef.current.has(promptRequest.text)) {
+      return;
+    }
+
     lastPromptIdRef.current = promptRequest.id;
+    deliveredPromptTextsRef.current.add(promptRequest.text);
     conversationRef.current.sendContextualUpdate(promptRequest.text);
   }, [promptRequest, status]);
 
@@ -235,6 +242,7 @@ export function VoiceCall({
         conversationRef.current.endSession().catch(() => {});
         conversationRef.current = null;
       }
+      deliveredPromptTextsRef.current.clear();
     };
   }, []);
 

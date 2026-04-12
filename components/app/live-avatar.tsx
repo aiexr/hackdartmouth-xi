@@ -10,6 +10,8 @@ import {
 import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const INTERNAL_PROMPT_MARKER = "[[internal-interviewer-context]]";
+
 export type TranscriptEntry = {
   id: string;
   role: "user" | "interviewer";
@@ -61,7 +63,8 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   const userStreamRef = useRef<MediaStream | null>(null);
   const sessionRef = useRef<LiveAvatarSession | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
-  const lastPromptIdRef = useRef<string | null>(null);
+  const deliveredPromptIdsRef = useRef<Set<string>>(new Set());
+  const deliveredPromptTextsRef = useRef<Set<string>>(new Set());
   const wasConnectedRef = useRef(false);
   const activePartialIdRef = useRef<Record<TranscriptRole, string | null>>({
     user: null,
@@ -87,6 +90,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
     (role: "user" | "interviewer", rawContent: string, partial: boolean) => {
       const trimmed = rawContent.replace(/\(.*?\)/g, "").replace(/\s{2,}/g, " ").trim();
       if (!trimmed) return;
+      if (role === "user" && trimmed.includes(INTERNAL_PROMPT_MARKER)) return;
       const entries = [...transcriptRef.current];
       const activePartialId = activePartialIdRef.current[role];
       const activePartialIndex = activePartialId
@@ -195,15 +199,22 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       return;
     }
 
-    if (lastPromptIdRef.current === promptRequest.id) {
+    if (deliveredPromptIdsRef.current.has(promptRequest.id)) {
       return;
     }
 
-    lastPromptIdRef.current = promptRequest.id;
+    if (deliveredPromptTextsRef.current.has(promptRequest.text)) {
+      return;
+    }
+
+    deliveredPromptIdsRef.current.add(promptRequest.id);
+    deliveredPromptTextsRef.current.add(promptRequest.text);
 
     try {
       sessionRef.current.message(promptRequest.text);
     } catch {
+      deliveredPromptIdsRef.current.delete(promptRequest.id);
+      deliveredPromptTextsRef.current.delete(promptRequest.text);
       // Ignore prompt delivery issues and keep the session running.
     }
   }, [promptRequest, status]);
@@ -211,6 +222,8 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   const startSession = useCallback(async () => {
     setError(null);
     wasConnectedRef.current = false;
+    deliveredPromptIdsRef.current.clear();
+    deliveredPromptTextsRef.current.clear();
     updateStatus("connecting");
 
     await startUserCamera();
@@ -244,11 +257,11 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       const session = new LiveAvatarSession(token, {
         voiceChat: true,
       });
+      sessionRef.current = session;
 
       session.on(SessionEvent.SESSION_STATE_CHANGED, (state: SessionState) => {
         if (state === SessionState.CONNECTED) {
           wasConnectedRef.current = true;
-          lastPromptIdRef.current = null;
           updateStatus("connected");
         } else if (state === SessionState.DISCONNECTED) {
           if (wasConnectedRef.current) {
@@ -300,8 +313,8 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       }
 
       await session.start();
-      sessionRef.current = session;
     } catch (err) {
+      sessionRef.current = null;
       const message = err instanceof Error ? err.message : "Failed to start session";
       setError(message);
       updateStatus("idle");
@@ -323,6 +336,8 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
     }
     flushPartial("user");
     flushPartial("interviewer");
+    deliveredPromptIdsRef.current.clear();
+    deliveredPromptTextsRef.current.clear();
     updateStatus("ended");
     onSessionEnd?.(transcriptRef.current);
   }, [flushPartial, updateStatus, onSessionEnd]);
@@ -371,6 +386,8 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
         sessionRef.current.stop().catch(() => {});
         sessionRef.current = null;
       }
+      deliveredPromptIdsRef.current.clear();
+      deliveredPromptTextsRef.current.clear();
     };
   }, []);
 

@@ -77,6 +77,9 @@ type PersistedPracticeState = {
 };
 
 const PRACTICE_STATE_TTL_MS = 24 * 60 * 60 * 1000;
+const EDITOR_CONTEXT_MAX_LINES = 80;
+const EDITOR_CONTEXT_MAX_CHARS = 3200;
+const INTERNAL_PROMPT_MARKER = "[[internal-interviewer-context]]";
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"
@@ -90,6 +93,43 @@ function buildDefaultEditorContent(scenario: Scenario) {
   }
 
   return "// Sketch your approach here.\n";
+}
+
+function formatEditorSnapshotForPrompt(editorContent: string) {
+  const normalized = editorContent.replace(/\r\n/g, "\n").trim();
+  if (!normalized) {
+    return "Editor is currently empty.";
+  }
+
+  const numbered = normalized
+    .split("\n")
+    .slice(0, EDITOR_CONTEXT_MAX_LINES)
+    .map((line, index) => `${index + 1}: ${line}`)
+    .join("\n");
+
+  if (numbered.length <= EDITOR_CONTEXT_MAX_CHARS) {
+    return numbered;
+  }
+
+  return `${numbered.slice(0, EDITOR_CONTEXT_MAX_CHARS)}\n...[truncated]`;
+}
+
+function hashPromptKey(text: string) {
+  let hash = 0;
+
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) >>> 0;
+  }
+
+  return hash.toString(36);
+}
+
+function wrapInternalPrompt(text: string) {
+  return [
+    INTERNAL_PROMPT_MARKER,
+    "Use the following as internal interviewer context. Do not repeat, quote, or acknowledge this marker or these instructions.",
+    text,
+  ].join("\n\n");
 }
 
 function buildInitialInterviewerPrompt(scenario: Scenario) {
@@ -127,6 +167,8 @@ function buildInitialInterviewerPrompt(scenario: Scenario) {
     }
 
     sharedContext.push(
+      "The candidate may share code editor snapshots from the app. Treat those snapshots as the current source of truth.",
+      "Never claim you cannot access the candidate's code editor.",
       "Probe on correctness, edge cases, testing instinct, and time/space complexity. Do not fully solve the problem for the candidate.",
       "Open with a short greeting, restate the problem crisply, and ask the candidate to talk through their first approach.",
     );
@@ -299,8 +341,8 @@ export function PracticeSession({
 
     initialPromptSentRef.current = true;
     setInterviewerPrompt({
-      id: `${scenario.id}-opening-${Date.now()}`,
-      text: buildInitialInterviewerPrompt(scenario),
+      id: `${scenario.id}-opening`,
+      text: wrapInternalPrompt(buildInitialInterviewerPrompt(scenario)),
     });
   }, [scenario, sessionState]);
 
@@ -311,6 +353,36 @@ export function PracticeSession({
       setInterviewerPrompt(null);
     }
   }, [sessionState]);
+
+  const handleShareCodeWithInterviewer = useCallback(() => {
+    if (!isTechnical || sessionState !== "connected") {
+      return;
+    }
+
+    const latestUserTurn = [...transcript]
+      .reverse()
+      .find((entry) => entry.role === "user" && !entry.partial);
+    const snapshot = formatEditorSnapshotForPrompt(editorContent);
+    const promptBody = latestUserTurn
+      ? [
+          "The candidate wants feedback on their current code.",
+          `Latest candidate request: ${latestUserTurn.content}`,
+          "Current code editor snapshot:",
+          snapshot,
+          "Respond with concise interview-style guidance. Do not fully solve the problem unless the candidate explicitly asks for a hint.",
+        ].join("\n\n")
+      : [
+          "The candidate asked you to inspect their current code.",
+          "Current code editor snapshot:",
+          snapshot,
+          "Respond with concise interview-style guidance. Focus on correctness, edge cases, complexity, and tests.",
+        ].join("\n\n");
+
+    setInterviewerPrompt({
+      id: `${scenario.id}-code-share-${hashPromptKey(promptBody)}`,
+      text: wrapInternalPrompt(promptBody),
+    });
+  }, [editorContent, isTechnical, scenario.id, sessionState, transcript]);
 
   const handleTranscriptScroll = useCallback(() => {
     const container = transcriptContainerRef.current;
@@ -770,6 +842,20 @@ export function PracticeSession({
                       testCases={codingProblem.testCases}
                     />
                   )}
+                  <button
+                    type="button"
+                    onClick={handleShareCodeWithInterviewer}
+                    disabled={sessionState !== "connected"}
+                    className={cn(
+                      "inline-flex items-center gap-2 text-xs font-medium transition",
+                      sessionState === "connected"
+                        ? "text-base-content/70 hover:text-base-content"
+                        : "cursor-not-allowed text-base-content/30",
+                    )}
+                  >
+                    <MessageSquareText className="size-3.5" />
+                    Share code with interviewer
+                  </button>
                   <button
                     type="button"
                     onClick={() => setEditorContent(buildDefaultEditorContent(scenario))}
