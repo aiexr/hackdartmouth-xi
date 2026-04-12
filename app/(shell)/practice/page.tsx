@@ -9,6 +9,7 @@ import {
   Code2,
   Loader2,
   Network,
+  Search,
   Shuffle,
   Users,
 } from "lucide-react";
@@ -57,8 +58,25 @@ const TECH_TYPES = [
   },
 ];
 
-// Behavioral: grouped by competency round
-const BEHAVIORAL_GROUPS = [
+// Behavioral: TYPE cards (top-level) + competency groups (sub-groups within STAR)
+const BEHAVIORAL_TYPES = [
+  {
+    id: "star-interview",
+    label: "STAR Interview",
+    description:
+      "Structured behavioral scenarios — leadership, conflict, strategy, and more — using the STAR framework.",
+    icon: Users,
+  },
+  {
+    id: "lc-behavioral",
+    label: "LeetCode Discussion",
+    description:
+      "Discuss a LeetCode problem verbally — walk through your thinking, tradeoffs, and approach without writing code.",
+    icon: Code2,
+  },
+];
+
+const STAR_GROUPS = [
   {
     id: "leadership",
     label: "Leadership & Influence",
@@ -118,8 +136,25 @@ const BEHAVIORAL_GROUPS = [
   },
 ];
 
-// System design: grouped by problem domain
-const SYSTEM_DESIGN_GROUPS = [
+// System design: TYPE cards (top-level) + domain groups (sub-groups within Architecture)
+const SYSTEM_DESIGN_TYPES = [
+  {
+    id: "architecture",
+    label: "Architecture Challenges",
+    description:
+      "Design real systems end-to-end — storage, APIs, realtime, and data pipelines with live whiteboard.",
+    icon: Network,
+  },
+  {
+    id: "lc-system-design",
+    label: "LeetCode Architecture",
+    description:
+      "Use a LeetCode problem as a jumping-off point to discuss system-level design, scaling, and architecture.",
+    icon: Code2,
+  },
+];
+
+const ARCHITECTURE_GROUPS = [
   {
     id: "past-work",
     label: "Past Work Review",
@@ -162,14 +197,6 @@ const ROUND_META: Record<RoundType, { label: string; icon: typeof Braces }> = {
   "system-design": { label: "System Design", icon: Network },
 };
 
-function getLcDifficulty(scenario: Scenario): LcDifficulty {
-  const src = scenario.codingProblem?.sourceDifficulty;
-  if (src) return src;
-  if (scenario.difficulty === "Foundations") return "Easy";
-  if (scenario.difficulty === "Growth") return "Medium";
-  return "Hard";
-}
-
 const diffColor: Record<LcDifficulty, string> = {
   Easy: "text-emerald-500",
   Medium: "text-amber-500",
@@ -180,12 +207,25 @@ const diffColor: Record<LcDifficulty, string> = {
 export default function PracticePage() {
   const router = useRouter();
   const [activeRound, setActiveRound] = useState<RoundType>("technical");
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedSubGroup, setSelectedSubGroup] = useState<string | null>(null);
   const [activeDiff, setActiveDiff] = useState<LcDifficulty | "All">("All");
+  const [lcSearch, setLcSearch] = useState("");
+  const [lcSearchDebounced, setLcSearchDebounced] = useState("");
 
-  const isTechnical = activeRound === "technical";
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setLcSearchDebounced(lcSearch), 350);
+    return () => clearTimeout(t);
+  }, [lcSearch]);
 
-  // LeetCode API state (only used when selectedGroup === "leetcode")
+  // Whether the current drill-down is showing a LeetCode problem list
+  const isLcDrillDown =
+    selectedType === "leetcode" ||
+    selectedType === "lc-behavioral" ||
+    selectedType === "lc-system-design";
+
+  // LeetCode API state
   const [lcProblems, setLcProblems] = useState<LcProblem[]>([]);
   const [lcTotal, setLcTotal] = useState(0);
   const [lcLoading, setLcLoading] = useState(false);
@@ -193,32 +233,47 @@ export default function PracticePage() {
 
   function switchRound(round: RoundType) {
     setActiveRound(round);
-    setSelectedGroup(null);
+    setSelectedType(null);
+    setSelectedSubGroup(null);
     setActiveDiff("All");
+    setLcSearch("");
+    setLcSearchDebounced("");
     setLcProblems([]);
   }
 
-  function selectGroup(id: string) {
-    setSelectedGroup(id);
+  function selectType(id: string) {
+    setSelectedType(id);
+    setSelectedSubGroup(null);
     setActiveDiff("All");
+    setLcSearch("");
+    setLcSearchDebounced("");
     setLcProblems([]);
+  }
+
+  function selectSubGroup(id: string) {
+    setSelectedSubGroup(id);
   }
 
   function goBack() {
-    setSelectedGroup(null);
-    setActiveDiff("All");
-    setLcProblems([]);
+    if (selectedSubGroup) {
+      setSelectedSubGroup(null);
+    } else {
+      setSelectedType(null);
+      setActiveDiff("All");
+      setLcProblems([]);
+    }
   }
 
   type LcApiResponse = { error?: string; questions?: LcProblem[]; total?: number };
 
-  // Fetch LeetCode problems when entering the drill-down
+  // Fetch LeetCode problems when entering any LeetCode drill-down
   useEffect(() => {
-    if (selectedGroup !== "leetcode") return;
+    if (!isLcDrillDown) return;
     setLcLoading(true);
     setLcError(null);
     const diff = activeDiff === "All" ? "" : activeDiff;
-    fetch(`/api/leetcode/problems?difficulty=${diff}&limit=50&skip=0`)
+    const searchParam = lcSearchDebounced ? `&search=${encodeURIComponent(lcSearchDebounced)}` : "";
+    fetch(`/api/leetcode/problems?difficulty=${diff}&limit=50&skip=0${searchParam}`)
       .then((r) => r.json() as Promise<LcApiResponse>)
       .then((data) => {
         if (data.error) throw new Error(data.error);
@@ -227,13 +282,14 @@ export default function PracticePage() {
       })
       .catch((e: Error) => setLcError(e.message ?? "Failed to load problems"))
       .finally(() => setLcLoading(false));
-  }, [selectedGroup, activeDiff]);
+  }, [isLcDrillDown, activeDiff, lcSearchDebounced]);
 
   function loadMore() {
     if (lcLoading) return;
     setLcLoading(true);
     const diff = activeDiff === "All" ? "" : activeDiff;
-    fetch(`/api/leetcode/problems?difficulty=${diff}&limit=50&skip=${lcProblems.length}`)
+    const searchParam = lcSearchDebounced ? `&search=${encodeURIComponent(lcSearchDebounced)}` : "";
+    fetch(`/api/leetcode/problems?difficulty=${diff}&limit=50&skip=${lcProblems.length}${searchParam}`)
       .then((r) => r.json() as Promise<LcApiResponse>)
       .then((data) => {
         if (data.error) throw new Error(data.error);
@@ -244,6 +300,14 @@ export default function PracticePage() {
   }
 
   function openLcProblem(slug: string) {
+    if (selectedType === "lc-behavioral") {
+      router.push(`/practice/lc/${slug}?mode=behavioral`);
+      return;
+    }
+    if (selectedType === "lc-system-design") {
+      router.push(`/practice/lc/${slug}?mode=system-design`);
+      return;
+    }
     const prebuilt = PREBUILT_SLUG_TO_SCENARIO[slug];
     router.push(prebuilt ? `/practice/${prebuilt}` : `/practice/lc/${slug}`);
   }
@@ -255,64 +319,49 @@ export default function PracticePage() {
     openLcProblem(pick.titleSlug);
   }
 
-  // Round counts for tab badges
-  const roundCounts = useMemo(
-    () =>
-      ROUND_ORDER.reduce(
-        (acc, r) => {
-          acc[r] = scenarios.filter((s) => s.category === r).length;
-          return acc;
-        },
-        {} as Record<RoundType, number>,
-      ),
-    [],
-  );
-
-  // All technical scenarios
-  const technicalScenarios = useMemo(
-    () => scenarios.filter((s) => s.category === "technical"),
-    [],
-  );
-
-  // Difficulty breakdown for the LeetCode card
-  const techDiffCounts = useMemo(() => {
-    const counts: Record<LcDifficulty, number> = { Easy: 0, Medium: 0, Hard: 0 };
-    for (const s of technicalScenarios) counts[getLcDifficulty(s)]++;
-    return counts;
-  }, [technicalScenarios]);
-
-  // Technical drill-down: filter by selected difficulty
-  const filteredTech = useMemo(() => {
-    if (!isTechnical || selectedGroup !== "leetcode") return [];
-    return technicalScenarios.filter(
-      (s) => activeDiff === "All" || getLcDifficulty(s) === activeDiff,
-    );
-  }, [isTechnical, selectedGroup, activeDiff, technicalScenarios]);
-
-  // Behavioral / system-design drill-down: scenarios in selected group
-  const filteredGroup = useMemo(() => {
-    if (!selectedGroup || isTechnical) return [];
+  // Scenarios in the selected sub-group (for STAR / Architecture drill-down)
+  const filteredSubGroup = useMemo(() => {
+    if (!selectedSubGroup) return [];
     const groups =
-      activeRound === "behavioral" ? BEHAVIORAL_GROUPS : SYSTEM_DESIGN_GROUPS;
-    const group = groups.find((g) => g.id === selectedGroup);
+      selectedType === "star-interview" ? STAR_GROUPS : ARCHITECTURE_GROUPS;
+    const group = groups.find((g) => g.id === selectedSubGroup);
     if (!group) return [];
     return scenarios.filter((s) => group.scenarioIds.includes(s.id));
-  }, [selectedGroup, isTechnical, activeRound]);
+  }, [selectedSubGroup, selectedType]);
 
-  function pickRandom() {
-    const pool = isTechnical ? filteredTech : filteredGroup;
-    if (pool.length === 0) return;
-    router.push(`/practice/${pool[Math.floor(Math.random() * pool.length)].id}`);
+  function pickRandomScenario() {
+    if (filteredSubGroup.length === 0) return;
+    router.push(`/practice/${filteredSubGroup[Math.floor(Math.random() * filteredSubGroup.length)].id}`);
   }
 
-  // Label for the breadcrumb
-  const selectedLabel = useMemo(() => {
-    if (!selectedGroup) return "";
-    if (isTechnical) return TECH_TYPES.find((t) => t.id === selectedGroup)?.label ?? "";
-    const groups =
-      activeRound === "behavioral" ? BEHAVIORAL_GROUPS : SYSTEM_DESIGN_GROUPS;
-    return groups.find((g) => g.id === selectedGroup)?.label ?? "";
-  }, [selectedGroup, isTechnical, activeRound]);
+  // Breadcrumb label
+  const breadcrumbParts = useMemo(() => {
+    const parts: string[] = [];
+    if (!selectedType) return parts;
+
+    // Find type label
+    const allTypes = [
+      ...TECH_TYPES,
+      ...BEHAVIORAL_TYPES,
+      ...SYSTEM_DESIGN_TYPES,
+    ];
+    const typeLabel = allTypes.find((t) => t.id === selectedType)?.label ?? "";
+    parts.push(typeLabel);
+
+    if (selectedSubGroup) {
+      const groups =
+        selectedType === "star-interview" ? STAR_GROUPS : ARCHITECTURE_GROUPS;
+      const groupLabel = groups.find((g) => g.id === selectedSubGroup)?.label ?? "";
+      parts.push(groupLabel);
+    }
+    return parts;
+  }, [selectedType, selectedSubGroup]);
+
+  // ── Determine what the current "level" is ─────────────────────────────────
+  // Level 1: no selectedType — show type cards
+  // Level 2: selectedType set, no selectedSubGroup — show either LC list or sub-group cards
+  // Level 3: selectedSubGroup set — show scenario list (STAR / Architecture only)
+  const level = !selectedType ? 1 : selectedSubGroup ? 3 : 2;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8 md:px-10 md:py-10">
@@ -334,25 +383,22 @@ export default function PracticePage() {
             >
               <Icon className="size-4" />
               {label}
-              <span className="text-[0.65rem] text-base-content/50">
-                {roundCounts[round]}
-              </span>
             </button>
           );
         })}
       </div>
 
       {/* ── Level 1: type cards ───────────────────────────────────────────────── */}
-      {!selectedGroup && (
+      {level === 1 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {isTechnical &&
+          {activeRound === "technical" &&
             TECH_TYPES.map((type) => {
               const Icon = type.icon;
               return (
                 <button
                   key={type.id}
                   type="button"
-                  onClick={() => selectGroup(type.id)}
+                  onClick={() => selectType(type.id)}
                   className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
                 >
                   <div className="flex items-start justify-between">
@@ -367,73 +413,66 @@ export default function PracticePage() {
                       {type.description}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className={cn("font-medium", diffColor.Easy)}>
-                      {techDiffCounts.Easy} Easy
-                    </span>
-                    <span className={cn("font-medium", diffColor.Medium)}>
-                      {techDiffCounts.Medium} Medium
-                    </span>
-                    <span className={cn("font-medium", diffColor.Hard)}>
-                      {techDiffCounts.Hard} Hard
-                    </span>
-                  </div>
                 </button>
               );
             })}
 
           {activeRound === "behavioral" &&
-            BEHAVIORAL_GROUPS.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                onClick={() => selectGroup(group.id)}
-                className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
-              >
-                <div className="flex items-start justify-between">
-                  <span className="rounded-none bg-base-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-base-content/60">
-                    {group.scenarioIds.length}{" "}
-                    {group.scenarioIds.length === 1 ? "scenario" : "scenarios"}
-                  </span>
-                  <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
-                </div>
-                <div>
-                  <p className="font-semibold text-base-content">{group.label}</p>
-                  <p className="mt-0.5 text-xs leading-5 text-base-content/60">
-                    {group.description}
-                  </p>
-                </div>
-              </button>
-            ))}
+            BEHAVIORAL_TYPES.map((type) => {
+              const Icon = type.icon;
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => selectType(type.id)}
+                  className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex size-9 items-center justify-center rounded-none bg-indigo-100 text-indigo-600">
+                      <Icon className="size-5" />
+                    </div>
+                    <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-base-content">{type.label}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-base-content/60">
+                      {type.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
 
           {activeRound === "system-design" &&
-            SYSTEM_DESIGN_GROUPS.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                onClick={() => selectGroup(group.id)}
-                className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
-              >
-                <div className="flex items-start justify-between">
-                  <span className="rounded-none bg-base-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-base-content/60">
-                    {group.scenarioIds.length}{" "}
-                    {group.scenarioIds.length === 1 ? "scenario" : "scenarios"}
-                  </span>
-                  <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
-                </div>
-                <div>
-                  <p className="font-semibold text-base-content">{group.label}</p>
-                  <p className="mt-0.5 text-xs leading-5 text-base-content/60">
-                    {group.description}
-                  </p>
-                </div>
-              </button>
-            ))}
+            SYSTEM_DESIGN_TYPES.map((type) => {
+              const Icon = type.icon;
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => selectType(type.id)}
+                  className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex size-9 items-center justify-center rounded-none bg-indigo-100 text-indigo-600">
+                      <Icon className="size-5" />
+                    </div>
+                    <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-base-content">{type.label}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-base-content/60">
+                      {type.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
         </div>
       )}
 
-      {/* ── Level 2: drill-down ───────────────────────────────────────────────── */}
-      {selectedGroup && (
+      {/* ── Level 2+: drill-down ─────────────────────────────────────────────── */}
+      {level >= 2 && (
         <div className="space-y-4">
           {/* Breadcrumb + back */}
           <div className="flex items-center gap-2">
@@ -445,158 +484,201 @@ export default function PracticePage() {
               <ArrowLeft className="size-4" />
               Back
             </button>
-            <span className="text-base-content/30">/</span>
-            <span className="text-sm font-medium text-base-content">{selectedLabel}</span>
+            {breadcrumbParts.map((part, i) => (
+              <span key={i} className="flex items-center gap-2">
+                <span className="text-base-content/30">/</span>
+                <span className="text-sm font-medium text-base-content">{part}</span>
+              </span>
+            ))}
           </div>
 
-          {/* Difficulty + Random — technical only */}
-          {isTechnical && (
-            <div className="flex flex-wrap items-center gap-2">
-              {(["All", "Easy", "Medium", "Hard"] as const).map((d) => (
+          {/* ── LeetCode problem list (used by technical, behavioral, system-design) */}
+          {isLcDrillDown && (
+            <>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-base-content/40" />
+                <input
+                  type="text"
+                  placeholder="Search problems…"
+                  value={lcSearch}
+                  onChange={(e) => setLcSearch(e.target.value)}
+                  className="input input-bordered w-full pl-9 text-sm"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {(["All", "Easy", "Medium", "Hard"] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setActiveDiff(d)}
+                    className={cn(
+                      "rounded-none border px-3 py-1.5 text-xs font-medium transition",
+                      activeDiff === d
+                        ? d === "All"
+                          ? "border-base-content/40 bg-base-200 text-base-content"
+                          : cn("border-current bg-current/5", diffColor[d])
+                        : "border-base-300 bg-transparent text-base-content/60 hover:border-base-content/30 hover:text-base-content",
+                    )}
+                  >
+                    {d}
+                  </button>
+                ))}
                 <button
-                  key={d}
                   type="button"
-                  onClick={() => setActiveDiff(d)}
-                  className={cn(
-                    "rounded-none border px-3 py-1.5 text-xs font-medium transition",
-                    activeDiff === d
-                      ? d === "All"
-                        ? "border-base-content/40 bg-base-200 text-base-content"
-                        : cn("border-current bg-current/5", diffColor[d])
-                      : "border-base-300 bg-transparent text-base-content/60 hover:border-base-content/30 hover:text-base-content",
-                  )}
+                  onClick={pickRandomLc}
+                  disabled={lcProblems.filter((p) => !p.paidOnly).length === 0}
+                  className="btn btn-sm btn-ghost ml-auto gap-1.5"
                 >
-                  {d}
+                  <Shuffle className="size-3.5" />
+                  Random
+                </button>
+              </div>
+
+              <div className="card card-bordered overflow-hidden bg-base-100">
+                <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_5rem_5.5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
+                  <span>#</span>
+                  <span>Problem</span>
+                  <span>Topic</span>
+                  <span>Difficulty</span>
+                </div>
+                {lcError && (
+                  <div className="px-4 py-6 text-center text-sm text-red-500">{lcError}</div>
+                )}
+                {lcLoading && lcProblems.length === 0 && (
+                  <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-base-content/50">
+                    <Loader2 className="size-4 animate-spin" />
+                    Loading problems…
+                  </div>
+                )}
+                {!lcLoading && !lcError && lcProblems.length === 0 && (
+                  <div className="px-4 py-10 text-center text-sm text-base-content/50">
+                    No problems found.
+                  </div>
+                )}
+                {lcProblems.map((problem, idx) => {
+                  const topic = problem.topicTags[0]?.name ?? "—";
+                  const d = problem.difficulty;
+                  return (
+                    <button
+                      key={problem.titleSlug}
+                      type="button"
+                      onClick={() => openLcProblem(problem.titleSlug)}
+                      disabled={problem.paidOnly}
+                      className={cn(
+                        "grid w-full cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_5rem_5.5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50 disabled:cursor-not-allowed disabled:opacity-40",
+                        idx < lcProblems.length - 1 && "border-b border-base-300/50",
+                      )}
+                    >
+                      <span className="text-center text-xs text-base-content/40">
+                        {problem.frontendQuestionId}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-base-content">{problem.title}</p>
+                        {problem.paidOnly && (
+                          <p className="text-[11px] text-amber-500">Premium</p>
+                        )}
+                      </div>
+                      <span className="truncate text-xs text-base-content/60">{topic}</span>
+                      <span className={cn("text-xs font-medium", diffColor[d])}>{d}</span>
+                    </button>
+                  );
+                })}
+                {!lcLoading && lcProblems.length > 0 && lcProblems.length < lcTotal && (
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    className="w-full py-3 text-center text-xs text-base-content/50 transition hover:text-base-content"
+                  >
+                    Load more
+                  </button>
+                )}
+                {lcLoading && lcProblems.length > 0 && (
+                  <div className="flex items-center justify-center gap-2 py-3 text-xs text-base-content/50">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Loading…
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── Sub-group cards (STAR Interview / Architecture Challenges) ─────── */}
+          {!isLcDrillDown && !selectedSubGroup && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(selectedType === "star-interview"
+                ? STAR_GROUPS
+                : ARCHITECTURE_GROUPS
+              ).map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => selectSubGroup(group.id)}
+                  className="group flex flex-col gap-3 rounded-none border border-base-300 bg-base-100 p-5 text-left transition hover:border-indigo-400 hover:bg-base-200/40"
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="rounded-none bg-base-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-base-content/60">
+                      {group.scenarioIds.length}{" "}
+                      {group.scenarioIds.length === 1 ? "scenario" : "scenarios"}
+                    </span>
+                    <ChevronRight className="size-4 text-base-content/30 transition group-hover:translate-x-0.5 group-hover:text-base-content/60" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-base-content">{group.label}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-base-content/60">
+                      {group.description}
+                    </p>
+                  </div>
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={pickRandomLc}
-                disabled={lcProblems.filter((p) => !p.paidOnly).length === 0}
-                className="btn btn-sm btn-ghost ml-auto gap-1.5"
-              >
-                <Shuffle className="size-3.5" />
-                Random
-              </button>
             </div>
           )}
 
-          {!isTechnical && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={pickRandom}
-                disabled={filteredGroup.length === 0}
-                className="btn btn-sm btn-ghost gap-1.5"
-              >
-                <Shuffle className="size-3.5" />
-                Random
-              </button>
-            </div>
-          )}
-
-          {/* Problem list — technical (from LeetCode API) */}
-          {isTechnical && (
-            <div className="card card-bordered overflow-hidden bg-base-100">
-              <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_5rem_5.5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
-                <span>#</span>
-                <span>Problem</span>
-                <span>Topic</span>
-                <span>Difficulty</span>
-              </div>
-              {lcError && (
-                <div className="px-4 py-6 text-center text-sm text-red-500">{lcError}</div>
-              )}
-              {lcLoading && lcProblems.length === 0 && (
-                <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-base-content/50">
-                  <Loader2 className="size-4 animate-spin" />
-                  Loading problems…
-                </div>
-              )}
-              {!lcLoading && !lcError && lcProblems.length === 0 && (
-                <div className="px-4 py-10 text-center text-sm text-base-content/50">
-                  No problems found.
-                </div>
-              )}
-              {lcProblems.map((problem, idx) => {
-                const topic = problem.topicTags[0]?.name ?? "—";
-                const d = problem.difficulty;
-                return (
-                  <button
-                    key={problem.titleSlug}
-                    type="button"
-                    onClick={() => openLcProblem(problem.titleSlug)}
-                    disabled={problem.paidOnly}
-                    className={cn(
-                      "grid w-full cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_5rem_5.5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50 disabled:cursor-not-allowed disabled:opacity-40",
-                      idx < lcProblems.length - 1 && "border-b border-base-300/50",
-                    )}
-                  >
-                    <span className="text-center text-xs text-base-content/40">
-                      {problem.frontendQuestionId}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-base-content">{problem.title}</p>
-                      {problem.paidOnly && (
-                        <p className="text-[11px] text-amber-500">Premium</p>
-                      )}
-                    </div>
-                    <span className="truncate text-xs text-base-content/60">{topic}</span>
-                    <span className={cn("text-xs font-medium", diffColor[d])}>{d}</span>
-                  </button>
-                );
-              })}
-              {!lcLoading && lcProblems.length > 0 && lcProblems.length < lcTotal && (
+          {/* ── Scenario list (Level 3 — inside a sub-group) ─────────────────── */}
+          {selectedSubGroup && (
+            <>
+              <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={loadMore}
-                  className="w-full py-3 text-center text-xs text-base-content/50 transition hover:text-base-content"
+                  onClick={pickRandomScenario}
+                  disabled={filteredSubGroup.length === 0}
+                  className="btn btn-sm btn-ghost gap-1.5"
                 >
-                  Load more
+                  <Shuffle className="size-3.5" />
+                  Random
                 </button>
-              )}
-              {lcLoading && lcProblems.length > 0 && (
-                <div className="flex items-center justify-center gap-2 py-3 text-xs text-base-content/50">
-                  <Loader2 className="size-3.5 animate-spin" />
-                  Loading…
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Scenario list — behavioral / system-design */}
-          {!isTechnical && (
-            <div className="card card-bordered overflow-hidden bg-base-100">
-              <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
-                <span>Scenario</span>
-                <span>Duration</span>
               </div>
-              {filteredGroup.length === 0 ? (
-                <div className="px-4 py-10 text-center text-sm text-base-content/50">
-                  No scenarios in this group.
+              <div className="card card-bordered overflow-hidden bg-base-100">
+                <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
+                  <span>Scenario</span>
+                  <span>Duration</span>
                 </div>
-              ) : (
-                filteredGroup.map((scenario, idx) => (
-                  <button
-                    key={scenario.id}
-                    type="button"
-                    onClick={() => router.push(`/practice/${scenario.id}`)}
-                    className={cn(
-                      "grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
-                      idx < filteredGroup.length - 1 && "border-b border-base-300/50",
-                    )}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-base-content">{scenario.title}</p>
-                      <p className="truncate text-[11px] text-base-content/50">
-                        {scenario.interviewer}
-                      </p>
-                    </div>
-                    <span className="text-xs text-base-content/50">{scenario.duration}</span>
-                  </button>
-                ))
-              )}
-            </div>
+                {filteredSubGroup.length === 0 ? (
+                  <div className="px-4 py-10 text-center text-sm text-base-content/50">
+                    No scenarios in this group.
+                  </div>
+                ) : (
+                  filteredSubGroup.map((scenario, idx) => (
+                    <button
+                      key={scenario.id}
+                      type="button"
+                      onClick={() => router.push(`/practice/${scenario.id}`)}
+                      className={cn(
+                        "grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
+                        idx < filteredSubGroup.length - 1 && "border-b border-base-300/50",
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-base-content">{scenario.title}</p>
+                        <p className="truncate text-[11px] text-base-content/50">
+                          {scenario.interviewer}
+                        </p>
+                      </div>
+                      <span className="text-xs text-base-content/50">{scenario.duration}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
