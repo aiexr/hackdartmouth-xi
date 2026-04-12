@@ -179,7 +179,7 @@ export function DashboardPreview({ className, avatarUrl }: DashboardPreviewProps
             </div>
             <div className="mt-4 space-y-4">
               <PreviewGoal
-                label="Complete 3 practice loops this week"
+                label="Complete 3 interviews this week"
                 current={0}
                 total={3}
               />

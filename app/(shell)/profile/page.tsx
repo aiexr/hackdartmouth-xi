@@ -1,16 +1,6 @@
-import { Suspense } from "react";
-import Link from "next/link";
-import { Briefcase, Edit3, User } from "lucide-react";
-import { scenarios } from "@/data/scenarios";
-import { getOptionalServerSession } from "@/lib/auth";
-import { getUserInterviewMetrics } from "@/lib/interview-metrics";
-import { InterviewModel, UserModel } from "@/lib/models";
-import { ProfileHistory } from "@/components/app/profile-history";
-import { ProfileEditor } from "@/components/app/profile-editor";
-import { ResumeUploaderCard } from "@/components/app/resume-uploader-card";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ProfilePageClient } from "@/components/app/profile-page-client";
 
+<<<<<<< HEAD
 export const dynamic = "force-dynamic";
 
 const scenarioById = new Map(scenarios.map((scenario) => [scenario.id, scenario]));
@@ -272,4 +262,8 @@ export default async function ProfilePage() {
         </Suspense>
       </div>
   );
+=======
+export default function ProfilePage() {
+  return <ProfilePageClient />;
+>>>>>>> 3c0c078772617745d529b3200d5269dd83b06554
 }

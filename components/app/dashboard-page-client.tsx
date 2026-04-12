@@ -1,36 +1,178 @@
-import { DashboardPageClient } from "@/components/app/dashboard-page-client";
+"use client";
 
-<<<<<<< HEAD
-export const dynamic = "force-dynamic";
-export const maxDuration = 25;
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import {
+  BookOpen,
+  Calendar,
+  Flame,
+  Play,
+  Target,
+  TrendingUp,
+  Trophy,
+  Zap,
+} from "lucide-react";
+import { LandingPage } from "@/components/app/landing-page";
+import { ActivityCalendar } from "@/components/app/activity-calendar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
-function getRollingActiveDays(activityDays: { date: string; count: number }[]) {
-  const end = new Date();
-  end.setHours(0, 0, 0, 0);
+type ActivityDay = {
+  date: string;
+  count: number;
+};
 
-  const start = new Date(end);
-  start.setDate(start.getDate() - 364);
+type GoalMetric = {
+  label: string;
+  current: number;
+  total: number;
+};
 
-  const startKey = [
-    start.getFullYear(),
-    `${start.getMonth() + 1}`.padStart(2, "0"),
-    `${start.getDate()}`.padStart(2, "0"),
-  ].join("-");
+type ImprovementMetric = {
+  id: string;
+  title: string;
+  tag: string;
+  source: string;
+  description: string;
+};
 
-  return activityDays.filter((day) => day.date >= startKey && day.count > 0).length;
+type UserInterviewMetrics = {
+  hasSession: boolean;
+  databaseReady: boolean;
+  completedSessions: number;
+  weeklyCompleted: number;
+  weeklyTarget: number;
+  remainingLoops: number;
+  streakDays: number;
+  longestStreak: number;
+  activityDays: ActivityDay[];
+  goals: GoalMetric[];
+  improvements: ImprovementMetric[];
+};
+
+let dashboardMetricsCache: UserInterviewMetrics | null = null;
+
+function MetricsSkeleton() {
+  return (
+    <>
+      <div className="grid gap-4 animate-pulse">
+        <div className="h-40 rounded border border-border bg-base-200/30" />
+        <div className="h-32 rounded border border-border bg-base-200/30" />
+      </div>
+      <div className="h-48 rounded border border-border bg-base-200/30 animate-pulse" />
+    </>
+  );
 }
 
-async function DashboardMetrics({ email }: { email?: string | null }) {
-  const metrics = await getUserInterviewMetrics(email ?? undefined).catch(
-    () => getUserInterviewMetrics(),
+export function DashboardPageClient() {
+  const { status } = useSession();
+  const [metrics, setMetrics] = useState<UserInterviewMetrics | null>(dashboardMetricsCache);
+  const [loading, setLoading] = useState(() => !dashboardMetricsCache);
+
+  useEffect(() => {
+    if (status === "loading") {
+      return;
+    }
+
+    if (status !== "authenticated") {
+      setMetrics(null);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    setLoading(!dashboardMetricsCache);
+    fetch("/api/user/metrics", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch metrics");
+        }
+
+        return (await response.json()) as UserInterviewMetrics;
+      })
+      .then((nextMetrics) => {
+        dashboardMetricsCache = nextMetrics;
+        setMetrics(nextMetrics);
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        console.error("Failed to load dashboard metrics:", error);
+        setMetrics(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [status]);
+
+  if (status === "loading") {
+    return (
+      <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
+        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <Card className="overflow-hidden">
+            <CardContent className="p-7 md:p-8">
+              <div className="space-y-4 animate-pulse">
+                <div className="h-10 w-96 max-w-full rounded bg-base-300/50" />
+                <div className="h-5 w-[32rem] max-w-full rounded bg-base-300/35" />
+                <div className="h-12 w-48 rounded bg-base-300/45" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <MetricsSkeleton />
+        </section>
+      </div>
+    );
+  }
+
+  if (status !== "authenticated") {
+    return <LandingPage />;
+  }
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
+      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="overflow-hidden">
+          <CardContent className="p-7 md:p-8">
+            <div className="mt-5">
+              <h1 className="max-w-2xl">Start practicing your interviewing skills.</h1>
+              <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
+                Practice behavioral, technical, and system design interviews with instant feedback.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button asChild size="lg" className="text-white">
+                  <Link href="/practice">
+                    <Play className="w-4 h-4" />
+                    Start quick practice
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {loading || !metrics ? <MetricsSkeleton /> : <DashboardMetrics metrics={metrics} />}
+      </section>
+    </div>
   );
+}
+
+function DashboardMetrics({ metrics }: { metrics: UserInterviewMetrics }) {
   const safeWeeklyTarget = Math.max(1, metrics.weeklyTarget);
   const isOverGoal = metrics.weeklyCompleted > metrics.weeklyTarget;
   const rawLoopProgress = (metrics.weeklyCompleted / safeWeeklyTarget) * 100;
-  const loopProgress = Math.min(
-    100,
-    rawLoopProgress,
-  );
+  const loopProgress = Math.min(100, rawLoopProgress);
   const overflowProgress =
     rawLoopProgress > 100 ? ((rawLoopProgress - 100) % 100 + 100) % 100 : 0;
   const loopCount = `${metrics.weeklyCompleted}/${metrics.weeklyTarget}`;
@@ -48,7 +190,6 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
   const streakLabel = metrics.streakDays
     ? `${metrics.streakDays}-day streak active`
     : "No active streak";
-  const rollingActiveDays = getRollingActiveDays(metrics.activityDays);
 
   return (
     <>
@@ -59,8 +200,8 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
             Today's progress
           </div>
           <div className="mt-5 flex items-center gap-4">
-            <div className="relative flex w-28 h-28 items-center justify-center">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+            <div className="relative flex h-28 w-28 items-center justify-center">
+              <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
                 {isOverGoal ? (
                   <>
                     <defs>
@@ -75,7 +216,6 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
                     </defs>
 
                     <circle cx="60" cy="60" r="52" fill="none" stroke="#f3f4f6" strokeWidth="10" />
-
                     <circle
                       cx="60"
                       cy="60"
@@ -100,14 +240,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
                   </>
                 ) : (
                   <>
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="52"
-                      fill="none"
-                      stroke="#f0effc"
-                      strokeWidth="10"
-                    />
+                    <circle cx="60" cy="60" r="52" fill="none" stroke="#f0effc" strokeWidth="10" />
                     <circle
                       cx="60"
                       cy="60"
@@ -123,15 +256,11 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-3xl font-semibold">{loopCount}</span>
-                <span className="text-xs font-medium text-base-content/60">
-                  loops
-                </span>
+                <span className="text-xs font-medium text-base-content/60">loops</span>
               </div>
             </div>
             <div className="space-y-2">
-              <p className="text-sm leading-6 text-base-content/60">
-                {weeklyCopy}
-              </p>
+              <p className="text-sm leading-6 text-base-content/60">{weeklyCopy}</p>
               {metrics.streakDays > 0 && (
                 <div className="inline-flex items-center gap-2 rounded-none bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
                   <Zap className="size-4" />
@@ -167,6 +296,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
         <div className="min-w-0">
           <ActivityCalendar
             activityDays={metrics.activityDays}
+            totalSessions={metrics.completedSessions}
           />
         </div>
         <div className="flex flex-col divide-y divide-base-300/70 border border-border bg-base-100">
@@ -193,7 +323,9 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
               <Calendar className="size-[18px]" />
             </div>
             <div className="min-w-0">
-              <div className="text-2xl font-semibold leading-none">{rollingActiveDays}</div>
+              <div className="text-2xl font-semibold leading-none">
+                {metrics.activityDays.filter((day) => day.count > 0).length}
+              </div>
               <div className="mt-1 text-[11px] uppercase tracking-[0.12em] text-base-content/50">Active days</div>
             </div>
           </div>
@@ -211,9 +343,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
               {metrics.improvements.map((item) => (
                 <Card key={item.id}>
                   <CardContent className="p-5">
-                    <p className="text-sm leading-6 text-base-content">
-                      {item.description}
-                    </p>
+                    <p className="text-sm leading-6 text-base-content">{item.description}</p>
                     <div className="mt-2 flex items-center gap-2 text-xs text-base-content/60">
                       <span>{item.tag}</span>
                       <span>-</span>
@@ -228,59 +358,4 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
       )}
     </>
   );
-}
-
-function MetricsSkeleton() {
-  return (
-    <>
-      <div className="grid gap-4 animate-pulse">
-        <div className="h-40 rounded border border-border bg-base-200/30" />
-        <div className="h-32 rounded border border-border bg-base-200/30" />
-      </div>
-      <div className="h-48 rounded border border-border bg-base-200/30 animate-pulse" />
-    </>
-  );
-}
-
-export default async function DashboardPage() {
-  const session = await getOptionalServerSession().catch(() => null);
-
-  if (!session) {
-    return <LandingPage />;
-  }
-
-  return (
-      <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-10 md:py-10">
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="overflow-hidden">
-            <CardContent className="p-7 md:p-8">
-              <div className="mt-5">
-                <h1 className="max-w-2xl">
-                  Start practicing your interviewing skills.
-                </h1>
-                <p className="mt-4 max-w-2xl text-base text-base-content/60 md:text-lg">
-                  Practice behavioral, technical, and system design interviews with instant feedback.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Button asChild size="lg" className="text-white">
-                    <Link href="/practice">
-                      <Play className="w-4 h-4" />
-                      Start quick practice
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Suspense fallback={<MetricsSkeleton />}>
-            <DashboardMetrics email={session?.user?.email} />
-          </Suspense>
-        </section>
-      </div>
-  );
-=======
-export default function DashboardPage() {
-  return <DashboardPageClient />;
->>>>>>> 3c0c078772617745d529b3200d5269dd83b06554
 }
