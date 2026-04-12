@@ -42,6 +42,10 @@ import {
   getInterviewerByName,
   type InterviewerProfile,
 } from "@/lib/interviewers";
+import {
+  readStoredInterviewWrapUpMinutes,
+  writeStoredInterviewWrapUpMinutes,
+} from "@/lib/interview-preferences";
 import { cn } from "@/lib/utils";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
@@ -718,13 +722,14 @@ export function PracticeSession({
       return;
     }
 
+    const localWrapUpMinutes = readStoredInterviewWrapUpMinutes();
+    setSavedInterviewWrapUpMinutes(localWrapUpMinutes);
+
     if (!session?.user?.email) {
-      setSavedInterviewWrapUpMinutes(null);
       return;
     }
 
     const controller = new AbortController();
-    setSavedInterviewWrapUpMinutes(undefined);
 
     void (async () => {
       try {
@@ -741,12 +746,12 @@ export function PracticeSession({
 
         const payload = asRecord(await response.json());
         const preferences = asRecord(payload.preferences);
-        setSavedInterviewWrapUpMinutes(
-          normalizeWrapUpMinutes(preferences.interviewWrapUpMinutes),
-        );
+        const wrapUpMinutes = normalizeWrapUpMinutes(preferences.interviewWrapUpMinutes);
+        writeStoredInterviewWrapUpMinutes(wrapUpMinutes);
+        setSavedInterviewWrapUpMinutes(wrapUpMinutes);
       } catch (error) {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setSavedInterviewWrapUpMinutes(null);
+          setSavedInterviewWrapUpMinutes(localWrapUpMinutes);
         }
       }
     })();

@@ -17,6 +17,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  readStoredInterviewWrapUpMinutes,
+  writeStoredInterviewWrapUpMinutes,
+} from "@/lib/interview-preferences";
 
 const INTERVIEW_WRAP_UP_MIN = 1;
 const INTERVIEW_WRAP_UP_MAX = 60;
@@ -163,6 +167,7 @@ export function SettingsPanel() {
     null,
   );
   const [interviewError, setInterviewError] = useState<string | null>(null);
+  const [interviewNotice, setInterviewNotice] = useState<string | null>(null);
   const [interviewSuccess, setInterviewSuccess] = useState(false);
   const [isSavingInterviewPreference, setIsSavingInterviewPreference] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -195,6 +200,11 @@ export function SettingsPanel() {
     async function loadInterviewPreference() {
       setPreferencesLoading(true);
       setInterviewError(null);
+      setInterviewNotice(null);
+
+      const localWrapUpMinutes = readStoredInterviewWrapUpMinutes();
+      setSavedInterviewWrapUpMinutes(localWrapUpMinutes);
+      setInterviewWrapUpMinutes(localWrapUpMinutes === null ? "" : String(localWrapUpMinutes));
 
       try {
         const response = await fetch("/api/user/profile", {
@@ -219,19 +229,16 @@ export function SettingsPanel() {
           return;
         }
 
+        writeStoredInterviewWrapUpMinutes(wrapUpMinutes);
         setSavedInterviewWrapUpMinutes(wrapUpMinutes);
         setInterviewWrapUpMinutes(wrapUpMinutes === null ? "" : String(wrapUpMinutes));
-      } catch (error) {
+      } catch {
         if (cancelled) {
           return;
         }
 
-        setSavedInterviewWrapUpMinutes(null);
-        setInterviewWrapUpMinutes("");
-        setInterviewError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load interview settings.",
+        setInterviewNotice(
+          "We couldn't load your account setting right now. You can still update it on this device.",
         );
       } finally {
         if (!cancelled) {
@@ -265,13 +272,20 @@ export function SettingsPanel() {
   function handleInterviewWrapUpChange(value: string) {
     setInterviewWrapUpMinutes(value);
     setInterviewError(null);
+    setInterviewNotice(null);
     setInterviewSuccess(false);
   }
 
   async function persistInterviewWrapUpPreference(value: number | null) {
     setInterviewError(null);
+    setInterviewNotice(null);
     setInterviewSuccess(false);
     setIsSavingInterviewPreference(true);
+
+    const normalizedValue = normalizeInterviewWrapUpMinutes(value);
+    writeStoredInterviewWrapUpMinutes(normalizedValue);
+    setSavedInterviewWrapUpMinutes(normalizedValue);
+    setInterviewWrapUpMinutes(normalizedValue === null ? "" : String(normalizedValue));
 
     try {
       const response = await fetch("/api/user/profile", {
@@ -281,7 +295,7 @@ export function SettingsPanel() {
         },
         body: JSON.stringify({
           preferences: {
-            interviewWrapUpMinutes: value,
+            interviewWrapUpMinutes: normalizedValue,
           },
         }),
       });
@@ -298,17 +312,16 @@ export function SettingsPanel() {
         preferences.interviewWrapUpMinutes,
       );
 
+      writeStoredInterviewWrapUpMinutes(nextWrapUpMinutes);
       setSavedInterviewWrapUpMinutes(nextWrapUpMinutes);
       setInterviewWrapUpMinutes(
         nextWrapUpMinutes === null ? "" : String(nextWrapUpMinutes),
       );
       setInterviewSuccess(true);
       window.setTimeout(() => setInterviewSuccess(false), 3000);
-    } catch (error) {
-      setInterviewError(
-        error instanceof Error
-          ? error.message
-          : "Failed to update interview settings.",
+    } catch {
+      setInterviewNotice(
+        "Saved on this device only. We couldn't sync your interview setting to your account right now.",
       );
     } finally {
       setIsSavingInterviewPreference(false);
@@ -456,6 +469,13 @@ export function SettingsPanel() {
                 <div className="flex items-start gap-3 rounded-none border border-red-200 bg-red-50 p-4">
                   <AlertCircle className="mt-0.5 size-4 shrink-0 text-red-600" />
                   <p className="text-sm text-red-800">{interviewError}</p>
+                </div>
+              ) : null}
+
+              {interviewNotice ? (
+                <div className="flex items-start gap-3 rounded-none border border-amber-200 bg-amber-50 p-4">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                  <p className="text-sm text-amber-800">{interviewNotice}</p>
                 </div>
               ) : null}
 
