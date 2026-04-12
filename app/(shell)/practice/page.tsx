@@ -93,7 +93,11 @@ const STAR_GROUPS = [
     label: "Leadership & Influence",
     description:
       "Self-advocacy, driving decisions under pressure, and leading without formal authority.",
-    scenarioIds: ["staff-swe-story", "staff-swe-incident"],
+    scenarioIds: [
+      "staff-swe-story",
+      "staff-swe-incident",
+      "staff-swe-missed-commitment",
+    ],
   },
   {
     id: "people-teams",
@@ -103,6 +107,7 @@ const STAR_GROUPS = [
     scenarioIds: [
       "staff-swe-mentorship",
       "staff-swe-conflict",
+      "staff-swe-technical-disagreement",
       "pm-stakeholder-pushback",
       "consulting-client-pushback",
     ],
@@ -115,6 +120,8 @@ const STAR_GROUPS = [
     scenarioIds: [
       "staff-swe-tech-strategy",
       "staff-swe-ambiguous-initiative",
+      "staff-swe-migration-rollout",
+      "staff-swe-quality-reset",
       "pm-prioritization",
       "pm-launch-decision",
       "consulting-ops-turnaround",
@@ -177,19 +184,23 @@ const ARCHITECTURE_GROUPS = [
     id: "storage-apis",
     label: "Storage & APIs",
     description: "URL shorteners, key-value stores, and read-heavy API services.",
-    scenarioIds: ["system-url-shortener"],
+    scenarioIds: ["system-url-shortener", "system-resume-ingestion"],
   },
   {
     id: "platform-tooling",
     label: "Platform & Tooling",
     description: "Internal platforms, feature flag systems, and developer tooling.",
-    scenarioIds: ["system-feature-flags"],
+    scenarioIds: ["system-feature-flags", "system-ai-grading-pipeline"],
   },
   {
     id: "realtime",
     label: "Realtime & Messaging",
     description: "Chat systems, notification pipelines, and event-driven architectures.",
-    scenarioIds: ["system-realtime-chat"],
+    scenarioIds: [
+      "system-realtime-chat",
+      "system-live-interview-platform",
+      "system-collaborative-editor",
+    ],
   },
   {
     id: "data-systems",
