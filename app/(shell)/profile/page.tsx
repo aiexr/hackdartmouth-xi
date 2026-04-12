@@ -125,10 +125,10 @@ export default async function ProfilePage() {
                 src={session.user.image}
                 alt={profileName}
                 referrerPolicy="no-referrer"
-                className="size-22 rounded-none object-cover ring-4 ring-primary/10"
+                className="size-22 rounded-full object-cover ring-4 ring-primary/10"
               />
             ) : (
-              <div className="flex size-22 items-center justify-center rounded-none bg-primary/10 text-primary">
+              <div className="flex size-22 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <User className="size-10" />
               </div>
             )}

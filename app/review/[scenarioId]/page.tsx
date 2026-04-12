@@ -475,7 +475,7 @@ export default async function ReviewPage({
             <CardContent className="p-6">
               <h2 className="flex items-center gap-2 text-emerald-700">
                 <CheckCircle2 className="size-5 text-emerald-500" />
-                What landed
+                What worked
               </h2>
               <div className="mt-4 space-y-3">
                 {strengths.length ? (
@@ -498,7 +498,7 @@ export default async function ReviewPage({
             <CardContent className="p-6">
               <h2 className="flex items-center gap-2 text-amber-700">
                 <AlertCircle className="size-5 text-amber-500" />
-                What to tighten
+                What to improve
               </h2>
               <div className="mt-4 space-y-3">
                 {improvements.length ? (

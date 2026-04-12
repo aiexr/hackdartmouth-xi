@@ -451,12 +451,11 @@ export function PracticeSession({
           </Link>
 
           <div className="flex min-w-0 items-center gap-4">
-            <div className="hidden text-sm text-base-content/60 sm:block">
+            <div className="text-sm text-base-content/60">
               {scenario.category === "technical"
                 ? "Live coding round"
                 : `${scenario.category.replace("-", " ")} round`}
             </div>
-            <Progress value={progress} className="w-32 sm:w-48" />
           </div>
 
           {hasSplitView && sessionState === "connected" && (

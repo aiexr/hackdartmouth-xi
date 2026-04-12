@@ -8,7 +8,13 @@ function getIntensity(count: number) {
   return 4;
 }
 
-const fills = ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"];
+const fillClasses = [
+  "cal-fill-0",
+  "cal-fill-1",
+  "cal-fill-2",
+  "cal-fill-3",
+  "cal-fill-4",
+];
 
 const CELL = 12;
 const GAP = 3;
@@ -143,12 +149,10 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
                     return (
                       <div
                         key={day.date}
-                        className="group relative"
+                        className={`group relative ${fillClasses[intensity]}`}
                         style={{
                           width: CELL,
                           height: CELL,
-                          backgroundColor: fills[intensity],
-                          borderRadius: 0,
                         }}
                       >
                         <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-none bg-foreground px-2.5 py-1.5 text-xs font-medium text-background shadow-lg group-hover:block">
@@ -166,14 +170,13 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
           {/* Legend */}
           <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-base-content/60">
             <span>Less</span>
-            {fills.map((color, i) => (
+            {fillClasses.map((cls, i) => (
               <div
                 key={i}
+                className={cls}
                 style={{
                   width: CELL,
                   height: CELL,
-                  backgroundColor: color,
-                  borderRadius: 0,
                 }}
               />
             ))}
