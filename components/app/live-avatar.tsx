@@ -30,6 +30,8 @@ export type LiveAvatarHandle = {
 type LiveAvatarProps = {
   tone?: string;
   compact?: boolean;
+  showStartButton?: boolean;
+  keepLargeLayout?: boolean;
   promptRequest?: { id: string; text: string } | null;
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
@@ -46,6 +48,8 @@ function asRecord(value: unknown): Record<string, unknown> {
 export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function LiveAvatar({
   tone = "neutral",
   compact = false,
+  showStartButton = true,
+  keepLargeLayout = false,
   promptRequest,
   onTranscriptUpdate,
   onSessionEnd,
@@ -372,18 +376,32 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
 
   const isActive = status === "connected";
   const isPreSession = status === "idle" || status === "connecting";
+  const useLargeLayout = isPreSession || keepLargeLayout;
 
   return (
     <div className="flex w-full flex-col gap-4">
       {/* Video grid -- always rendered so refs stay stable */}
-      <div className={cn("w-full gap-3", compact ? "flex flex-col" : "grid grid-cols-2")}>
+      <div
+        className={cn(
+          "w-full gap-4 transition-all duration-500 ease-out",
+          useLargeLayout ? "flex flex-col" : compact ? "flex flex-col" : "grid grid-cols-2",
+        )}
+      >
         {/* Interviewer (avatar) tile */}
-        <div className="relative overflow-hidden rounded-none bg-black shadow-lg">
+        <div
+          className={cn(
+            "relative overflow-hidden rounded-none bg-black shadow-lg transition-all duration-500 ease-out",
+            useLargeLayout && "mx-auto w-full max-w-xl",
+          )}
+        >
           <video
             ref={avatarVideoRef}
             autoPlay
             playsInline
-            className="aspect-video size-full object-cover"
+            className={cn(
+              "size-full object-cover transition-all duration-500 ease-out",
+              useLargeLayout ? "aspect-[16/8.5]" : "aspect-video",
+            )}
           />
           {/* Overlay when not yet connected */}
           {isPreSession && (
@@ -427,19 +445,30 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
         </div>
 
         {/* User (webcam) tile */}
-        <div className="relative overflow-hidden rounded-none bg-black shadow-lg">
+        <div
+          className={cn(
+            "relative overflow-hidden rounded-none bg-black shadow-lg transition-all duration-500 ease-out",
+            useLargeLayout && "mx-auto w-full max-w-xl",
+          )}
+        >
           <video
             ref={userVideoRef}
             autoPlay
             playsInline
             muted
             className={cn(
-              "aspect-video size-full object-cover",
+              "size-full object-cover transition-all duration-500 ease-out",
+              useLargeLayout ? "aspect-[16/8.5]" : "aspect-video",
               !isCameraOn && "hidden",
             )}
           />
           {!isCameraOn && (
-            <div className="flex aspect-video size-full items-center justify-center bg-base-200">
+            <div
+              className={cn(
+                "flex size-full items-center justify-center bg-base-200 transition-all duration-500 ease-out",
+                useLargeLayout ? "aspect-[16/8.5]" : "aspect-video",
+              )}
+            >
               <VideoOff className="size-8 text-base-content/60" />
             </div>
           )}
@@ -483,7 +512,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
 
       {/* Control bar */}
       <div className="flex items-center justify-center gap-3">
-        {status === "idle" && (
+        {status === "idle" && showStartButton && (
           <button
             onClick={startSession}
             className="flex items-center gap-2 rounded-none bg-primary px-6 py-3 text-sm font-medium text-primary-content shadow-lg shadow-primary/25 transition hover:bg-primary/90"

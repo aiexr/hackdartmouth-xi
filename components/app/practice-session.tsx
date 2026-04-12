@@ -175,6 +175,7 @@ export function PracticeSession({
   const storageKey = `practice-state:${scenario.id}`;
   const isTechnical = scenario.category === "technical";
   const isSystemDesign = scenario.category === "system-design";
+  const isBehavioral = scenario.category === "behavioral";
   const hasSplitView = isTechnical || isSystemDesign;
 
   const [panel, setPanel] = useState<PracticePanel>(isTechnical ? "hints" : "rubric");
@@ -420,8 +421,10 @@ export function PracticeSession({
   const mediaSurface =
     interviewMode === "video" ? (
       <LiveAvatar
-        ref={hasSplitView ? avatarRef : undefined}
+        ref={avatarRef}
         compact={hasSplitView && (sessionState === "connected" || sessionState === "ended")}
+        showStartButton={false}
+        keepLargeLayout={isBehavioral}
         tone={interviewTone}
         promptRequest={interviewerPrompt}
         onTranscriptUpdate={setTranscript}
@@ -554,9 +557,9 @@ export function PracticeSession({
               )}
             </div>
 
-            <div className="mt-6 flex flex-col items-start gap-3">
+            <div className="mt-6 flex flex-col items-center gap-3 text-center">
               {!isTechnical && (
-                <div className="flex items-center gap-2 rounded-none border border-border bg-base-100 p-1">
+                <div className="flex items-center justify-center gap-2 rounded-none border border-border bg-base-100 p-1">
                   <button
                     type="button"
                     onClick={() => setInterviewMode("video")}
@@ -586,7 +589,7 @@ export function PracticeSession({
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="text-xs text-base-content/60">Tone:</span>
                 {toneOptions.map((tone) => (
                   <button
@@ -607,7 +610,7 @@ export function PracticeSession({
                 ))}
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 {scenario.focus.map((focus) => (
                   <span
                     key={focus}
@@ -617,6 +620,23 @@ export function PracticeSession({
                   </span>
                 ))}
               </div>
+
+              {interviewMode === "video" && (
+                <button
+                  type="button"
+                  onClick={() => avatarRef.current?.start()}
+                  disabled={sessionState !== "idle"}
+                  className={cn(
+                    "mt-3 flex items-center gap-2 rounded-none px-6 py-3 text-sm font-medium transition",
+                    sessionState === "idle"
+                      ? "bg-primary text-primary-content shadow-lg shadow-primary/25 hover:bg-primary/90"
+                      : "cursor-not-allowed bg-base-300 text-base-content/50",
+                  )}
+                >
+                  <Phone className="size-4" />
+                  {sessionState === "connecting" ? "Connecting..." : "Start Interview"}
+                </button>
+              )}
             </div>
 
           </section>
@@ -626,14 +646,22 @@ export function PracticeSession({
         {/* Media surface — keep mounted across state changes to avoid teardown/reconnect loops */}
         <div
           className={cn(
-            "z-20 overflow-hidden",
+            "z-20 overflow-hidden transition-all duration-500 ease-out",
             (sessionState === "idle" || sessionState === "connecting") &&
-              "mx-auto w-full max-w-2xl px-6 pb-6",
+              cn(
+                "mx-auto w-full px-6 pb-6",
+                interviewMode === "video" ? "max-w-2xl" : "max-w-2xl",
+              ),
             (sessionState === "connected" || sessionState === "ended") &&
               hasSplitView &&
               "absolute left-4 top-4 w-56 border border-base-300 bg-base-100 shadow-lg xl:w-64",
             (sessionState === "connected" || sessionState === "ended") &&
+              isBehavioral &&
+              interviewMode === "video" &&
+              "mx-auto w-full max-w-2xl px-6 pb-6",
+            (sessionState === "connected" || sessionState === "ended") &&
               !hasSplitView &&
+              !isBehavioral &&
               "absolute inset-x-0 top-0 mx-auto w-full max-w-3xl p-6",
           )}
         >
@@ -641,7 +669,7 @@ export function PracticeSession({
         </div>
 
         {/* Active session layout — only once connected */}
-        {(sessionState === "connected" || sessionState === "ended") && (
+        {(sessionState === "connected" || sessionState === "ended") && hasSplitView && (
           <section className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8">
 
             {/* Technical: problem + editor fills the space, avatar is PiP */}
