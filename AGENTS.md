@@ -412,7 +412,7 @@ Common runtime envs
 Profile uploads now persist as well:
 
 - the profile editor at `/profile` accepts a resume upload
-- the file is stored in Cloudflare R2 through `RESUME_BUCKET`
+- the file is stored directly in MongoDB on the user profile record
 - extracted text and resume metadata are saved on the user profile for reuse in later interview grading
 - the profile page at `/profile` shows the stored resume and offers a download link
 - GOOGLE_CLIENT_SECRET
@@ -423,7 +423,6 @@ Profile uploads now persist as well:
 - GEMINI_API_KEY
 - GEMINI_MODEL
 - LLM_PROVIDER
-- `RESUME_BUCKET`
 - ELEVENLABS_API_KEY
 - ELEVENLABS_VOICE_ID
 - HEYGEN_API_KEY

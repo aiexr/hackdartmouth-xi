@@ -1,14 +1,10 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { Binary } from "mongodb";
 import { getOptionalServerSession } from "@/lib/auth";
 import { extractDocumentText } from "@/lib/document-extract";
-import { UserModel } from "@/lib/models";
+import { UserModel, UserResumeModel } from "@/lib/models";
 
 const MAX_RESUME_FILE_SIZE = 10 * 1024 * 1024;
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
-
-type ResumeCloudflareEnv = CloudflareEnv & {
-  RESUME_BUCKET?: NonNullable<CloudflareEnv["NEXT_INC_CACHE_R2_BUCKET"]>;
-};
 
 function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUserByEmail>>) {
   if (!user) {
@@ -17,10 +13,6 @@ function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUser
 
   const { resumeExtractedText, resumeStorageKey, ...publicUser } = user;
   return publicUser;
-}
-
-function getResumeStorageKey(email: string) {
-  return `users/${encodeURIComponent(email.toLowerCase())}/resume`;
 }
 
 function getExtension(filename: string) {
@@ -33,16 +25,6 @@ function getContentDisposition(filename: string) {
   return `attachment; filename="${escaped}"`;
 }
 
-function getBucket(env: ResumeCloudflareEnv) {
-  const bucket = env.RESUME_BUCKET;
-
-  if (!bucket) {
-    throw new Error("Resume storage bucket is not configured");
-  }
-
-  return bucket;
-}
-
 export async function GET() {
   const session = await getOptionalServerSession();
 
@@ -51,29 +33,25 @@ export async function GET() {
   }
 
   try {
-    const user = await UserModel.getUserByEmail(session.user.email);
-    if (!user?.resumeStorageKey) {
+    const resume = await UserResumeModel.getResumeByEmail(session.user.email);
+    if (!resume?.data) {
       return Response.json({ error: "Resume not found" }, { status: 404 });
     }
 
-    const { env } = await getCloudflareContext({ async: true });
-    const bucket = getBucket(env as ResumeCloudflareEnv);
-    const stored = await bucket.get(user.resumeStorageKey);
+    const filename = resume.fileName || "resume";
+    const contentType = resume.mimeType || "application/octet-stream";
+    const contentDisposition = getContentDisposition(filename);
+    const content = resume.data instanceof Binary ? Buffer.from(resume.data.buffer) : null;
 
-    if (!stored?.body) {
+    if (!content) {
       return Response.json({ error: "Resume not found" }, { status: 404 });
     }
 
-    const filename = stored.customMetadata?.filename || user.resumeFileName || "resume";
-    const contentType = stored.httpMetadata?.contentType || user.resumeMimeType || "application/octet-stream";
-    const contentDisposition =
-      stored.httpMetadata?.contentDisposition || getContentDisposition(filename);
-
-    return new Response(stored.body, {
+    return new Response(content, {
       headers: {
         "Content-Type": contentType,
         "Content-Disposition": contentDisposition,
-        "Content-Length": String(stored.size),
+        "Content-Length": String(content.byteLength),
       },
     });
   } catch (error) {
@@ -113,25 +91,21 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await resumeField.arrayBuffer());
     const extracted = await extractDocumentText(buffer, filename);
-
-    const { env } = await getCloudflareContext({ async: true });
-    const bucket = getBucket(env as ResumeCloudflareEnv);
-    const storageKey = getResumeStorageKey(session.user.email);
     const uploadedAt = new Date();
-
-    await bucket.put(storageKey, buffer, {
-      httpMetadata: {
-        contentType: resumeField.type || "application/octet-stream",
-        contentDisposition: getContentDisposition(filename),
-      },
-      customMetadata: {
-        filename,
-        uploadedAt: uploadedAt.toISOString(),
-      },
+    const savedResume = await UserResumeModel.upsertResume(session.user.email, {
+      fileName: filename,
+      mimeType: resumeField.type || "application/octet-stream",
+      uploadedAt,
+      data: buffer,
     });
 
+    if (!savedResume) {
+      return Response.json({ error: "Failed to save resume" }, { status: 500 });
+    }
+
     const updatedUser = await UserModel.updateUserProfile(session.user.email, {
-      resumeStorageKey: storageKey,
+      resumeUrl: null,
+      resumeStorageKey: null,
       resumeFileName: filename,
       resumeMimeType: resumeField.type || "application/octet-stream",
       resumeUploadedAt: uploadedAt,
@@ -139,25 +113,6 @@ export async function POST(request: Request) {
     });
 
     if (!updatedUser) {
-      let cleanupError: string | null = null;
-
-      try {
-        await bucket.delete(storageKey);
-      } catch (deleteError) {
-        cleanupError = deleteError instanceof Error ? deleteError.message : "Failed to clean up uploaded file";
-        console.error("Failed to clean up uploaded resume after profile save failure:", deleteError);
-      }
-
-      if (cleanupError) {
-        return Response.json(
-          {
-            error: "Failed to save resume",
-            cleanupError,
-          },
-          { status: 500 },
-        );
-      }
-
       return Response.json({ error: "Failed to save resume" }, { status: 500 });
     }
 

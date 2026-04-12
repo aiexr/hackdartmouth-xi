@@ -35,6 +35,7 @@ export default async function ProfilePage() {
         year: "numeric",
       }).format(dbUser.resumeUploadedAt)
     : null;
+  const hasStoredResume = Boolean(dbUser?.resumeFileName && dbUser?.resumeUploadedAt);
   
   const subtitle = !metrics.hasSession
     ? "Sign in to save interviews and unlock profile progress."
@@ -103,15 +104,15 @@ export default async function ProfilePage() {
                   {profileResumeName}
                   {profileResumeDate ? ` · Uploaded ${profileResumeDate}` : " · Stored on your profile"}
                 </p>
-                {dbUser?.resumeUrl && !dbUser.resumeStorageKey && (
+                {dbUser?.resumeUrl && !hasStoredResume && (
                   <p className="mt-1 text-xs text-muted-foreground">
                     Legacy link still available in your profile data.
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <Badge>{dbUser?.resumeStorageKey ? "Persistent" : "Legacy"}</Badge>
-                {dbUser?.resumeStorageKey ? (
+                <Badge>{hasStoredResume ? "Saved" : "Legacy"}</Badge>
+                {hasStoredResume ? (
                   <Button asChild variant="secondary">
                     <a href="/api/user/profile/resume" target="_blank" rel="noreferrer">
                       <Download className="size-4" />

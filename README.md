@@ -90,7 +90,7 @@ ln -s AGENTS.md CLAUDE.md
 
 Users can optionally upload a resume or document (PDF, DOCX) during practice sessions. The document is extracted to plain text and included in the interview grading context so the LLM can reference the candidate's background and experience when evaluating performance.
 
-Users can also persist a resume on their profile from `/profile`. That upload is stored in Cloudflare R2, the extracted text is cached on the user record, and future interview grading can reuse it without requiring a fresh upload.
+Users can also persist a resume on their profile from `/profile`. That upload is stored directly in MongoDB on the user record, the extracted text is cached alongside it, and future interview grading can reuse it without requiring a fresh upload.
 
 - File size limit: 10 MB
 - One uploaded file per interview submission

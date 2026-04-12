@@ -191,7 +191,7 @@ export function ProfileEditor() {
 
   const currentResumeName = user?.resumeFileName || null;
   const legacyResumeUrl = user?.resumeUrl || null;
-  const hasPersistentResume = Boolean(user?.resumeStorageKey);
+  const hasPersistentResume = Boolean(user?.resumeFileName && user?.resumeUploadedAt);
   const currentResumeUploadedAt = user?.resumeUploadedAt
     ? user.resumeUploadedAt.toLocaleDateString(undefined, {
         year: "numeric",
