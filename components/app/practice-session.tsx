@@ -201,6 +201,8 @@ export function PracticeSession({
   const [isPortalReady, setIsPortalReady] = useState(false);
   const whiteboardRef = useRef<WhiteboardHandle | null>(null);
   const avatarRef = useRef<LiveAvatarHandle | null>(null);
+  const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScrollTranscriptRef = useRef(true);
   const [avatarControls, setAvatarControls] = useState({ isMuted: false, isCameraOn: true });
 
   const sessionStartRef = useRef<number | null>(null);
@@ -320,6 +322,30 @@ export function PracticeSession({
       setLastCodeSyncLabel(null);
     }
   }, [sessionState]);
+
+  const handleTranscriptScroll = useCallback(() => {
+    const container = transcriptContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldAutoScrollTranscriptRef.current = distanceFromBottom < 64;
+  }, []);
+
+  useEffect(() => {
+    if (panel !== "transcript" || !panelOpen) {
+      return;
+    }
+
+    const container = transcriptContainerRef.current;
+    if (!container || !shouldAutoScrollTranscriptRef.current) {
+      return;
+    }
+
+    container.scrollTop = container.scrollHeight;
+  }, [panel, panelOpen, transcript]);
 
   const handleSessionEnd = useCallback(
     async (rawTranscript: TranscriptEntry[]) => {
@@ -910,7 +936,11 @@ export function PracticeSession({
             ) : null}
 
             {panel === "transcript" ? (
-              <div className="space-y-4">
+              <div
+                ref={transcriptContainerRef}
+                onScroll={handleTranscriptScroll}
+                className="max-h-[70vh] space-y-4 overflow-y-auto pr-1"
+              >
                 {transcript.length === 0 && (
                   <p className="text-sm text-base-content/60">
                     Transcript will appear here once the interview starts.
