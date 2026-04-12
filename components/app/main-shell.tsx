@@ -52,7 +52,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
       <aside className="hidden w-64 shrink-0 border-r border-border bg-base-100 px-4 py-7 md:flex md:flex-col">
         <Link href="/" className="flex items-center gap-3 px-3">
           <ThemeLogo alt="LeetSpeak logo" className="h-10 w-auto" />
-          <span className="text-base font-semibold tracking-tight">LeetSpeak</span>
+          <span className="pt-2 text-base font-semibold tracking-tight">LeetSpeak</span>
         </Link>
 
         <nav className="mt-8 flex flex-1 flex-col gap-0.5">
