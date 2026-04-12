@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Award, Briefcase, Edit3, Flame, FileText, Target, TrendingUp, User, type LucideIcon } from "lucide-react";
+import { Award, Briefcase, Edit3, Flame, Target, TrendingUp, User, type LucideIcon } from "lucide-react";
 
 const achievementIcons: Record<string, LucideIcon> = {
   flame: Flame,
@@ -11,6 +11,7 @@ import { getOptionalServerSession } from "@/lib/auth";
 import { getUserInterviewMetrics } from "@/lib/interview-metrics";
 import { UserModel } from "@/lib/models";
 import { ProfileEditor } from "@/components/app/profile-editor";
+import { ResumeUploaderCard } from "@/components/app/resume-uploader-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -51,20 +52,7 @@ async function ProfileStats({ email }: { email?: string | null }) {
         </Card>
       )}
 
-      {hasResumeContext && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <FileText className="size-4 text-primary" />
-              <h2 className="text-lg font-semibold">Resume</h2>
-            </div>
-            <p className="mt-2 text-sm text-base-content/60">Resume processed successfully.</p>
-            <p className="mt-1 text-xs text-base-content/60">
-              Extracted text context is stored in MongoDB for interview coaching and grading.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      <ResumeUploaderCard initialHasResumeContext={hasResumeContext} />
 
       <div className="grid gap-4 md:grid-cols-4">
         {metrics.profileStats.map((item) => (
@@ -164,7 +152,7 @@ export default async function ProfilePage() {
           <div>
             <h2 className="text-lg font-semibold">Profile Information</h2>
             <p className="mt-2 text-sm text-base-content/60">
-              Update your display name, bio, and resume from your profile page.
+              Update your display name and bio from your profile page.
             </p>
           </div>
           <ProfileEditor />
