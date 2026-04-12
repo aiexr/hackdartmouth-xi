@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, FileText, Loader2, Upload, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useResumeUpload } from "@/components/app/resume-upload-provider";
@@ -57,16 +56,17 @@ export function ResumeUploaderCard({ initialHasResumeContext }: ResumeUploaderCa
             <div className="flex items-center gap-2">
               <FileText className="size-4 text-primary" />
               <h2 className="text-lg font-semibold">Resume</h2>
+              {hasResumeContext && !uploadingResume && (
+                <span className="inline-flex items-center gap-1 text-sm font-medium text-green-700">
+                  Added
+                  <CheckCircle2 className="size-4" />
+                </span>
+              )}
             </div>
-            <p className="mt-2 text-sm text-base-content/60">
-              {hasResumeContext
-                ? "Resume processed successfully."
-                : "No resume processed yet."}
-            </p>
+            {!hasResumeContext && (
+              <p className="mt-2 text-sm text-base-content/60">No resume added yet.</p>
+            )}
           </div>
-          {hasResumeContext && !uploadingResume && (
-            <Badge className="shrink-0 rounded-none">Context active</Badge>
-          )}
         </div>
 
         <div className="space-y-3 rounded-none border border-dashed border-border/80 bg-base-200/40 p-4">
@@ -126,10 +126,7 @@ export function ResumeUploaderCard({ initialHasResumeContext }: ResumeUploaderCa
               </>
             ) : hasResumeContext ? (
               <>
-                <p className="text-sm text-base-content/80">Resume is currently active</p>
-                <p className="mt-0.5 text-xs text-base-content/60">
-                  Context has been extracted and is used for coaching and grading
-                </p>
+                <p className="text-sm text-base-content/80">Resume on file</p>
                 {lastProcessedFileName && (
                   <p className="mt-1 text-xs text-base-content/60 truncate">
                     Last upload: {lastProcessedFileName}
@@ -160,7 +157,7 @@ export function ResumeUploaderCard({ initialHasResumeContext }: ResumeUploaderCa
                 <CheckCircle2 className="size-4 mt-0.5 shrink-0" />
               )}
               <p className="whitespace-pre-wrap break-words">
-                {resumeError || "Resume processed successfully."}
+                {resumeError || "Resume added."}
               </p>
             </div>
           )}

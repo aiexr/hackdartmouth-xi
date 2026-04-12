@@ -255,9 +255,6 @@ export function ProfileEditor() {
               onChange={(e) => handleWeeklyGoalChange(e.target.value)}
               disabled={saving}
             />
-            <p className="text-xs text-base-content/60">
-              This controls your dashboard weekly loop target.
-            </p>
           </div>
 
           <div className="flex gap-3 pt-4">
