@@ -300,17 +300,14 @@ export default async function ReviewPage({
           </Card>
         ) : null}
 
-<<<<<<< HEAD
-        <Card className="bg-base-100/85 text-center">
-=======
         {hasPersistedReview && interview?.gradingResult?.diagram_analysis ? (
-          <Card className="bg-white/85">
+          <Card className="bg-base-100/85">
             <CardContent className="p-6">
               <h2 className="flex items-center gap-2">
                 <Lightbulb className="size-5 text-violet-500" />
                 Diagram analysis
               </h2>
-              <div className="mt-4 space-y-4 text-sm leading-6 text-muted-foreground">
+              <div className="mt-4 space-y-4 text-sm leading-6 text-base-content/60">
                 {interview.gradingResult.diagram_analysis.description ? (
                   <p>{interview.gradingResult.diagram_analysis.description}</p>
                 ) : null}
@@ -352,8 +349,7 @@ export default async function ReviewPage({
           </Card>
         ) : null}
 
-        <Card className="bg-white/85 text-center">
->>>>>>> 82cafda (feat: add diagram analysis support to interview grading and review components)
+        <Card className="bg-base-100/85 text-center">
           <CardContent className="p-8">
             <div className="inline-flex items-center gap-2 rounded-none bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
               <Award className="size-4" />
