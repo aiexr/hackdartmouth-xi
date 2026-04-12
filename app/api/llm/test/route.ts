@@ -76,8 +76,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
+    const defaultProvider = getLlmProvider();
     const autoSelectedVisionModel = Boolean(
-      imagePayload && !providerOverride && !modelOverride,
+      imagePayload &&
+        !providerOverride &&
+        !modelOverride &&
+        defaultProvider === "openai",
     );
     const effectiveProviderOverride = autoSelectedVisionModel
       ? "openai"
@@ -107,7 +111,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       content: result.content,
       modelUsed: result.modelUsed,
-      provider: effectiveProviderOverride ?? getLlmProvider(),
+      provider: effectiveProviderOverride ?? defaultProvider,
       imageProcessed: Boolean(imagePayload),
       autoSelectedVisionModel,
     });

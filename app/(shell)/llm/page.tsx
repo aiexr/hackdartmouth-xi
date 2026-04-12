@@ -233,7 +233,9 @@ export default function LlmTestPage() {
                 ) : null}
                 {imageFile && !useProviderOverride ? (
                   <p className="text-xs text-muted-foreground">
-                    Image attached with no provider override. This sandbox will auto-use Dartmouth vision model qwen.qwen3-vl-32b-instruct-fp8.
+                    Image attached with no provider override. Gemini will use your
+                    configured Gemini model. OpenAI will fall back to Dartmouth vision
+                    model qwen.qwen3-vl-32b-instruct-fp8.
                   </p>
                 ) : null}
               </div>
