@@ -227,11 +227,35 @@ async function ProfileHistorySection({ email }: { email?: string | null }) {
 function ProfileHistorySkeleton() {
   return (
     <div className="rounded-none border border-border bg-base-100 p-6">
-      <div className="h-6 w-28 animate-pulse rounded-none bg-base-300/55" />
-      <div className="mt-2 h-4 w-80 animate-pulse rounded-none bg-base-300/40" />
-      <div className="mt-6 space-y-4">
-        <div className="h-56 animate-pulse rounded-none border border-border bg-base-200/40" />
-        <div className="h-56 animate-pulse rounded-none border border-border bg-base-200/40" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="h-6 w-28 animate-pulse rounded-none bg-base-300/55" />
+          <div className="mt-2 h-4 w-72 animate-pulse rounded-none bg-base-300/40" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-7 w-24 animate-pulse rounded-none border border-border bg-base-200/40" />
+          <div className="h-7 w-32 animate-pulse rounded-none border border-border bg-base-200/40" />
+        </div>
+      </div>
+      <div className="mt-6 overflow-hidden rounded-none border border-border bg-base-100">
+        <div className="hidden h-10 border-b border-border bg-base-200/30 md:block" />
+        <div className="space-y-0">
+          <div className="border-b border-border/50 px-4 py-4">
+            <div className="h-3 w-40 animate-pulse rounded-none bg-base-300/35" />
+            <div className="mt-3 h-5 w-64 animate-pulse rounded-none bg-base-300/50" />
+            <div className="mt-3 h-3 w-52 animate-pulse rounded-none bg-base-300/35 md:hidden" />
+          </div>
+          <div className="border-b border-border/50 px-4 py-4">
+            <div className="h-3 w-32 animate-pulse rounded-none bg-base-300/35" />
+            <div className="mt-3 h-5 w-56 animate-pulse rounded-none bg-base-300/50" />
+            <div className="mt-3 h-3 w-48 animate-pulse rounded-none bg-base-300/35 md:hidden" />
+          </div>
+          <div className="px-4 py-4">
+            <div className="h-3 w-36 animate-pulse rounded-none bg-base-300/35" />
+            <div className="mt-3 h-5 w-60 animate-pulse rounded-none bg-base-300/50" />
+            <div className="mt-3 h-3 w-44 animate-pulse rounded-none bg-base-300/35 md:hidden" />
+          </div>
+        </div>
       </div>
     </div>
   );
