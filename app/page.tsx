@@ -212,7 +212,7 @@ export default async function DashboardPage() {
           </div>
 
           <div>
-            <img src={logo.src} alt="LeetSpeak logo" className="mb-6 w-32 opacity-80" />
+            
             <div className="mb-4 flex items-center gap-2">
               
               
