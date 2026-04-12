@@ -38,6 +38,7 @@ type LiveAvatarProps = {
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
+  onInterviewerSpeakingChange?: (isSpeaking: boolean) => void;
   onControlsChange?: (controls: { isMuted: boolean; isCameraOn: boolean }) => void;
 };
 
@@ -78,6 +79,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   onTranscriptUpdate,
   onSessionEnd,
   onStateChange,
+  onInterviewerSpeakingChange,
   onControlsChange,
 }, ref) {
   const avatarVideoRef = useRef<HTMLVideoElement>(null);
@@ -418,11 +420,16 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   }), [startSession, stopSession, toggleMute, toggleCamera]);
 
   useEffect(() => {
+    onInterviewerSpeakingChange?.(avatarSpeaking);
+  }, [avatarSpeaking, onInterviewerSpeakingChange]);
+
+  useEffect(() => {
     onControlsChange?.({ isMuted, isCameraOn });
   }, [isMuted, isCameraOn, onControlsChange]);
 
   useEffect(() => {
     return () => {
+      onInterviewerSpeakingChange?.(false);
       if (userStreamRef.current) {
         userStreamRef.current.getTracks().forEach((t) => t.stop());
         userStreamRef.current = null;
@@ -434,7 +441,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       deliveredPromptIdsRef.current.clear();
       deliveredPromptTextsRef.current.clear();
     };
-  }, []);
+  }, [onInterviewerSpeakingChange]);
 
   const isActive = status === "connected";
   const isPreSession = status === "idle" || status === "connecting";

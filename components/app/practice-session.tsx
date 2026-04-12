@@ -85,6 +85,7 @@ const INTERNAL_PROMPT_MARKER = "[[internal-interviewer-context]]";
 const GRACEFUL_END_MESSAGE = "Thank you for your time today. I'm going to end the interview here now.";
 const INTERVIEWER_CLOSING_DELAY_MIN_MS = 3200;
 const INTERVIEWER_CLOSING_DELAY_MAX_MS = 5000;
+const ENDING_COUNTDOWN_TICK_MS = 100;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"
@@ -217,6 +218,20 @@ function getInterviewerClosureDelayMs(text: string) {
   );
 }
 
+function formatEndingCountdown(msRemaining: number) {
+  if (msRemaining <= 250) {
+    return "now";
+  }
+
+  const secondsRemaining = msRemaining / 1000;
+
+  if (secondsRemaining >= 10) {
+    return `${Math.ceil(secondsRemaining)}s`;
+  }
+
+  return `${secondsRemaining.toFixed(1)}s`;
+}
+
 function buildInitialInterviewerPrompt(scenario: Scenario, candidateName?: string | null) {
   const sharedContext = [
     `You are ${scenario.interviewer}, a ${scenario.interviewerRole}, conducting a ${scenario.category} mock interview.`,
@@ -332,6 +347,9 @@ export function PracticeSession({
   const [interviewerPrompt, setInterviewerPrompt] = useState<PracticePrompt>(null);
   const [isGrading, setIsGrading] = useState(false);
   const [isPortalReady, setIsPortalReady] = useState(false);
+  const [isInterviewerSpeaking, setIsInterviewerSpeaking] = useState(false);
+  const [endingCountdownDeadline, setEndingCountdownDeadline] = useState<number | null>(null);
+  const [endingCountdownMsRemaining, setEndingCountdownMsRemaining] = useState<number | null>(null);
   const whiteboardRef = useRef<WhiteboardHandle | null>(null);
   const avatarRef = useRef<LiveAvatarHandle | null>(null);
   const voiceCallRef = useRef<VoiceCallHandle | null>(null);
@@ -344,16 +362,19 @@ export function PracticeSession({
   const lastModeratedTurnIdRef = useRef<string | null>(null);
   const moderationEndingRef = useRef(false);
   const pendingGracefulEndRef = useRef(false);
-  const gracefulEndFallbackTimeoutRef = useRef<number | null>(null);
+  const endingCountdownDeadlineRef = useRef<number | null>(null);
   const savedCodeVersionRef = useRef(0);
   const lastInterviewerClosureTurnIdRef = useRef<string | null>(null);
   const sessionEndHandledRef = useRef(false);
 
+  const clearEndingCountdown = useCallback(() => {
+    endingCountdownDeadlineRef.current = null;
+    setEndingCountdownDeadline(null);
+    setEndingCountdownMsRemaining(null);
+  }, []);
+
   const stopActiveSession = useCallback(() => {
-    if (gracefulEndFallbackTimeoutRef.current) {
-      window.clearTimeout(gracefulEndFallbackTimeoutRef.current);
-      gracefulEndFallbackTimeoutRef.current = null;
-    }
+    clearEndingCountdown();
 
     if (interviewMode === "video") {
       avatarRef.current?.stop();
@@ -361,7 +382,19 @@ export function PracticeSession({
     }
 
     void voiceCallRef.current?.stop();
-  }, [interviewMode]);
+  }, [clearEndingCountdown, interviewMode]);
+
+  const scheduleSessionStop = useCallback((delayMs: number) => {
+    const proposedDeadline = Date.now() + Math.max(0, delayMs);
+    const nextDeadline =
+      endingCountdownDeadlineRef.current === null
+        ? proposedDeadline
+        : Math.min(endingCountdownDeadlineRef.current, proposedDeadline);
+
+    endingCountdownDeadlineRef.current = nextDeadline;
+    setEndingCountdownDeadline(nextDeadline);
+    setEndingCountdownMsRemaining(Math.max(0, nextDeadline - Date.now()));
+  }, []);
 
   const requestGracefulEnd = useCallback((reason?: string) => {
     if (pendingGracefulEndRef.current || moderationEndingRef.current || sessionState !== "connected") {
@@ -386,11 +419,8 @@ export function PracticeSession({
       text: wrapInternalPrompt(promptBody),
     });
 
-    gracefulEndFallbackTimeoutRef.current = window.setTimeout(() => {
-      moderationEndingRef.current = true;
-      stopActiveSession();
-    }, 6000);
-  }, [scenario.id, sessionState, stopActiveSession]);
+    scheduleSessionStop(6000);
+  }, [scenario.id, scheduleSessionStop, sessionState]);
 
   useEffect(() => {
     setIsPortalReady(true);
@@ -510,6 +540,22 @@ export function PracticeSession({
   }, [candidateName, scenario, sessionState]);
 
   useEffect(() => {
+    if (!endingCountdownDeadline || sessionState !== "connected") {
+      return;
+    }
+
+    const syncCountdown = () => {
+      const msRemaining = Math.max(0, endingCountdownDeadline - Date.now());
+      setEndingCountdownMsRemaining(msRemaining);
+    };
+
+    syncCountdown();
+    const interval = window.setInterval(syncCountdown, ENDING_COUNTDOWN_TICK_MS);
+
+    return () => window.clearInterval(interval);
+  }, [endingCountdownDeadline, sessionState]);
+
+  useEffect(() => {
     if (sessionState === "idle") {
       initialPromptSentRef.current = false;
       sessionStartRef.current = null;
@@ -517,15 +563,33 @@ export function PracticeSession({
       moderationEndingRef.current = false;
       pendingGracefulEndRef.current = false;
       sessionEndHandledRef.current = false;
-      if (gracefulEndFallbackTimeoutRef.current) {
-        window.clearTimeout(gracefulEndFallbackTimeoutRef.current);
-        gracefulEndFallbackTimeoutRef.current = null;
-      }
       savedCodeVersionRef.current = 0;
       lastInterviewerClosureTurnIdRef.current = null;
       setInterviewerPrompt(null);
+      setIsInterviewerSpeaking(false);
+      clearEndingCountdown();
     }
-  }, [sessionState]);
+  }, [clearEndingCountdown, sessionState]);
+
+  useEffect(() => {
+    if (sessionState === "ended") {
+      setIsInterviewerSpeaking(false);
+      clearEndingCountdown();
+    }
+  }, [clearEndingCountdown, sessionState]);
+
+  useEffect(() => {
+    if (
+      sessionState !== "connected" ||
+      endingCountdownMsRemaining === null ||
+      endingCountdownMsRemaining > 0 ||
+      isInterviewerSpeaking
+    ) {
+      return;
+    }
+
+    stopActiveSession();
+  }, [endingCountdownMsRemaining, isInterviewerSpeaking, sessionState, stopActiveSession]);
 
   useEffect(() => {
     if (sessionState !== "connected" || moderationEndingRef.current || pendingGracefulEndRef.current) {
@@ -621,15 +685,8 @@ export function PracticeSession({
 
     pendingGracefulEndRef.current = false;
     moderationEndingRef.current = true;
-
-    if (gracefulEndFallbackTimeoutRef.current) {
-      window.clearTimeout(gracefulEndFallbackTimeoutRef.current);
-    }
-
-    gracefulEndFallbackTimeoutRef.current = window.setTimeout(() => {
-      stopActiveSession();
-    }, getInterviewerClosureDelayMs(latestInterviewerTurn.content));
-  }, [sessionState, stopActiveSession, transcript]);
+    scheduleSessionStop(getInterviewerClosureDelayMs(latestInterviewerTurn.content));
+  }, [scheduleSessionStop, sessionState, transcript]);
 
   const handleShareCodeWithInterviewer = useCallback(() => {
     if (!isTechnical || sessionState !== "connected") {
@@ -795,6 +852,13 @@ export function PracticeSession({
     const remainder = seconds % 60;
     return `${minutes}:${remainder.toString().padStart(2, "0")}`;
   }, [seconds]);
+  const endingCountdownLabel = useMemo(() => {
+    if (endingCountdownMsRemaining === null) {
+      return null;
+    }
+
+    return formatEndingCountdown(endingCountdownMsRemaining);
+  }, [endingCountdownMsRemaining]);
 
   const mediaSurface =
     interviewMode === "video" ? (
@@ -808,6 +872,7 @@ export function PracticeSession({
         onTranscriptUpdate={setTranscript}
         onSessionEnd={handleSessionEnd}
         onStateChange={setSessionState}
+        onInterviewerSpeakingChange={setIsInterviewerSpeaking}
         onControlsChange={hasSplitView ? setAvatarControls : undefined}
       />
     ) : (
@@ -818,6 +883,7 @@ export function PracticeSession({
         onTranscriptUpdate={setTranscript}
         onSessionEnd={handleSessionEnd}
         onStateChange={setSessionState}
+        onInterviewerSpeakingChange={setIsInterviewerSpeaking}
       />
     );
 
@@ -1396,6 +1462,25 @@ export function PracticeSession({
                 <span className="size-1.5 animate-bounce rounded-full bg-primary/70 [animation-delay:-0.2s]" />
                 <span className="size-1.5 animate-bounce rounded-full bg-primary/70 [animation-delay:-0.1s]" />
                 <span className="size-1.5 animate-bounce rounded-full bg-primary/70" />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+      {!isGrading && sessionState === "connected" && endingCountdownLabel && isPortalReady &&
+        createPortal(
+          <div className="pointer-events-none fixed right-4 top-4 z-[2147483646]">
+            <div className="pointer-events-auto flex items-center gap-3 rounded-none border border-amber-300 bg-amber-50 px-3 py-2 text-amber-950 shadow-lg">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-none border border-amber-300 bg-amber-100">
+                <Clock3 className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-900/70">
+                  Ending Soon
+                </p>
+                <p className="text-sm font-medium">
+                  Interview closes in {endingCountdownLabel}
+                </p>
               </div>
             </div>
           </div>,
