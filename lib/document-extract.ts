@@ -1,25 +1,24 @@
 import "server-only";
 
+// Use pdfjs-dist directly — pdf-parse relies on @napi-rs native bindings
+// that don't work in Cloudflare Workers.
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf.mjs";
+import type { TextItem } from "pdfjs-dist/types/src/display/api";
+
+// Disable worker threads — not available in Cloudflare Workers runtime.
+GlobalWorkerOptions.workerSrc = "";
+
+let mammothModulePromise: Promise<typeof import("mammoth")> | null = null;
+
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_EXTRACTED_LENGTH = 8000; // Char limit for prompt injection
-let pdfWorkerReady: Promise<void> | null = null;
-let pdfParseModulePromise: Promise<typeof import("pdf-parse")> | null = null;
-let mammothModulePromise: Promise<typeof import("mammoth")> | null = null;
 
 export type ExtractedDocument = {
   text: string;
   filename: string;
   extracted_length: number;
 };
-
-function loadPdfParse() {
-  if (!pdfParseModulePromise) {
-    pdfParseModulePromise = import("pdf-parse");
-  }
-
-  return pdfParseModulePromise;
-}
 
 function loadMammoth() {
   if (!mammothModulePromise) {
@@ -29,49 +28,32 @@ function loadMammoth() {
   return mammothModulePromise;
 }
 
-async function ensurePdfJsWorker() {
-  const workerState = globalThis as typeof globalThis & {
-    pdfjsWorker?: { WorkerMessageHandler?: unknown };
-  };
-
-  if (workerState.pdfjsWorker?.WorkerMessageHandler) {
-    return;
-  }
-
-  if (!pdfWorkerReady) {
-    pdfWorkerReady = import(
-      // pdf-parse bundles its own pdfjs version, so we preload the matching worker.
-      // @ts-expect-error - nested bundled worker has no public types entry.
-      "../node_modules/pdf-parse/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"
-    )
-      .then(({ WorkerMessageHandler }) => {
-        workerState.pdfjsWorker = { WorkerMessageHandler };
-      })
-      .catch((error) => {
-        pdfWorkerReady = null;
-        throw error;
-      });
-  }
-
-  await pdfWorkerReady;
-}
-
 async function extractPdf(buffer: Buffer): Promise<string> {
-  const { PDFParse } = await loadPdfParse();
-  await ensurePdfJsWorker();
-
-  const parser = new PDFParse({
+  const doc = await getDocument({
     data: new Uint8Array(buffer),
-    isEvalSupported: false,
     useSystemFonts: true,
-  });
+    isEvalSupported: false,
+    disableFontFace: true,
+  }).promise;
 
+  const parts: string[] = [];
   try {
-    const result = await parser.getText();
-    return result.text || "";
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items
+        .filter((item): item is TextItem => "str" in item)
+        .map((item) => item.str)
+        .join(" ");
+      if (pageText.trim()) {
+        parts.push(pageText);
+      }
+    }
   } finally {
-    await parser.destroy().catch(() => undefined);
+    await doc.destroy().catch(() => undefined);
   }
+
+  return parts.join("\n");
 }
 
 function normalizeExtractedText(text: string) {
