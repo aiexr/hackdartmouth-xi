@@ -46,12 +46,12 @@ async function withTimeout<T>(
 export default async function DashboardPage() {
   const session = await withTimeout(
     getOptionalServerSession(),
-    4500,
+    1200,
     "Session lookup timed out.",
   ).catch(() => null);
   const metrics = await withTimeout(
     getUserInterviewMetrics(session?.user?.email),
-    5000,
+    1600,
     "Metrics lookup timed out.",
   ).catch(() => getUserInterviewMetrics());
   const loopProgress = Math.min(

@@ -18,10 +18,49 @@ import { Progress } from "@/components/ui/progress";
 
 export const dynamic = "force-dynamic";
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(timeoutMessage));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 export default async function ProfilePage() {
-  const session = await getOptionalServerSession();
-  const metrics = await getUserInterviewMetrics(session?.user?.email);
-  const dbUser = session?.user?.email ? await UserModel.getUserByEmail(session.user.email) : null;
+  const session = await withTimeout(
+    getOptionalServerSession(),
+    1200,
+    "Session lookup timed out.",
+  ).catch(() => null);
+
+  const [metrics, dbUser] = await Promise.all([
+    withTimeout(
+      getUserInterviewMetrics(session?.user?.email),
+      1600,
+      "Metrics lookup timed out.",
+    ).catch(() => getUserInterviewMetrics()),
+    session?.user?.email
+      ? withTimeout(
+          UserModel.getUserByEmail(session.user.email),
+          1600,
+          "User lookup timed out.",
+        ).catch(() => null)
+      : Promise.resolve(null),
+  ]);
   
   const profileName = (dbUser?.name || session?.user?.name) ?? "Guest user";
   const profileBio = dbUser?.bio || null;

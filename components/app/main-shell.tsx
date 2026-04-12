@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Bot,
   Home,
+  Loader2,
   Play,
   Settings,
   Sparkles,
@@ -24,7 +26,25 @@ const navigation = [
 
 export function MainShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
+  const [isPending, startTransition] = useTransition();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
+
+  const navigateTo = (href: string) => {
+    if (href === pathname) {
+      return;
+    }
+
+    setPendingHref(href);
+    startTransition(() => {
+      router.push(href);
+    });
+  };
 
   return (
     <div className="flex min-h-screen bg-transparent">
@@ -46,19 +66,44 @@ export function MainShell({ children }: { children: React.ReactNode }) {
           {navigation.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            const pending = pendingHref === item.href && isPending;
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
+                onMouseEnter={() => router.prefetch(item.href)}
+                onFocus={() => router.prefetch(item.href)}
+                onClick={(event) => {
+                  if (
+                    event.defaultPrevented ||
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey ||
+                    event.button !== 0
+                  ) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  navigateTo(item.href);
+                }}
                 className={cn(
                   "flex items-center gap-3 rounded-none px-4 py-3 text-sm font-medium transition-all",
                   active
                     ? "bg-secondary text-secondary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  pending && "opacity-70",
                 )}
+                aria-busy={pending || undefined}
               >
-                <item.icon className="size-5" />
+                {pending ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : (
+                  <item.icon className="size-5" />
+                )}
                 {item.label}
               </Link>
             );
@@ -126,17 +171,42 @@ export function MainShell({ children }: { children: React.ReactNode }) {
           {navigation.map((item) => {
             const active =
               item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            const pending = pendingHref === item.href && isPending;
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
+                onMouseEnter={() => router.prefetch(item.href)}
+                onFocus={() => router.prefetch(item.href)}
+                onClick={(event) => {
+                  if (
+                    event.defaultPrevented ||
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey ||
+                    event.button !== 0
+                  ) {
+                    return;
+                  }
+
+                  event.preventDefault();
+                  navigateTo(item.href);
+                }}
                 className={cn(
                   "flex min-w-16 flex-col items-center gap-1 rounded-none px-3 py-2 text-[0.72rem] font-medium",
                   active ? "text-primary" : "text-muted-foreground",
+                  pending && "opacity-70",
                 )}
+                aria-busy={pending || undefined}
               >
-                <item.icon className="size-5" />
+                {pending ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : (
+                  <item.icon className="size-5" />
+                )}
                 {item.label}
               </Link>
             );
