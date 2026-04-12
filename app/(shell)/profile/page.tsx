@@ -142,8 +142,8 @@ async function ProfileHistorySection({ email }: { email?: string | null }) {
       return Boolean(interview.completedAt) || status === "completed" || status === "graded";
     })
     .sort((left, right) => {
-      const leftTime = new Date(left.completedAt ?? left.createdAt).getTime();
-      const rightTime = new Date(right.completedAt ?? right.createdAt).getTime();
+      const leftTime = new Date(left.completedAt ?? left.createdAt ?? 0).getTime();
+      const rightTime = new Date(right.completedAt ?? right.createdAt ?? 0).getTime();
       return leftTime - rightTime;
     })
     .map((interview) => {
@@ -198,8 +198,8 @@ async function ProfileHistorySection({ email }: { email?: string | null }) {
   const descendingSessions = sessionsWithDelta
     .slice()
     .sort((left, right) => {
-      const leftTime = new Date(left.completedAt ?? left.createdAt).getTime();
-      const rightTime = new Date(right.completedAt ?? right.createdAt).getTime();
+      const leftTime = new Date(left.completedAt ?? left.createdAt ?? 0).getTime();
+      const rightTime = new Date(right.completedAt ?? right.createdAt ?? 0).getTime();
       return rightTime - leftTime;
     });
 

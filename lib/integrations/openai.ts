@@ -46,6 +46,20 @@ type ImagePart = {
   dataBase64: string;
 };
 
+type ErrorDetails = {
+  name?: string;
+  message?: string;
+  stack?: string;
+  code?: string;
+  errno?: number | string;
+  syscall?: string;
+  hostname?: string;
+  host?: string;
+  port?: number | string;
+  address?: string;
+  cause?: ErrorDetails | string;
+};
+
 export function getModel() {
   return env.openAiModel || DEFAULT_OPENAI_MODEL;
 }
@@ -172,6 +186,57 @@ function toImageDataUrl(image: ImagePart) {
   return `data:${mimeType};base64,${normalizedBase64}`;
 }
 
+function formatErrorDetails(error: unknown): ErrorDetails | string {
+  if (!(error instanceof Error)) {
+    return String(error);
+  }
+
+  const details: ErrorDetails = {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+  };
+
+  const errorWithFields = error as Error & {
+    code?: string;
+    errno?: number | string;
+    syscall?: string;
+    hostname?: string;
+    host?: string;
+    port?: number | string;
+    address?: string;
+    cause?: unknown;
+  };
+
+  if (errorWithFields.code) details.code = errorWithFields.code;
+  if (errorWithFields.errno !== undefined) details.errno = errorWithFields.errno;
+  if (errorWithFields.syscall) details.syscall = errorWithFields.syscall;
+  if (errorWithFields.hostname) details.hostname = errorWithFields.hostname;
+  if (errorWithFields.host) details.host = errorWithFields.host;
+  if (errorWithFields.port !== undefined) details.port = errorWithFields.port;
+  if (errorWithFields.address) details.address = errorWithFields.address;
+  if (errorWithFields.cause !== undefined) {
+    details.cause =
+      errorWithFields.cause instanceof Error || typeof errorWithFields.cause === "object"
+        ? formatErrorDetails(errorWithFields.cause)
+        : String(errorWithFields.cause);
+  }
+
+  return details;
+}
+
+function logOpenAiFailure(
+  phase: string,
+  details: Record<string, unknown>,
+  error?: unknown,
+) {
+  console.error("[llm:openai]", {
+    phase,
+    ...details,
+    ...(error !== undefined ? { error: formatErrorDetails(error) } : {}),
+  });
+}
+
 export async function fetchAvailableModels(): Promise<
   [models: string[], warning: string | null]
 > {
@@ -207,6 +272,13 @@ export async function fetchAvailableModels(): Promise<
     return [models.length > 0 ? models : [DEFAULT_OPENAI_MODEL], null];
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    logOpenAiFailure(
+      "fetchAvailableModels",
+      {
+        baseUrl: DARTMOUTH_OPENAI_BASE_URL,
+      },
+      error,
+    );
     return [[DEFAULT_OPENAI_MODEL], message];
   }
 }
@@ -232,6 +304,7 @@ export async function execute(
   let lastError: Error | null = null;
 
   for (const model of modelsToTry) {
+    const requestStartedAt = Date.now();
     try {
       const messages: ChatMessage[] = [
         { role: "system", content: systemPrompt },
@@ -251,6 +324,15 @@ export async function execute(
 
       if (!response.ok) {
         const text = await response.text();
+        logOpenAiFailure("chatCompletionResponseNotOk", {
+          baseUrl,
+          endpoint: `${baseUrl}/chat/completions`,
+          model,
+          status: response.status,
+          statusText: response.statusText,
+          durationMs: Date.now() - requestStartedAt,
+          responseSnippet: text.slice(0, 300),
+        });
         throw new Error(
           `Model ${model} failed with ${response.status}: ${text.slice(0, 300)}`,
         );
@@ -268,6 +350,22 @@ export async function execute(
         modelUsed: model,
       };
     } catch (error) {
+      logOpenAiFailure(
+        "chatCompletionAttemptFailed",
+        {
+          baseUrl,
+          endpoint: `${baseUrl}/chat/completions`,
+          model,
+          modelAttemptCount: modelsToTry.length,
+          responseFormat,
+          promptChars: prompt.length,
+          systemPromptChars: systemPrompt.length,
+          temperature,
+          maxTokens,
+          durationMs: Date.now() - requestStartedAt,
+        },
+        error,
+      );
       lastError = error instanceof Error ? error : new Error(String(error));
     }
   }
@@ -300,6 +398,7 @@ export async function executeWithImage(
   let lastError: Error | null = null;
 
   for (const model of modelsToTry) {
+    const requestStartedAt = Date.now();
     try {
       const messages: ChatMessage[] = [
         { role: "system", content: systemPrompt },
@@ -325,6 +424,16 @@ export async function executeWithImage(
 
       if (!response.ok) {
         const text = await response.text();
+        logOpenAiFailure("chatCompletionImageResponseNotOk", {
+          baseUrl,
+          endpoint: `${baseUrl}/chat/completions`,
+          model,
+          status: response.status,
+          statusText: response.statusText,
+          durationMs: Date.now() - requestStartedAt,
+          responseSnippet: text.slice(0, 300),
+          imageMimeType: image.mimeType,
+        });
         throw new Error(
           `Model ${model} failed with ${response.status}: ${text.slice(0, 300)}`,
         );
@@ -342,6 +451,23 @@ export async function executeWithImage(
         modelUsed: model,
       };
     } catch (error) {
+      logOpenAiFailure(
+        "chatCompletionImageAttemptFailed",
+        {
+          baseUrl,
+          endpoint: `${baseUrl}/chat/completions`,
+          model,
+          modelAttemptCount: modelsToTry.length,
+          responseFormat,
+          promptChars: prompt.length,
+          systemPromptChars: systemPrompt.length,
+          temperature,
+          maxTokens,
+          durationMs: Date.now() - requestStartedAt,
+          imageMimeType: image.mimeType,
+        },
+        error,
+      );
       lastError = error instanceof Error ? error : new Error(String(error));
     }
   }

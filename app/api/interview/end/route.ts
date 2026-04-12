@@ -502,6 +502,22 @@ export async function POST(req: NextRequest) {
       gradingResult = await gradeInterview(diagramImage);
     } catch (error) {
       const primaryError = error instanceof Error ? error.message : String(error);
+      console.error("Interview grading attempt failed.", {
+        interviewId,
+        scenarioId: String(interview.scenarioId ?? "unknown"),
+        interviewType: String(interview.type ?? "unknown"),
+        difficulty: String(interview.difficulty ?? "unknown"),
+        userEmail: session.user.email,
+        hasTranscript: Boolean(transcriptText),
+        transcriptChars: transcriptText.length,
+        hasResumeContext: Boolean(resumeContext),
+        resumeChars: resumeContext.length,
+        hasDiagram: Boolean(diagramImage),
+        hasUploadedDocument: Boolean(uploadedDocument),
+        providerOverride: diagramImage ? "openai" : process.env.LLM_PROVIDER ?? "openai",
+        modelOverride: diagramImage ? DEFAULT_DARTMOUTH_VISION_MODEL : null,
+        error: primaryError,
+      });
 
       if (diagramImage) {
         try {
@@ -509,6 +525,15 @@ export async function POST(req: NextRequest) {
         } catch (retryError) {
           const retryMessage =
             retryError instanceof Error ? retryError.message : String(retryError);
+          console.error("Interview grading retry without diagram failed.", {
+            interviewId,
+            scenarioId: String(interview.scenarioId ?? "unknown"),
+            userEmail: session.user.email,
+            transcriptChars: transcriptText.length,
+            hasUploadedDocument: Boolean(uploadedDocument),
+            providerOverride: process.env.LLM_PROVIDER ?? "openai",
+            retryError: retryMessage,
+          });
           gradingError = `${primaryError} Retry without diagram also failed: ${retryMessage}`;
         }
       } else {
