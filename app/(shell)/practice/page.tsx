@@ -31,7 +31,7 @@ const roundMeta: Record<
 > = {
   behavioral: {
     label: "Behavioral",
-    description: "STAR stories, leadership, conflict, product sense, and case studies.",
+    description: "",
     icon: Users,
   },
   technical: {
@@ -107,12 +107,7 @@ export default function PracticePage() {
   return (
       <div className="mx-auto max-w-5xl space-y-6 px-6 py-8 md:px-10 md:py-10">
         {/* Header */}
-        <div>
-          <h1>Practice</h1>
-          <p className="mt-1 text-base text-base-content/60">
-            Pick a round type, choose a problem, and start a live session.
-          </p>
-        </div>
+
 
         {/* Round type tabs */}
         <div className="flex flex-wrap items-center gap-2">
