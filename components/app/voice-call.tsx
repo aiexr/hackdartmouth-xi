@@ -42,6 +42,7 @@ type VoiceCallProps = {
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
   onStateChange?: (state: "idle" | "connecting" | "connected" | "ended") => void;
+  onInterviewerSpeakingChange?: (isSpeaking: boolean) => void;
 };
 
 export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function VoiceCall({
@@ -50,6 +51,7 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
   onTranscriptUpdate,
   onSessionEnd,
   onStateChange,
+  onInterviewerSpeakingChange,
 }, ref) {
   const conversationRef = useRef<VoiceConversation | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
@@ -252,6 +254,10 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
   }), [endCall]);
 
   useEffect(() => {
+    onInterviewerSpeakingChange?.(agentSpeaking);
+  }, [agentSpeaking, onInterviewerSpeakingChange]);
+
+  useEffect(() => {
     if (!promptRequest || status !== "connected" || !conversationRef.current) {
       return;
     }
@@ -271,13 +277,14 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
 
   useEffect(() => {
     return () => {
+      onInterviewerSpeakingChange?.(false);
       if (conversationRef.current) {
         conversationRef.current.endSession().catch(() => {});
         conversationRef.current = null;
       }
       deliveredPromptTextsRef.current.clear();
     };
-  }, []);
+  }, [onInterviewerSpeakingChange]);
 
   return (
     <div className="flex w-full flex-col items-center gap-6">

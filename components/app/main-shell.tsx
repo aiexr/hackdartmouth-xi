@@ -42,7 +42,7 @@ const navigation = [
   { href: "/", label: "Home", icon: Home },
   { href: "/practice", label: "Practice", icon: Play },
   { href: "/profile", label: "Profile", icon: User },
-  { href: "/coach", label: "Coach", icon: WhistleIcon },
+  { href: "/coach", label: "LeetCoach", icon: WhistleIcon },
   { href: "/llm", label: "LLM", icon: Bot },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

@@ -2,12 +2,64 @@
 
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
-import { Moon, Trash2, X } from "lucide-react";
+import { Loader2, Moon, Trash2, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 
+function SettingsPanelSkeleton() {
+  return (
+    <div className="space-y-8 animate-pulse">
+      <div className="space-y-4">
+        <div className="h-7 w-28 rounded-none bg-base-300/45" />
+        <Card className="bg-base-100/80">
+          <CardContent className="py-5 pr-5 pl-8">
+            <div className="flex items-start gap-4">
+              <div className="size-11 rounded-none bg-base-300/45" />
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="h-5 w-28 rounded-none bg-base-300/50" />
+                <div className="h-4 w-56 max-w-full rounded-none bg-base-300/35" />
+                <div className="h-4 w-40 rounded-none bg-base-300/35" />
+              </div>
+              <div className="mt-1 h-6 w-12 rounded-full bg-base-300/45" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <div className="h-7 w-20 rounded-none bg-base-300/45" />
+        <Card className="bg-base-100/80">
+          <CardContent className="py-5 pr-5 pl-8">
+            <div className="flex items-start gap-4">
+              <div className="size-11 rounded-none bg-base-300/45" />
+              <div className="min-w-0 flex-1 space-y-3">
+                <div className="h-5 w-40 rounded-none bg-base-300/50" />
+                <div className="h-4 w-full rounded-none bg-base-300/35" />
+                <div className="h-4 w-11/12 rounded-none bg-base-300/35" />
+                <div className="h-4 w-3/4 rounded-none bg-base-300/35" />
+              </div>
+              <div className="h-9 w-32 rounded-none bg-base-300/45" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex items-center gap-3 pt-2">
+        <div className="h-9 w-20 rounded-none bg-base-300/45" />
+        <div className="h-9 w-20 rounded-none bg-base-300/45" />
+      </div>
+
+      <div className="inline-flex items-center gap-2 text-sm text-base-content/60">
+        <Loader2 className="size-4 animate-spin" />
+        Loading settings...
+      </div>
+    </div>
+  );
+}
+
 export function SettingsPanel() {
+  const [hydrated, setHydrated] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleted, setDeleted] = useState(false);
@@ -26,7 +78,12 @@ export function SettingsPanel() {
     } else {
       setDarkMode(false);
     }
+    setHydrated(true);
   }, []);
+
+  if (!hydrated) {
+    return <SettingsPanelSkeleton />;
+  }
 
   function toggleDarkMode(enabled: boolean) {
     setDarkMode(enabled);
@@ -120,7 +177,7 @@ export function SettingsPanel() {
                   {confirmDelete ? (
                     <p className="mt-2 text-sm leading-6 text-destructive">
                       This is not a local-only reset. It permanently removes your
-                      stored HackDartmouth XI account data and signs you out.
+                      stored LeetSpeak account data and signs you out.
                     </p>
                   ) : null}
                   {deleteError ? (

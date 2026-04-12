@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import type { ActivityDay } from "@/lib/interview-metrics";
 
 function getIntensity(count: number) {
@@ -31,14 +34,18 @@ type ActivityCalendarProps = {
   totalSessions: number;
 };
 
-function buildWeeks(days: ActivityDay[]) {
-  const weeks: (ActivityDay | null)[][] = [];
-  let week: (ActivityDay | null)[] = [];
+type CalendarCell =
+  | { kind: "day"; date: string; count: number }
+  | { kind: "pad"; key: string };
 
-  if (days.length > 0) {
+function buildWeeks(days: CalendarCell[]) {
+  const weeks: CalendarCell[][] = [];
+  let week: CalendarCell[] = [];
+
+  if (days.length > 0 && days[0]?.kind === "day") {
     const firstDow = new Date(days[0].date).getDay();
-    for (let i = 0; i < firstDow; i++) {
-      week.push(null);
+    for (let i = 0; i < firstDow; i += 1) {
+      week.push({ kind: "pad", key: `lead-${i}` });
     }
   }
 
@@ -49,81 +56,153 @@ function buildWeeks(days: ActivityDay[]) {
       week = [];
     }
   }
+
   if (week.length > 0) {
+    while (week.length < 7) {
+      week.push({ kind: "pad", key: `trail-${weeks.length}-${week.length}` });
+    }
     weeks.push(week);
   }
 
   return weeks;
 }
 
-function getMonthPositions(weeks: (ActivityDay | null)[][]) {
+function getMonthPositions(weeks: CalendarCell[][]) {
   const months: { label: string; x: number }[] = [];
   let prevMonth = -1;
-  for (let w = 0; w < weeks.length; w++) {
-    const realDay = weeks[w].find((d) => d?.date);
-    if (!realDay?.date) continue;
-    const m = new Date(realDay.date).getMonth();
-    if (m !== prevMonth) {
-      months.push({ label: monthLabels[m], x: w });
-      prevMonth = m;
+
+  for (let w = 0; w < weeks.length; w += 1) {
+    const realDay = weeks[w]?.find((d) => d.kind === "day");
+    if (!realDay || realDay.kind !== "day") continue;
+
+    const month = new Date(realDay.date).getMonth();
+    if (month !== prevMonth) {
+      months.push({ label: monthLabels[month]!, x: w });
+      prevMonth = month;
     }
   }
+
   return months;
 }
 
 function getAvailableYears(days: ActivityDay[]) {
   const years = new Set<number>();
-  for (const d of days) {
-    if (d.date) years.add(new Date(d.date).getFullYear());
+  for (const day of days) {
+    years.add(new Date(day.date).getFullYear());
   }
   return [...years].sort((a, b) => b - a);
 }
 
-export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalendarProps) {
-  const availableYears = getAvailableYears(activityDays);
-  // We render all data as-is (last 365 days). The year buttons are visual only for now.
-  const currentYear = new Date().getFullYear();
+function buildYearDays(activityDays: ActivityDay[], year: number) {
+  const countsByDate = new Map<string, number>();
 
-  const weeks = buildWeeks(activityDays);
-  const months = getMonthPositions(weeks);
+  for (const day of activityDays) {
+    const date = new Date(day.date);
+    if (date.getFullYear() !== year) continue;
+    const normalized = day.date.slice(0, 10);
+    countsByDate.set(normalized, day.count);
+  }
+
+  const cursor = new Date(year, 0, 1);
+  const end = new Date(year, 11, 31);
+  const days: CalendarCell[] = [];
+
+  while (cursor <= end) {
+    const iso = cursor.toISOString().slice(0, 10);
+    days.push({
+      kind: "day",
+      date: iso,
+      count: countsByDate.get(iso) ?? 0,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return days;
+}
+
+export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalendarProps) {
+  const availableYears = useMemo(() => getAvailableYears(activityDays), [activityDays]);
+  const [selectedYear, setSelectedYear] = useState<number>(
+    availableYears[0] ?? new Date().getFullYear(),
+  );
+
+  const selectedYearDays = useMemo(
+    () => buildYearDays(activityDays, selectedYear),
+    [activityDays, selectedYear],
+  );
+  const weeks = useMemo(() => buildWeeks(selectedYearDays), [selectedYearDays]);
+  const months = useMemo(() => getMonthPositions(weeks), [weeks]);
+  const selectedYearSessions = useMemo(
+    () =>
+      selectedYearDays.reduce((sum, day) => (
+        day.kind === "day" ? sum + day.count : sum
+      ), 0),
+    [selectedYearDays],
+  );
   const gridWidth = weeks.length > 0 ? weeks.length * CELL + (weeks.length - 1) * GAP : 0;
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-base-content">
-          {totalSessions} interview session{totalSessions !== 1 ? "s" : ""} in the last year
+          {availableYears.length > 0
+            ? `${selectedYearSessions} interview session${selectedYearSessions !== 1 ? "s" : ""} in ${selectedYear}`
+            : `${totalSessions} interview session${totalSessions !== 1 ? "s" : ""} in the last year`}
         </p>
+        {availableYears.length > 0 && (
+          <div className="flex items-center gap-2 text-xs text-base-content/60">
+            <span>Year</span>
+            <div className="flex items-center gap-1">
+              {availableYears.map((year) => (
+                <button
+                  key={year}
+                  type="button"
+                  onClick={() => setSelectedYear(year)}
+                  className={
+                    year === selectedYear
+                      ? "rounded-none border border-primary/60 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                      : "rounded-none border border-base-300 px-2 py-0.5 text-[11px] font-medium text-base-content/60 transition hover:border-base-content/30 hover:text-base-content"
+                  }
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-none border border-border px-3 py-2">
         <div className="min-w-max">
-          {/* Month labels */}
-          <div className="relative" style={{ marginLeft: DAY_LABEL_WIDTH, width: gridWidth, height: 16 }}>
-            {months.map((m, i) => {
+          <div
+            className="relative"
+            style={{ marginLeft: DAY_LABEL_WIDTH, width: gridWidth, height: 16 }}
+          >
+            {months.map((month, i) => {
               const nextX = months[i + 1]?.x ?? weeks.length;
-              const span = nextX - m.x;
+              const span = nextX - month.x;
 
-              if (span < 3) {
+              if (span < 2) {
                 return null;
               }
 
               return (
                 <span
-                  key={`${m.label}-${m.x}`}
+                  key={`${month.label}-${month.x}`}
                   className="absolute top-0 text-xs text-base-content/60"
-                  style={{ left: m.x * STEP }}
+                  style={{ left: month.x * STEP }}
                 >
-                  {m.label}
+                  {month.label}
                 </span>
               );
             })}
           </div>
 
-          {/* Grid with day labels */}
           <div className="mt-1 flex">
-            {/* Day-of-week labels */}
-            <div className="flex flex-col pr-1" style={{ gap: GAP, width: DAY_LABEL_WIDTH, flexShrink: 0 }}>
+            <div
+              className="flex flex-col pr-1"
+              style={{ gap: GAP, width: DAY_LABEL_WIDTH, flexShrink: 0 }}
+            >
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label, i) => (
                 <div
                   key={label}
@@ -135,19 +214,21 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
               ))}
             </div>
 
-            {/* Week columns */}
             <div className="flex flex-1" style={{ gap: GAP }}>
-              {weeks.map((wk, wi) => (
-                <div key={wi} className="flex flex-col items-center" style={{ gap: GAP }}>
-                  {Array.from({ length: 7 }).map((_, di) => {
-                    const day = wk[di];
-
-                    if (!day) {
-                      return <div key={di} style={{ width: CELL, height: CELL }} />;
+              {weeks.map((week, weekIndex) => (
+                <div key={weekIndex} className="flex flex-col items-center" style={{ gap: GAP }}>
+                  {week.map((day, dayIndex) => {
+                    if (day.kind === "pad") {
+                      return (
+                        <div
+                          key={day.key ?? `${weekIndex}-${dayIndex}`}
+                          className={fillClasses[0]}
+                          style={{ width: CELL, height: CELL }}
+                        />
+                      );
                     }
 
                     const intensity = getIntensity(day.count);
-
                     const label = day.count === 0
                       ? `No interviews on ${day.date}`
                       : `${day.count} interview${day.count !== 1 ? "s" : ""} on ${day.date}`;
@@ -156,10 +237,7 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
                       <div
                         key={day.date}
                         className={`group relative ${fillClasses[intensity]}`}
-                        style={{
-                          width: CELL,
-                          height: CELL,
-                        }}
+                        style={{ width: CELL, height: CELL }}
                       >
                         <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-none bg-foreground px-2.5 py-1.5 text-xs font-medium text-background shadow-lg group-hover:block">
                           {label}
@@ -173,17 +251,13 @@ export function ActivityCalendar({ activityDays, totalSessions }: ActivityCalend
             </div>
           </div>
 
-          {/* Legend */}
           <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-base-content/60">
             <span>Less</span>
-            {fillClasses.map((cls, i) => (
+            {fillClasses.map((fillClass, i) => (
               <div
                 key={i}
-                className={cls}
-                style={{
-                  width: CELL,
-                  height: CELL,
-                }}
+                className={fillClass}
+                style={{ width: CELL, height: CELL }}
               />
             ))}
             <span>More</span>

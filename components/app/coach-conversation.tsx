@@ -173,7 +173,7 @@ function CoachMarkdown({ text }: { text: string }) {
 function CoachAvatarIcon() {
   return (
     <div className="flex size-9 shrink-0 items-center justify-center rounded-none border border-border/70 bg-base-100">
-      <ThemeLogo alt="LeetSpeak coach" className="size-5 w-auto object-contain" />
+      <ThemeLogo alt="LeetCoach" className="size-5 w-auto object-contain" />
     </div>
   );
 }
@@ -183,7 +183,7 @@ export function CoachConversation() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "coach",
-      text: "I'm your interview coach. You can ask me anything about interview prep, or hit Resume Review and I'll give you concrete feedback on what to fix.",
+      text: "I'm LeetCoach, your interview coach. You can ask me anything about interview prep, or hit Resume Review and I'll give you concrete feedback on what to fix.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -269,7 +269,7 @@ export function CoachConversation() {
       <Card className="overflow-hidden bg-base-100/85">
         <div className="flex items-center gap-2 border-b border-border px-5 py-4 text-sm font-semibold">
           <MessageCircleMore className="size-4 text-primary" />
-          Coaching Chat
+          LeetCoach
         </div>
 
         <div ref={scrollRef} className="max-h-[28rem] overflow-y-auto">
@@ -326,10 +326,10 @@ export function CoachConversation() {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about interview prep, storytelling, or your resume..."
+            placeholder="Ask LeetCoach about interview prep, storytelling, or your resume..."
             disabled={loading}
           />
-          <Button size="icon" type="submit" disabled={loading || !input.trim()} aria-label="Send coach message">
+          <Button size="icon" type="submit" disabled={loading || !input.trim()} aria-label="Send LeetCoach message">
             <Send className="size-4" />
           </Button>
         </form>

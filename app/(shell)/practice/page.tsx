@@ -11,8 +11,10 @@ import {
   Network,
   Search,
   Shuffle,
+  Star,
   Users,
 } from "lucide-react";
+import type { FavoriteItem } from "@/lib/favorites";
 import {
   quantProblemCategories,
   quantProblems,
@@ -93,7 +95,11 @@ const STAR_GROUPS = [
     label: "Leadership & Influence",
     description:
       "Self-advocacy, driving decisions under pressure, and leading without formal authority.",
-    scenarioIds: ["staff-swe-story", "staff-swe-incident"],
+    scenarioIds: [
+      "staff-swe-story",
+      "staff-swe-incident",
+      "staff-swe-missed-commitment",
+    ],
   },
   {
     id: "people-teams",
@@ -103,6 +109,7 @@ const STAR_GROUPS = [
     scenarioIds: [
       "staff-swe-mentorship",
       "staff-swe-conflict",
+      "staff-swe-technical-disagreement",
       "pm-stakeholder-pushback",
       "consulting-client-pushback",
     ],
@@ -115,6 +122,8 @@ const STAR_GROUPS = [
     scenarioIds: [
       "staff-swe-tech-strategy",
       "staff-swe-ambiguous-initiative",
+      "staff-swe-migration-rollout",
+      "staff-swe-quality-reset",
       "pm-prioritization",
       "pm-launch-decision",
       "consulting-ops-turnaround",
@@ -177,19 +186,23 @@ const ARCHITECTURE_GROUPS = [
     id: "storage-apis",
     label: "Storage & APIs",
     description: "URL shorteners, key-value stores, and read-heavy API services.",
-    scenarioIds: ["system-url-shortener"],
+    scenarioIds: ["system-url-shortener", "system-resume-ingestion"],
   },
   {
     id: "platform-tooling",
     label: "Platform & Tooling",
     description: "Internal platforms, feature flag systems, and developer tooling.",
-    scenarioIds: ["system-feature-flags"],
+    scenarioIds: ["system-feature-flags", "system-ai-grading-pipeline"],
   },
   {
     id: "realtime",
     label: "Realtime & Messaging",
     description: "Chat systems, notification pipelines, and event-driven architectures.",
-    scenarioIds: ["system-realtime-chat"],
+    scenarioIds: [
+      "system-realtime-chat",
+      "system-live-interview-platform",
+      "system-collaborative-editor",
+    ],
   },
   {
     id: "data-systems",
@@ -200,13 +213,25 @@ const ARCHITECTURE_GROUPS = [
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const ROUND_ORDER: RoundType[] = ["technical", "behavioral", "system-design"];
+const ROUND_ORDER: RoundType[] = ["behavioral", "technical", "system-design"];
 
 const ROUND_META: Record<RoundType, { label: string; icon: typeof Braces }> = {
   technical: { label: "Technical", icon: Braces },
   behavioral: { label: "Behavioral", icon: Users },
   "system-design": { label: "System Design", icon: Network },
 };
+
+function getLcPracticeHref(slug: string, selectedType: string | null) {
+  if (selectedType === "lc-behavioral") {
+    return `/practice/lc/${slug}?mode=behavioral`;
+  }
+  if (selectedType === "lc-system-design") {
+    return `/practice/lc/${slug}?mode=system-design`;
+  }
+
+  const prebuilt = PREBUILT_SLUG_TO_SCENARIO[slug];
+  return prebuilt ? `/practice/${prebuilt}` : `/practice/lc/${slug}`;
+}
 
 const diffColor: Record<LcDifficulty, string> = {
   Easy: "text-emerald-500",
@@ -221,7 +246,7 @@ function LeetCodeTableSkeleton() {
         <div
           key={idx}
           className={cn(
-            "grid grid-cols-[2.5rem_minmax(0,1fr)_5rem_5.5rem] items-center gap-3 px-4 py-3",
+            "grid grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5.5rem_3rem] items-center gap-3 pl-4 pr-6 py-3",
             idx < 5 && "border-b border-base-300/50",
           )}
         >
@@ -232,6 +257,7 @@ function LeetCodeTableSkeleton() {
           </div>
           <div className="h-3 rounded-none bg-base-300/50" />
           <div className="h-3 rounded-none bg-base-300/50" />
+          <div className="ml-auto h-4 w-4 rounded-none bg-base-300/40" />
         </div>
       ))}
     </div>
@@ -241,7 +267,7 @@ function LeetCodeTableSkeleton() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function PracticePage() {
   const router = useRouter();
-  const [activeRound, setActiveRound] = useState<RoundType>("technical");
+  const [activeRound, setActiveRound] = useState<RoundType>("behavioral");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedSubGroup, setSelectedSubGroup] = useState<string | null>(null);
   const [activeDiff, setActiveDiff] = useState<LcDifficulty | "All">("All");
@@ -268,6 +294,10 @@ export default function PracticePage() {
   const [lcTotal, setLcTotal] = useState(0);
   const [lcLoading, setLcLoading] = useState(false);
   const [lcError, setLcError] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+  const [favoritesReady, setFavoritesReady] = useState(false);
+  const [favoritesEnabled, setFavoritesEnabled] = useState(true);
+  const [favoriteSavingId, setFavoriteSavingId] = useState<string | null>(null);
 
   function switchRound(round: RoundType) {
     setActiveRound(round);
@@ -309,6 +339,45 @@ export default function PracticePage() {
   }
 
   type LcApiResponse = { error?: string; questions?: LcProblem[]; total?: number };
+  type FavoriteApiResponse = { error?: string; favorites?: FavoriteItem[]; isFavorited?: boolean };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/user/favorites")
+      .then(async (response) => {
+        if (response.status === 401) {
+          if (!cancelled) {
+            setFavoritesEnabled(false);
+            setFavoritesReady(true);
+          }
+          return null;
+        }
+
+        const data = (await response.json()) as FavoriteApiResponse;
+        if (!response.ok || data.error) {
+          throw new Error(data.error ?? "Failed to load favorites");
+        }
+
+        if (!cancelled) {
+          setFavorites(data.favorites ?? []);
+          setFavoritesEnabled(true);
+          setFavoritesReady(true);
+        }
+
+        return null;
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setFavoritesEnabled(false);
+          setFavoritesReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Fetch LeetCode problems when entering any LeetCode drill-down
   useEffect(() => {
@@ -344,16 +413,7 @@ export default function PracticePage() {
   }
 
   function openLcProblem(slug: string) {
-    if (selectedType === "lc-behavioral") {
-      router.push(`/practice/lc/${slug}?mode=behavioral`);
-      return;
-    }
-    if (selectedType === "lc-system-design") {
-      router.push(`/practice/lc/${slug}?mode=system-design`);
-      return;
-    }
-    const prebuilt = PREBUILT_SLUG_TO_SCENARIO[slug];
-    router.push(prebuilt ? `/practice/${prebuilt}` : `/practice/lc/${slug}`);
+    router.push(getLcPracticeHref(slug, selectedType));
   }
 
   function pickRandomLc() {
@@ -403,6 +463,38 @@ export default function PracticePage() {
   function pickRandomScenario() {
     if (filteredSubGroup.length === 0) return;
     router.push(`/practice/${filteredSubGroup[Math.floor(Math.random() * filteredSubGroup.length)].id}`);
+  }
+
+  const favoriteIds = useMemo(
+    () => new Set(favorites.map((favorite) => favorite.id)),
+    [favorites],
+  );
+
+  async function toggleFavorite(item: FavoriteItem) {
+    if (!favoritesEnabled) {
+      return;
+    }
+
+    setFavoriteSavingId(item.id);
+
+    try {
+      const response = await fetch("/api/user/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item }),
+      });
+      const data = (await response.json()) as FavoriteApiResponse;
+
+      if (!response.ok || data.error) {
+        throw new Error(data.error ?? "Failed to update favorites");
+      }
+
+      setFavorites(data.favorites ?? []);
+    } catch {
+      // Best-effort only for now.
+    } finally {
+      setFavoriteSavingId(null);
+    }
   }
 
   // Breadcrumb label
@@ -458,6 +550,52 @@ export default function PracticePage() {
           );
         })}
       </div>
+
+      {favoritesEnabled && favoritesReady && favorites.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm font-semibold text-base-content">
+              <Star className="size-4 fill-amber-400 text-amber-400" />
+              Favorites
+            </div>
+            <span className="text-xs text-base-content/50">
+              {favorites.length} saved
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {favorites.map((favorite) => (
+              <div
+                key={favorite.id}
+                className="flex items-start gap-3 rounded-none border border-base-300 bg-base-100 p-4"
+              >
+                <button
+                  type="button"
+                  onClick={() => router.push(favorite.href)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <p className="truncate text-sm font-medium text-base-content">
+                    {favorite.title}
+                  </p>
+                  {favorite.subtitle && (
+                    <p className="mt-1 truncate text-xs text-base-content/50">
+                      {favorite.subtitle}
+                    </p>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(favorite)}
+                  disabled={favoriteSavingId === favorite.id}
+                  className="text-amber-400 transition hover:text-amber-500 disabled:opacity-50"
+                  title="Remove favorite"
+                >
+                  <Star className="size-4 fill-current" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Level 1: type cards ───────────────────────────────────────────────── */}
       {level === 1 && (
@@ -604,47 +742,77 @@ export default function PracticePage() {
               </div>
 
               <div className="card card-bordered overflow-hidden bg-base-100">
-                <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_7rem_5.5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
+                <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_7rem_5.5rem_3rem] items-center gap-3 border-b border-base-300 pl-4 pr-6 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
                   <span>#</span>
                   <span>Problem</span>
-                  <span>Category</span>
-                  <span>Duration</span>
+                  <span className="justify-self-center">Category</span>
+                  <span className="justify-self-center">Duration</span>
+                  <span />
                 </div>
                 {filteredQuantProblems.length === 0 ? (
                   <div className="px-4 py-10 text-center text-sm text-base-content/50">
                     No quant problems found.
                   </div>
                 ) : (
-                  filteredQuantProblems.map((problem, idx) => (
-                    <button
-                      key={problem.slug}
-                      type="button"
-                      onClick={() => openQuantProblem(problem.slug)}
-                      className={cn(
-                        "grid w-full cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_7rem_5.5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
-                        idx < filteredQuantProblems.length - 1 &&
-                          "border-b border-base-300/50",
-                      )}
-                    >
-                      <span className="text-center text-xs text-base-content/40">
-                        {problem.order}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-base-content">
-                          {problem.title}
-                        </p>
-                        <p className="truncate text-[11px] text-base-content/50">
-                          BrainStellar
-                        </p>
+                  filteredQuantProblems.map((problem, idx) => {
+                    const favorite: FavoriteItem = {
+                      id: `quant:${problem.slug}`,
+                      kind: "quant",
+                      title: problem.title,
+                      href: `/practice/quant/${problem.slug}`,
+                      subtitle: problem.categoryLabel,
+                    };
+
+                    return (
+                      <div
+                        key={problem.slug}
+                        className={cn(
+                          "grid grid-cols-[2.5rem_minmax(0,1fr)_7rem_5.5rem_3rem] items-center gap-3 pl-4 pr-6 py-3 text-sm transition hover:bg-base-200/50",
+                          idx < filteredQuantProblems.length - 1 &&
+                            "border-b border-base-300/50",
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => openQuantProblem(problem.slug)}
+                          className="contents"
+                        >
+                          <span className="text-center text-xs text-base-content/40">
+                            {problem.order}
+                          </span>
+                          <div className="min-w-0 text-left">
+                            <p className="truncate font-medium text-base-content">
+                              {problem.title}
+                            </p>
+                            <p className="truncate text-[11px] text-base-content/50">
+                              BrainStellar
+                            </p>
+                          </div>
+                          <span className="truncate justify-self-center text-xs text-base-content/60">
+                            {problem.categoryLabel}
+                          </span>
+                          <span className="justify-self-center text-xs text-base-content/50">
+                            {problem.duration}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleFavorite(favorite)}
+                          disabled={!favoritesEnabled || favoriteSavingId === favorite.id}
+                          className="justify-self-center text-base-content/30 transition hover:text-amber-400 disabled:opacity-40"
+                          title={favoriteIds.has(favorite.id) ? "Remove favorite" : "Add favorite"}
+                        >
+                          <Star
+                            className={cn(
+                              "size-4",
+                              favoriteIds.has(favorite.id) &&
+                                "fill-amber-400 text-amber-400",
+                            )}
+                          />
+                        </button>
                       </div>
-                      <span className="truncate text-xs text-base-content/60">
-                        {problem.categoryLabel}
-                      </span>
-                      <span className="text-xs text-base-content/50">
-                        {problem.duration}
-                      </span>
-                    </button>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </>
@@ -708,11 +876,12 @@ export default function PracticePage() {
               </div>
 
               <div className="card card-bordered overflow-hidden bg-base-100">
-                <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_5rem_5.5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
+                <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5.5rem_3rem] items-center gap-3 border-b border-base-300 pl-4 pr-6 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
                   <span>#</span>
                   <span>Problem</span>
-                  <span>Topic</span>
-                  <span>Difficulty</span>
+                  <span className="justify-self-center">Topic</span>
+                  <span className="justify-self-center">Difficulty</span>
+                  <span />
                 </div>
                 {lcError && (
                   <div className="px-4 py-6 text-center text-sm text-red-500">{lcError}</div>
@@ -728,29 +897,55 @@ export default function PracticePage() {
                 {lcProblems.map((problem, idx) => {
                   const topic = problem.topicTags[0]?.name ?? "—";
                   const d = problem.difficulty;
+                  const favorite: FavoriteItem = {
+                    id: `${selectedType ?? "leetcode"}:${problem.titleSlug}`,
+                    kind: "leetcode",
+                    title: problem.title,
+                    href: getLcPracticeHref(problem.titleSlug, selectedType),
+                    subtitle:
+                      selectedType === "lc-behavioral"
+                        ? `LeetCode Discussion · ${problem.difficulty}`
+                        : selectedType === "lc-system-design"
+                          ? `LeetCode Architecture · ${problem.difficulty}`
+                          : `LeetCode Problems · ${problem.difficulty}`,
+                  };
                   return (
-                    <button
+                    <div
                       key={problem.titleSlug}
-                      type="button"
-                      onClick={() => openLcProblem(problem.titleSlug)}
-                      disabled={problem.paidOnly}
                       className={cn(
-                        "grid w-full cursor-pointer grid-cols-[2.5rem_minmax(0,1fr)_5rem_5.5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50 disabled:cursor-not-allowed disabled:opacity-40",
+                        "grid grid-cols-[2.5rem_minmax(0,1fr)_5.5rem_5.5rem_3rem] items-center gap-3 pl-4 pr-6 py-3 text-sm transition hover:bg-base-200/50",
                         idx < lcProblems.length - 1 && "border-b border-base-300/50",
+                        problem.paidOnly && "opacity-40",
                       )}
                     >
-                      <span className="text-center text-xs text-base-content/40">
-                        {problem.frontendQuestionId}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-base-content">{problem.title}</p>
-                        {problem.paidOnly && (
-                          <p className="text-[11px] text-amber-500">Premium</p>
-                        )}
-                      </div>
-                      <span className="truncate text-xs text-base-content/60">{topic}</span>
-                      <span className={cn("text-xs font-medium", diffColor[d])}>{d}</span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => openLcProblem(problem.titleSlug)}
+                        disabled={problem.paidOnly}
+                        className="contents disabled:cursor-not-allowed"
+                      >
+                        <span className="text-center text-xs text-base-content/40">
+                          {problem.frontendQuestionId}
+                        </span>
+                        <div className="min-w-0 text-left">
+                          <p className="truncate font-medium text-base-content">{problem.title}</p>
+                          {problem.paidOnly && (
+                            <p className="text-[11px] text-amber-500">Premium</p>
+                          )}
+                        </div>
+                        <span className="truncate justify-self-center text-xs text-base-content/60">{topic}</span>
+                        <span className={cn("justify-self-center text-xs font-medium", diffColor[d])}>{d}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleFavorite(favorite)}
+                        disabled={!favoritesEnabled || favoriteSavingId === favorite.id}
+                        className="justify-self-center text-base-content/30 transition hover:text-amber-400 disabled:opacity-40"
+                        title={favoriteIds.has(favorite.id) ? "Remove favorite" : "Add favorite"}
+                      >
+                        <Star className={cn("size-4", favoriteIds.has(favorite.id) && "fill-amber-400 text-amber-400")} />
+                      </button>
+                    </div>
                   );
                 })}
                 {!lcLoading && lcProblems.length > 0 && lcProblems.length < lcTotal && (
@@ -818,34 +1013,58 @@ export default function PracticePage() {
                 </button>
               </div>
               <div className="card card-bordered overflow-hidden bg-base-100">
-                <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-3 border-b border-base-300 px-4 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
+                <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_3rem] items-center gap-3 border-b border-base-300 pl-4 pr-6 py-2.5 text-[0.7rem] uppercase tracking-[0.16em] text-base-content/50">
                   <span>Scenario</span>
-                  <span>Duration</span>
+                  <span className="justify-self-center">Duration</span>
+                  <span />
                 </div>
                 {filteredSubGroup.length === 0 ? (
                   <div className="px-4 py-10 text-center text-sm text-base-content/50">
                     No scenarios in this group.
                   </div>
                 ) : (
-                  filteredSubGroup.map((scenario, idx) => (
-                    <button
-                      key={scenario.id}
-                      type="button"
-                      onClick={() => router.push(`/practice/${scenario.id}`)}
-                      className={cn(
-                        "grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_5.5rem] items-center gap-3 px-4 py-3 text-left text-sm transition hover:bg-base-200/50",
-                        idx < filteredSubGroup.length - 1 && "border-b border-base-300/50",
-                      )}
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-base-content">{scenario.title}</p>
-                        <p className="truncate text-[11px] text-base-content/50">
-                          {scenario.interviewer}
-                        </p>
+                  filteredSubGroup.map((scenario, idx) => {
+                    const favorite: FavoriteItem = {
+                      id: `scenario:${scenario.id}`,
+                      kind: "scenario",
+                      title: scenario.title,
+                      href: `/practice/${scenario.id}`,
+                      subtitle: scenario.interviewer,
+                    };
+
+                    return (
+                      <div
+                        key={scenario.id}
+                        className={cn(
+                          "grid grid-cols-[minmax(0,1fr)_5.5rem_3rem] items-center gap-3 pl-4 pr-6 py-3 text-sm transition hover:bg-base-200/50",
+                          idx < filteredSubGroup.length - 1 && "border-b border-base-300/50",
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/practice/${scenario.id}`)}
+                          className="contents"
+                        >
+                          <div className="min-w-0 text-left">
+                            <p className="truncate font-medium text-base-content">{scenario.title}</p>
+                            <p className="truncate text-[11px] text-base-content/50">
+                              {scenario.interviewer}
+                            </p>
+                          </div>
+                          <span className="justify-self-center text-xs text-base-content/50">{scenario.duration}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleFavorite(favorite)}
+                          disabled={!favoritesEnabled || favoriteSavingId === favorite.id}
+                          className="justify-self-center text-base-content/30 transition hover:text-amber-400 disabled:opacity-40"
+                          title={favoriteIds.has(favorite.id) ? "Remove favorite" : "Add favorite"}
+                        >
+                          <Star className={cn("size-4", favoriteIds.has(favorite.id) && "fill-amber-400 text-amber-400")} />
+                        </button>
                       </div>
-                      <span className="text-xs text-base-content/50">{scenario.duration}</span>
-                    </button>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </>

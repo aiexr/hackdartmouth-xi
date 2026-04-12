@@ -7,10 +7,10 @@ export default function CoachPage() {
         <div>
           <h1 className="flex items-center gap-3">
             <Sparkles className="size-7 text-primary" />
-            AI Coach
+            LeetCoach
           </h1>
           <p className="mt-3 max-w-3xl text-base text-base-content/60">
-            Get personalized resume feedback and interview coaching powered by AI.
+            Get personalized resume feedback and interview coaching from LeetCoach.
           </p>
         </div>
 

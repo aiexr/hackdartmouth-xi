@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb";
+import type { FavoriteItem } from "@/lib/favorites";
 import { getMongoDb } from "@/lib/mongodb";
 
 export interface User {
@@ -16,6 +17,7 @@ export interface User {
     practiceReminders: boolean;
     weeklyGoal: number;
   };
+  favorites: FavoriteItem[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +51,7 @@ export class UserModel {
         practiceReminders: true,
         weeklyGoal: 4,
       },
+      favorites: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -67,7 +70,7 @@ export class UserModel {
 
   static async updateUserProfile(
     email: string,
-    updates: Partial<Pick<User, "name" | "bio" | "resumeExtractedText" | "focusTrack" | "preferences">>
+    updates: Partial<Pick<User, "name" | "bio" | "resumeExtractedText" | "focusTrack" | "preferences" | "favorites">>
   ): Promise<User | null> {
     const db = await getMongoDb();
     if (!db) return null;

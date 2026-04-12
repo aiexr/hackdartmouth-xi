@@ -33,6 +33,8 @@ async function getMetadataBase() {
 
 export async function generateMetadata(): Promise<Metadata> {
   const metadataBase = await getMetadataBase();
+  const socialImageUrl = new URL("/social-preview.png", metadataBase);
+  const twitterImageUrl = socialImageUrl;
 
   return {
     metadataBase,
@@ -72,21 +74,27 @@ export async function generateMetadata(): Promise<Metadata> {
       description: "Speak your way through interviews.",
       url: "/",
       siteName: "LeetSpeak",
-      type: "website",
       images: [
         {
-          url: "/opengraph-image",
-          width: 1200,
-          height: 630,
+          url: socialImageUrl,
+          width: 1238,
+          height: 446,
           alt: "LeetSpeak social preview",
+          type: "image/png",
         },
       ],
+      type: "website",
     },
     twitter: {
       card: "summary_large_image",
       title: "LeetSpeak",
       description: "Speak your way through interviews.",
-      images: ["/opengraph-image"],
+      images: [
+        {
+          url: twitterImageUrl,
+          alt: "LeetSpeak social preview",
+        },
+      ],
     },
   };
 }

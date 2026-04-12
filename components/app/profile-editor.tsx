@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import type { FavoriteItem } from "@/lib/favorites";
 import type { User } from "@/lib/models/User";
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -16,6 +17,24 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function toUser(value: Record<string, unknown>): User {
   const preferences = asRecord(value.preferences);
+  const favorites = Array.isArray(value.favorites)
+    ? value.favorites.filter((favorite): favorite is FavoriteItem => {
+        if (!favorite || typeof favorite !== "object") {
+          return false;
+        }
+
+        const item = favorite as Record<string, unknown>;
+        return (
+          typeof item.id === "string" &&
+          typeof item.kind === "string" &&
+          typeof item.title === "string" &&
+          typeof item.href === "string" &&
+          (item.subtitle === undefined ||
+            item.subtitle === null ||
+            typeof item.subtitle === "string")
+        );
+      })
+    : [];
 
   return {
     email: typeof value.email === "string" ? value.email : "",
@@ -54,6 +73,7 @@ function toUser(value: Record<string, unknown>): User {
           ? (preferences.weeklyGoal as number)
           : 4,
     },
+    favorites,
     createdAt:
       value.createdAt instanceof Date
         ? value.createdAt
@@ -255,9 +275,6 @@ export function ProfileEditor() {
               onChange={(e) => handleWeeklyGoalChange(e.target.value)}
               disabled={saving}
             />
-            <p className="text-xs text-base-content/60">
-              This controls your dashboard weekly loop target.
-            </p>
           </div>
 
           <div className="flex gap-3 pt-4">
