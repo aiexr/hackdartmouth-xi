@@ -41,6 +41,8 @@ type PersistedInterview = {
     timestamp?: string;
     step?: number;
   }> | null;
+  codeSnapshot?: string | null;
+  diagramSnapshot?: string | null;
 };
 
 type PersistedKeyMoment = {
@@ -461,6 +463,37 @@ export default async function ReviewPage({
             </div>
           </CardContent>
         </Card>
+
+        {hasPersistedReview && interview?.codeSnapshot ? (
+          <Card className="bg-white/85">
+            <CardContent className="p-6">
+              <h2 className="flex items-center gap-2">
+                Your Code
+              </h2>
+              <pre className="mt-4 overflow-x-auto rounded-2xl bg-muted/60 p-4 font-mono text-sm leading-6">
+                {interview.codeSnapshot}
+              </pre>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {hasPersistedReview && interview?.diagramSnapshot ? (
+          <Card className="bg-white/85">
+            <CardContent className="p-6">
+              <h2 className="flex items-center gap-2">
+                Your System Design
+              </h2>
+              <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={interview.diagramSnapshot}
+                  alt="System design whiteboard diagram"
+                  className="w-full"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card className="bg-white/85">
           <CardContent className="p-6">

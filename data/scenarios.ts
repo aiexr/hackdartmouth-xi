@@ -11,12 +11,7 @@ export type Scenario = {
   id: string;
   title: string;
   prompt: string;
-  category:
-    | "behavioral"
-    | "technical"
-    | "system-design"
-    | "product"
-    | "case-study";
+  category: "behavioral" | "technical" | "system-design";
   pattern: string;
   trackId: string;
   trackLabel: string;
@@ -40,6 +35,11 @@ export type Scenario = {
     constraints: string[];
     optimalApproach: string;
     starterCode?: string;
+    functionName?: string;
+    testCases?: Array<{
+      args: unknown[];
+      expected: unknown;
+    }>;
   };
 };
 
@@ -743,6 +743,12 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
         "Use a hash map from value to index while scanning once. For each number, check whether `target - nums[i]` has already been seen; if so, return the previous index and `i`. This gives O(n) time and O(n) space.",
       starterCode:
         "function twoSum(nums: number[], target: number): number[] {\n  // Write your solution here.\n  return [];\n}",
+      functionName: "twoSum",
+      testCases: [
+        { args: [[2, 7, 11, 15], 9], expected: [0, 1] },
+        { args: [[3, 2, 4], 6], expected: [1, 2] },
+        { args: [[3, 3], 6], expected: [0, 1] },
+      ],
     },
   },
   {
@@ -798,6 +804,14 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
         "Use a stack to track unmatched opening brackets. On every closing bracket, verify it matches the latest opening bracket and fail fast if not. This yields O(n) time and O(n) space in the worst case.",
       starterCode:
         "function isValid(s: string): boolean {\n  // Write your solution here.\n  return false;\n}",
+      functionName: "isValid",
+      testCases: [
+        { args: ["()[]{}"], expected: true },
+        { args: ["(]"], expected: false },
+        { args: ["([)]"], expected: false },
+        { args: ["{[]}"], expected: true },
+        { args: [""], expected: true },
+      ],
     },
   },
   {
@@ -854,6 +868,12 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
         "Sort intervals by start time, then scan once while keeping the last merged interval. If the current interval overlaps the last merged interval, extend its end; otherwise append a new interval. This is O(n log n) time and O(n) output space.",
       starterCode:
         "function merge(intervals: number[][]): number[][] {\n  // Write your solution here.\n  return [];\n}",
+      functionName: "merge",
+      testCases: [
+        { args: [[[1, 3], [2, 6], [8, 10], [15, 18]]], expected: [[1, 6], [8, 10], [15, 18]] },
+        { args: [[[1, 4], [4, 5]]], expected: [[1, 5]] },
+        { args: [[[1, 4], [0, 4]]], expected: [[0, 4]] },
+      ],
     },
   },
   {
@@ -909,6 +929,12 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
         "Count frequencies with a hash map, then either keep a min-heap of size `k` or bucket values by frequency. A heap-based solution runs in O(n log k) time and O(n) space and is usually the clearest interview answer.",
       starterCode:
         "function topKFrequent(nums: number[], k: number): number[] {\n  // Write your solution here.\n  return [];\n}",
+      functionName: "topKFrequent",
+      testCases: [
+        { args: [[1, 1, 1, 2, 2, 3], 2], expected: [1, 2] },
+        { args: [[1], 1], expected: [1] },
+        { args: [[4, 1, -1, 2, -1, 2, 3], 2], expected: [-1, 2] },
+      ],
     },
   },
   {
@@ -1015,6 +1041,11 @@ const scenarioBank: Array<Omit<Scenario, "category" | "pattern">> = [
         "Model the words as an implicit graph and run BFS from the begin word. Either generate one-letter mutations on the fly with a hash set lookup or precompute wildcard patterns to reduce repeated work. The intended solution is BFS-based because the first time you reach `endWord` is the shortest path.",
       starterCode:
         "function ladderLength(beginWord: string, endWord: string, wordList: string[]): number {\n  // Write your solution here.\n  return 0;\n}",
+      functionName: "ladderLength",
+      testCases: [
+        { args: ["hit", "cog", ["hot", "dot", "dog", "lot", "log", "cog"]], expected: 5 },
+        { args: ["hit", "cog", ["hot", "dot", "dog", "lot", "log"]], expected: 0 },
+      ],
     },
   },
   {
@@ -1153,20 +1184,20 @@ const scenarioCategories: Record<string, Scenario["category"]> = {
   "staff-swe-system-design-intro": "system-design",
   "staff-swe-conflict": "behavioral",
   "staff-swe-incident": "behavioral",
-  "staff-swe-tech-strategy": "product",
-  "staff-swe-ambiguous-initiative": "product",
-  "pm-metric-drop": "product",
-  "pm-product-sense": "product",
-  "pm-prioritization": "product",
-  "pm-stakeholder-pushback": "product",
-  "pm-launch-decision": "product",
-  "pm-zero-to-one": "product",
-  "consulting-market-sizing": "case-study",
-  "consulting-profitability": "case-study",
-  "consulting-market-entry": "case-study",
-  "consulting-client-pushback": "case-study",
-  "consulting-synthesis": "case-study",
-  "consulting-ops-turnaround": "case-study",
+  "staff-swe-tech-strategy": "behavioral",
+  "staff-swe-ambiguous-initiative": "behavioral",
+  "pm-metric-drop": "behavioral",
+  "pm-product-sense": "behavioral",
+  "pm-prioritization": "behavioral",
+  "pm-stakeholder-pushback": "behavioral",
+  "pm-launch-decision": "behavioral",
+  "pm-zero-to-one": "behavioral",
+  "consulting-market-sizing": "behavioral",
+  "consulting-profitability": "behavioral",
+  "consulting-market-entry": "behavioral",
+  "consulting-client-pushback": "behavioral",
+  "consulting-synthesis": "behavioral",
+  "consulting-ops-turnaround": "behavioral",
   "technical-two-sum": "technical",
   "technical-valid-parentheses": "technical",
   "technical-merge-intervals": "technical",

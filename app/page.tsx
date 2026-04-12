@@ -19,10 +19,41 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 25;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(timeoutMessage));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
 
 export default async function DashboardPage() {
-  const session = await getOptionalServerSession();
-  const metrics = await getUserInterviewMetrics(session?.user?.email);
+  const session = await withTimeout(
+    getOptionalServerSession(),
+    4500,
+    "Session lookup timed out.",
+  ).catch(() => null);
+  const metrics = await withTimeout(
+    getUserInterviewMetrics(session?.user?.email),
+    5000,
+    "Metrics lookup timed out.",
+  ).catch(() => getUserInterviewMetrics());
   const loopProgress = Math.min(
     100,
     (metrics.weeklyCompleted / metrics.weeklyTarget) * 100,
@@ -51,10 +82,10 @@ export default async function DashboardPage() {
             <CardContent className="p-7 md:p-8">
               <div className="mt-5">
                 <h1 className="max-w-2xl">
-                  Practice interviewing the LeetSpeak way with focused role tracks and repeatable loops.
+                  Practice interviewing the LeetSpeak way with canonical round types and repeatable loops.
                 </h1>
                 <p className="mt-4 max-w-2xl text-base text-muted-foreground md:text-lg">
-                  Choose a role track, jump into a repeatable interview scenario, and review visible progress over time. Weekly goals, streaks, and track completion now pull from saved interview history in MongoDB.
+                  Switch between behavioral, technical coding, and system design rounds, then review visible progress over time. Weekly goals, streaks, and saved interview history flow through MongoDB-backed scoring.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="lg">

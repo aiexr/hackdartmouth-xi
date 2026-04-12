@@ -8,7 +8,6 @@ import {
   Braces,
   Clock3,
   FileText,
-  Flame,
   Lightbulb,
   MessageSquareText,
   Minus,
@@ -18,27 +17,48 @@ import {
   Sparkles,
   Video,
   X,
+  Flame,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import type { Scenario } from "@/data/scenarios";
 import { LiveAvatar, type TranscriptEntry } from "@/components/app/live-avatar";
 import { VoiceCall } from "@/components/app/voice-call";
+import { CodeRunner } from "@/components/app/code-runner";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full min-h-[24rem] items-center justify-center rounded-none border border-border bg-muted/30 text-sm text-muted-foreground">
+    <div className="flex h-full min-h-[24rem] items-center justify-center rounded-3xl border border-border bg-muted/30 text-sm text-muted-foreground">
       Loading editor...
     </div>
   ),
 });
 
+import type { WhiteboardHandle } from "@/components/app/whiteboard-panel";
+
+const WhiteboardPanel = dynamic(
+  () => import("@/components/app/whiteboard-panel").then((m) => ({ default: m.WhiteboardPanel })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full min-h-[28rem] items-center justify-center rounded-3xl border border-border bg-muted/30 text-sm text-muted-foreground">
+        Loading whiteboard...
+      </div>
+    ),
+  },
+);
+
 type InterviewMode = "video" | "call";
 type InterviewTone = "friendly" | "neutral" | "tough";
 type PracticePanel = "rubric" | "hints" | "transcript";
 type PracticePrompt = { id: string; text: string } | null;
+
+const toneOptions = [
+  { id: "friendly" as const, label: "Friendly", icon: Smile, description: "Warm and encouraging" },
+  { id: "neutral" as const, label: "Neutral", icon: Minus, description: "Standard professional" },
+  { id: "tough" as const, label: "Tough", icon: Flame, description: "Pushes back hard" },
+];
 
 type PersistedPracticeState = {
   seconds?: number;
@@ -50,32 +70,6 @@ type PersistedPracticeState = {
 };
 
 const PRACTICE_STATE_TTL_MS = 24 * 60 * 60 * 1000;
-
-const toneOptions: Array<{
-  id: InterviewTone;
-  label: string;
-  icon: LucideIcon;
-  description: string;
-}> = [
-  {
-    id: "friendly",
-    label: "Friendly",
-    icon: Smile,
-    description: "Warm and encouraging follow-ups.",
-  },
-  {
-    id: "neutral",
-    label: "Neutral",
-    icon: Minus,
-    description: "Balanced and professional pacing.",
-  },
-  {
-    id: "tough",
-    label: "Tough",
-    icon: Flame,
-    description: "Sharper pushback and higher pressure.",
-  },
-];
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"
@@ -134,15 +128,10 @@ function buildInitialInterviewerPrompt(scenario: Scenario) {
       "Guide the candidate through requirements, components, data flow, scaling bottlenecks, and tradeoffs.",
       "Open with the design prompt and ask for the first set of clarifying requirements.",
     );
-  } else if (scenario.category === "product") {
-    sharedContext.push(
-      "Play the role of a stakeholder or executive interviewer. Push on priorities, metrics, tradeoffs, and decision quality.",
-      "Open with the scenario and quickly ask how the candidate would structure the problem.",
-    );
   } else {
     sharedContext.push(
-      "Play the role of an engagement manager in a case interview. Expect top-down structure, explicit assumptions, and synthesis.",
-      "Open with the case prompt and ask the candidate to structure the problem before diving into details.",
+      "Run this as a behavioral or situational interview. Push for specifics, structured thinking, and measurable outcomes.",
+      "Open with a brief greeting and then ask the opening question.",
     );
   }
 
@@ -177,9 +166,14 @@ export function PracticeSession({
   const router = useRouter();
   const storageKey = `practice-state:${scenario.id}`;
   const isTechnical = scenario.category === "technical";
+  const isSystemDesign = scenario.category === "system-design";
+  const hasSplitView = isTechnical || isSystemDesign;
+
   const [panel, setPanel] = useState<PracticePanel>("rubric");
   const [seconds, setSeconds] = useState(0);
-  const [interviewMode, setInterviewMode] = useState<InterviewMode>("video");
+  const [interviewMode, setInterviewMode] = useState<InterviewMode>(
+    isTechnical ? "video" : "video",
+  );
   const [interviewTone, setInterviewTone] = useState<InterviewTone>("neutral");
   const [sessionState, setSessionState] = useState<
     "idle" | "connecting" | "connected" | "ended"
@@ -193,6 +187,7 @@ export function PracticeSession({
   const [resumed, setResumed] = useState(false);
   const [interviewerPrompt, setInterviewerPrompt] = useState<PracticePrompt>(null);
   const [lastCodeSyncLabel, setLastCodeSyncLabel] = useState<string | null>(null);
+  const whiteboardRef = useRef<WhiteboardHandle | null>(null);
 
   const sessionStartRef = useRef<number | null>(null);
   const initialPromptSentRef = useRef(false);
@@ -312,6 +307,18 @@ export function PracticeSession({
     async (rawTranscript: TranscriptEntry[]) => {
       const finalTranscript = rawTranscript.filter((entry) => !entry.partial);
 
+      // Capture whiteboard screenshot before submitting
+      let diagramSnapshot: string | null = null;
+      if (isSystemDesign && whiteboardRef.current) {
+        diagramSnapshot = await whiteboardRef.current.captureScreenshot();
+      }
+
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        // ignore
+      }
+
       try {
         const startRes = await fetch("/api/interview/start", {
           method: "POST",
@@ -340,6 +347,9 @@ export function PracticeSession({
           if (isTechnical) {
             formData.append("editorContent", editorContent);
           }
+          if (isSystemDesign && diagramSnapshot) {
+            formData.append("diagramSnapshot", diagramSnapshot);
+          }
 
           await fetch("/api/interview/end", {
             method: "POST",
@@ -353,18 +363,19 @@ export function PracticeSession({
               interviewId: id,
               transcript: finalTranscript,
               editorContent: isTechnical ? editorContent : undefined,
+              diagramSnapshot: isSystemDesign ? diagramSnapshot : undefined,
             }),
           });
         }
 
-        window.localStorage.removeItem(storageKey);
-        router.push(`/review/${scenario.id}`);
+        router.push(`/review/${scenario.id}?interviewId=${id}`);
       } catch {
         router.push(`/review/${scenario.id}`);
       }
     },
     [
       editorContent,
+      isSystemDesign,
       isTechnical,
       router,
       scenario.category,
@@ -423,8 +434,8 @@ export function PracticeSession({
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b border-border bg-white/75 px-5 py-4 backdrop-blur md:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+      <header className="border-b border-border bg-white/75 backdrop-blur">
+        <div className="flex items-center justify-between px-4 py-3">
           <Link href="/" className="text-muted-foreground transition hover:text-foreground">
             <X className="size-5" />
           </Link>
@@ -445,214 +456,171 @@ export function PracticeSession({
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden">
-        <section className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8">
-          <div
-            className={cn(
-              "grid min-h-0 flex-1 gap-6",
-              isTechnical && "xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]",
-            )}
-          >
-            <div className="flex min-h-0 flex-col items-center gap-6 rounded-none border border-border bg-card p-6 text-center">
-              <div className="max-w-2xl space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {scenario.interviewer} · {scenario.interviewerRole}
-                </p>
-                <h1 className="text-2xl md:text-3xl">{sessionTitle}</h1>
-                <p className="text-base leading-7 text-muted-foreground">
-                  {scenario.prompt}
-                </p>
-                {sessionState === "idle" && resumed && (
-                  <div className="inline-flex items-center gap-2 rounded-none border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
-                    Resuming your previous session · {transcript.length} saved turn
-                    {transcript.length === 1 ? "" : "s"}
-                  </div>
-                )}
-              </div>
+      <div className="relative flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden">
+        {/* Media surface — single mount point, never unmounts, repositioned via CSS */}
+        <div
+          className={cn(
+            "z-20 overflow-hidden transition-all duration-200",
+            (sessionState === "idle" || sessionState === "connecting") &&
+              "absolute inset-x-0 bottom-6 mx-auto w-full max-w-2xl px-6",
+            (sessionState === "connected" || sessionState === "ended") && hasSplitView &&
+              "absolute left-4 top-4 w-48 rounded-2xl border border-border bg-card shadow-lg xl:w-56",
+            (sessionState === "connected" || sessionState === "ended") && !hasSplitView &&
+              "absolute inset-x-0 top-6 mx-auto w-full max-w-2xl px-8",
+          )}
+        >
+          {mediaSurface}
+        </div>
 
-              {sessionState === "idle" && (
-                <div className="flex flex-col items-center gap-3">
-                  {!isTechnical && (
-                    <div className="flex items-center gap-2 rounded-none border border-border bg-white p-1">
-                      <button
-                        type="button"
-                        onClick={() => setInterviewMode("video")}
-                        className={cn(
-                          "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
-                          interviewMode === "video"
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <Video className="size-4" />
-                        Video
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setInterviewMode("call")}
-                        className={cn(
-                          "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
-                          interviewMode === "call"
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <Phone className="size-4" />
-                        Voice
-                      </button>
-                    </div>
-                  )}
-
-                  {isTechnical && (
-                    <div className="inline-flex items-center gap-2 rounded-none border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
-                      <Braces className="size-4" />
-                      Technical rounds use avatar + editor mode
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Tone:</span>
-                    {toneOptions.map((tone) => (
-                      <button
-                        key={tone.id}
-                        type="button"
-                        onClick={() => setInterviewTone(tone.id)}
-                        className={cn(
-                          "flex items-center gap-1.5 rounded-none px-3 py-1.5 text-xs font-medium transition",
-                          interviewTone === tone.id
-                            ? "bg-secondary text-secondary-foreground"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                        )}
-                        title={tone.description}
-                      >
-                        <tone.icon className="size-3.5" />
-                        {tone.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex max-w-sm items-center gap-3 rounded-none border border-border bg-muted/40 px-4 py-3">
-                    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-                      <FileText className="size-4" />
-                      <input
-                        type="file"
-                        accept=".pdf,.docx"
-                        onChange={(event) => {
-                          const file = event.currentTarget.files?.[0];
-                          if (file) {
-                            setSelectedDocument(file);
-                          }
-                        }}
-                        className="hidden"
-                      />
-                      <span>{selectedDocument ? "Change" : "Upload"} resume</span>
-                    </label>
-                    {selectedDocument && (
-                      <>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {selectedDocument.name}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedDocument(null)}
-                          className="ml-auto text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="size-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex w-full max-w-4xl flex-1 items-center justify-center">
-                {mediaSurface}
-              </div>
-
-              {sessionState === "idle" && (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {scenario.focus.map((focus) => (
-                    <span
-                      key={focus}
-                      className="rounded-none border border-border bg-white/75 px-3 py-1 text-sm font-medium text-foreground/85"
-                    >
-                      {focus}
-                    </span>
-                  ))}
+        {/* Pre-session screen (idle + connecting) */}
+        {(sessionState === "idle" || sessionState === "connecting") && (
+          <section className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-10 text-center">
+            <div className="max-w-xl space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">
+                {scenario.interviewer} · {scenario.interviewerRole}
+              </p>
+              <h1 className="text-2xl md:text-3xl">{sessionTitle}</h1>
+              <p className="text-base leading-7 text-muted-foreground">
+                {scenario.prompt}
+              </p>
+              {resumed && (
+                <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
+                  Resuming your previous session · {transcript.length} saved turn
+                  {transcript.length === 1 ? "" : "s"}
                 </div>
               )}
             </div>
 
-            {isTechnical && codingProblem ? (
-              <div className="flex min-h-0 flex-col rounded-none border border-border bg-card p-5">
-                <div className="space-y-4 border-b border-border pb-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Coding Prompt
-                      </p>
-                      <h2 className="mt-1 text-xl font-semibold">{scenario.title}</h2>
-                    </div>
+            <div className="mt-6 flex flex-col items-center gap-3">
+              {!isTechnical && (
+                <div className="flex items-center gap-2 rounded-full border border-border bg-white p-1">
+                  <button
+                    type="button"
+                    onClick={() => setInterviewMode("video")}
+                    className={cn(
+                      "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                      interviewMode === "video"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Video className="size-4" />
+                    Video
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInterviewMode("call")}
+                    className={cn(
+                      "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
+                      interviewMode === "call"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Phone className="size-4" />
+                    Voice
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Tone:</span>
+                {toneOptions.map((tone) => (
+                  <button
+                    key={tone.id}
+                    type="button"
+                    onClick={() => setInterviewTone(tone.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition",
+                      interviewTone === tone.id
+                        ? "bg-secondary text-secondary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                    title={tone.description}
+                  >
+                    <tone.icon className="size-3.5" />
+                    {tone.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex max-w-sm items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                  <FileText className="size-4" />
+                  <input
+                    type="file"
+                    accept=".pdf,.docx"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      if (file) {
+                        setSelectedDocument(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <span>{selectedDocument ? "Change" : "Upload"} resume</span>
+                </label>
+                {selectedDocument && (
+                  <>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {selectedDocument.name}
+                    </span>
                     <button
                       type="button"
-                      onClick={syncCodeWithInterviewer}
-                      disabled={sessionState !== "connected"}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-none border px-4 py-2 text-sm font-medium transition",
-                        sessionState === "connected"
-                          ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400"
-                          : "border-border bg-muted/40 text-muted-foreground",
-                      )}
+                      onClick={() => setSelectedDocument(null)}
+                      className="ml-auto text-muted-foreground hover:text-foreground"
                     >
-                      <Sparkles className="size-4" />
-                      Share code with interviewer
+                      <X className="size-4" />
                     </button>
+                  </>
+                )}
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-2">
+                {scenario.focus.map((focus) => (
+                  <span
+                    key={focus}
+                    className="rounded-full border border-border bg-white/75 px-3 py-1 text-sm font-medium text-foreground/85"
+                  >
+                    {focus}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+          </section>
+        )}
+
+        {/* Active session layout — only once connected */}
+        {(sessionState === "connected" || sessionState === "ended") && (
+          <section className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6 md:px-8">
+            {/* Behavioral: media surface is positioned via the persistent container above */}
+
+            {/* Technical: problem + editor fills the space, avatar is PiP */}
+            {isTechnical && codingProblem && (
+              <div className="flex min-h-0 flex-1 flex-col gap-4 pl-0 xl:pl-60">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">{scenario.title}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">{codingProblem.description}</p>
                   </div>
-
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {codingProblem.description}
-                  </p>
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-none bg-muted/40 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                        Examples
-                      </p>
-                      <div className="mt-3 space-y-3 text-sm">
-                        {codingProblem.examples.map((example, index) => (
-                          <div key={`${example.input}-${index}`} className="space-y-1">
-                            <p className="font-medium text-foreground">Input: {example.input}</p>
-                            <p className="text-muted-foreground">Output: {example.output}</p>
-                            {example.explanation ? (
-                              <p className="text-muted-foreground">{example.explanation}</p>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="rounded-none bg-muted/40 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                        Constraints
-                      </p>
-                      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                        {codingProblem.constraints.map((constraint) => (
-                          <li key={constraint}>{constraint}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {lastCodeSyncLabel ? (
-                    <p className="text-xs font-medium text-emerald-700">{lastCodeSyncLabel}</p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Use the sync button after major edits so the interviewer can probe your current implementation.
-                    </p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={syncCodeWithInterviewer}
+                    disabled={sessionState !== "connected"}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition",
+                      sessionState === "connected"
+                        ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400"
+                        : "border-border bg-muted/40 text-muted-foreground",
+                    )}
+                  >
+                    <Sparkles className="size-3.5" />
+                    Share code
+                  </button>
                 </div>
 
-                <div className="min-h-0 flex-1 pt-4">
+                <div className="min-h-0 flex-1">
                   <MonacoEditor
                     theme="vs-light"
                     defaultLanguage="typescript"
@@ -662,29 +630,50 @@ export function PracticeSession({
                       automaticLayout: true,
                       fontSize: 14,
                       minimap: { enabled: false },
-                      padding: { top: 16 },
+                      padding: { top: 12 },
                       scrollBeyondLastLine: false,
                       wordWrap: "on",
                     }}
-                    className="min-h-[26rem] overflow-hidden rounded-none border border-border"
+                    className="min-h-80 overflow-hidden rounded-2xl border border-border"
                   />
                 </div>
 
-                <div className="mt-4 flex items-center justify-between rounded-none border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-                  <span>Current language: TypeScript</span>
+                <div className="flex items-center gap-4">
+                  {codingProblem.functionName && codingProblem.testCases && codingProblem.testCases.length > 0 && (
+                    <CodeRunner
+                      code={editorContent}
+                      functionName={codingProblem.functionName}
+                      testCases={codingProblem.testCases}
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => setEditorContent(buildDefaultEditorContent(scenario))}
-                    className="inline-flex items-center gap-2 font-medium text-foreground transition hover:text-primary"
+                    className="ml-auto inline-flex items-center gap-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
                   >
-                    <RefreshCcw className="size-4" />
-                    Reset starter
+                    <RefreshCcw className="size-3.5" />
+                    Reset
                   </button>
                 </div>
               </div>
-            ) : null}
-          </div>
-        </section>
+            )}
+
+            {/* System Design: whiteboard fills the space, avatar is PiP */}
+            {isSystemDesign && (
+              <div className="flex min-h-0 flex-1 flex-col gap-4 pl-0 xl:pl-60">
+                <div>
+                  <h2 className="text-lg font-semibold">{scenario.title}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Draw your system architecture. The diagram will be captured for grading.
+                  </p>
+                </div>
+                <div className="min-h-0 flex-1">
+                  <WhiteboardPanel ref={whiteboardRef} />
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         <aside className="flex min-h-0 flex-col border-t border-border bg-white/85 backdrop-blur lg:w-[24rem] lg:overflow-y-auto lg:border-l lg:border-t-0">
           <div className="grid grid-cols-3 border-b border-border">
@@ -719,7 +708,7 @@ export function PracticeSession({
                 {scenario.rubric.map((item, index) => (
                   <div
                     key={item}
-                    className="flex items-center justify-between rounded-none bg-muted/60 px-4 py-3"
+                    className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3"
                   >
                     <span className="text-sm font-medium">{item}</span>
                     <span className="text-xs font-medium text-muted-foreground/85">
@@ -737,7 +726,7 @@ export function PracticeSession({
                 </p>
                 {scenario.hints.map((hint, index) => (
                   <div key={hint} className="flex gap-3">
-                    <div className="flex size-7 shrink-0 items-center justify-center rounded-none bg-amber-100 text-xs font-semibold text-amber-700">
+                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-semibold text-amber-700">
                       {index + 1}
                     </div>
                     <p className="text-sm leading-6">{hint}</p>
@@ -783,7 +772,7 @@ export function PracticeSession({
                       >
                         <div
                           className={cn(
-                            "max-w-[85%] rounded-none px-4 py-3 text-sm leading-6",
+                            "max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6",
                             isUser ? "bg-primary/8" : "bg-muted/70",
                             entry.partial && "opacity-70",
                           )}

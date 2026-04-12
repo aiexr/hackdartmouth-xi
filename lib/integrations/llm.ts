@@ -27,6 +27,15 @@ type ProviderModule = {
     pdf: { mimeType: "application/pdf"; dataBase64: string },
     fallbacks?: string[],
   ) => Promise<{ content: string; modelUsed: string }>;
+  executeWithImage?: (
+    prompt: string,
+    systemPrompt: string,
+    modelOverride: string | undefined,
+    temperature: number,
+    maxTokens: number,
+    image: { mimeType: string; dataBase64: string },
+    fallbacks?: string[],
+  ) => Promise<{ content: string; modelUsed: string }>;
 };
 
 export function getLlmProvider(): LlmProviderName {
@@ -85,6 +94,10 @@ type LlOptions = {
     filename: string;
     buffer: Buffer;
   };
+  image?: {
+    mimeType: string;
+    dataBase64: string;
+  };
 };
 
 type LlResult = {
@@ -104,12 +117,24 @@ export async function ll(
   const maxTokens = options.maxTokens ?? 4000;
   const trimmedPrompt = prompt.trim();
   const document = options.document;
+  const image = options.image;
 
   const shouldUseNativePdf =
     document?.mimeType === "application/pdf" && Boolean(provider.executeWithPdf);
+  const shouldUseImage = Boolean(image) && Boolean(provider.executeWithImage);
 
   try {
-    const { content, modelUsed } = shouldUseNativePdf
+    const { content, modelUsed } = shouldUseImage
+      ? await provider.executeWithImage!(
+          trimmedPrompt,
+          systemPrompt,
+          options.modelOverride,
+          temperature,
+          maxTokens,
+          image!,
+          options.modelFallbacks,
+        )
+      : shouldUseNativePdf
       ? await (() => {
           if (!document) {
             throw new Error("Document was not provided.");

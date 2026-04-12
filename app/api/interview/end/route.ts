@@ -108,16 +108,6 @@ function buildCategoryScoringGuidance(category: Scenario["category"] | string) {
         "- Reward candidates who clarify requirements before drawing architecture.",
         "- Look for explicit handling of bottlenecks, failure modes, and data flow choices.",
       ];
-    case "product":
-      return [
-        "- Weigh problem framing, prioritization quality, metric reasoning, and stakeholder judgment.",
-        "- Reward crisp decisions supported by evidence and explicit tradeoffs.",
-      ];
-    case "case-study":
-      return [
-        "- Weigh top-down structure, business reasoning, synthesis, and recommendation clarity.",
-        "- Reward explicit assumptions, good decomposition, and a crisp final recommendation.",
-      ];
     case "behavioral":
     default:
       return [
@@ -305,10 +295,12 @@ export async function POST(req: NextRequest) {
     interviewId?: string;
     transcript?: unknown;
     editorContent?: unknown;
+    diagramSnapshot?: unknown;
   } = {
     interviewId: undefined,
     transcript: undefined,
     editorContent: undefined,
+    diagramSnapshot: undefined,
   };
   let documentError: string | null = null;
   let uploadedDocument: { buffer: Buffer; mimeType: string; filename: string } | null = null;
@@ -331,6 +323,10 @@ export async function POST(req: NextRequest) {
       body.editorContent =
         typeof formData.get("editorContent") === "string"
           ? formData.get("editorContent")
+          : undefined;
+      body.diagramSnapshot =
+        typeof formData.get("diagramSnapshot") === "string"
+          ? formData.get("diagramSnapshot")
           : undefined;
 
       // Extract document if present
@@ -368,7 +364,7 @@ export async function POST(req: NextRequest) {
     body = (await req.json()) as typeof body;
   }
 
-  const { interviewId, transcript, editorContent } = body;
+  const { interviewId, transcript, editorContent, diagramSnapshot } = body;
 
   if (!interviewId) {
     return NextResponse.json({ error: "interviewId required" }, { status: 400 });
@@ -401,6 +397,11 @@ export async function POST(req: NextRequest) {
     typeof interview.scenarioId === "string" ? interview.scenarioId : null,
   );
   const interviewCategory = scenario?.category ?? String(interview.type ?? "behavioral");
+
+  const diagramDataUrl =
+    typeof diagramSnapshot === "string" && diagramSnapshot.startsWith("data:")
+      ? diagramSnapshot
+      : null;
 
   let gradingResult: NormalizedGradingResult | null = null;
   let gradingError: string | null = null;
@@ -461,7 +462,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // For system-design interviews, add a note about the diagram
+    if (interviewCategory === "system-design" && diagramDataUrl) {
+      promptParts.push(
+        "",
+        "The candidate's whiteboard diagram is attached as an image. Use it to evaluate component clarity, data flow, and architectural completeness.",
+      );
+    } else if (interviewCategory === "system-design") {
+      promptParts.push(
+        "",
+        "No diagram was captured. Grade based on verbal architecture discussion in the transcript only.",
+      );
+    }
+
     const userPrompt = promptParts.join("\n");
+
+    // Extract base64 from data URL for image grading
+    let imagePayload: { mimeType: string; dataBase64: string } | undefined;
+    if (diagramDataUrl) {
+      const match = diagramDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        imagePayload = { mimeType: match[1], dataBase64: match[2] };
+      }
+    }
 
     try {
       const llmResponse = await ll(userPrompt, {
@@ -476,6 +499,7 @@ export async function POST(req: NextRequest) {
               buffer: uploadedDocument.buffer,
             }
           : undefined,
+        image: imagePayload,
       });
 
       gradingResult = normalizeGradingResult(llmResponse.json);
@@ -497,6 +521,8 @@ export async function POST(req: NextRequest) {
         letterGrade: gradingResult?.letter_grade ?? null,
         gradingResult,
         gradingError,
+        ...(editorSnapshot ? { codeSnapshot: editorSnapshot } : {}),
+        ...(diagramDataUrl ? { diagramSnapshot: diagramDataUrl } : {}),
       },
     },
   );
