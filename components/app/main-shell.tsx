@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useTransition, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
-  Bot,
   Home,
   Loader2,
   Play,
@@ -41,7 +40,6 @@ const navigation = [
   { href: "/practice", label: "Practice", icon: Play },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/coach", label: "LeetCoach", icon: WhistleIcon },
-  { href: "/llm", label: "LLM", icon: Bot },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

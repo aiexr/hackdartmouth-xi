@@ -1205,6 +1205,7 @@ export function PracticeSession({
       <VoiceCall
         ref={voiceCallRef}
         tone={interviewTone}
+        showStartButton={false}
         promptRequest={interviewerPrompt}
         onTranscriptUpdate={setTranscript}
         onSessionEnd={handleSessionEnd}
@@ -1431,6 +1432,18 @@ export function PracticeSession({
                     )}
                   </div>
                   <p className="text-xs leading-5 text-base-content/70">{codingProblem.description}</p>
+                  {scenario.focus.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {scenario.focus.map((focus) => (
+                        <span
+                          key={focus}
+                          className="rounded-none border border-border bg-base-100/75 px-3 py-1 text-sm font-medium text-base-content/85"
+                        >
+                          {focus}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {codingProblem.examples.length > 0 && (
                     <div className="mt-3 space-y-1.5">
                       {codingProblem.examples.map((ex, i) => (
@@ -1501,38 +1514,6 @@ export function PracticeSession({
                   </button>
                 ))}
               </div>
-
-              <div className="flex flex-wrap justify-center gap-2">
-                {scenario.focus.map((focus) => (
-                  <span
-                    key={focus}
-                    className="rounded-none border border-border bg-base-100/75 px-3 py-1 text-sm font-medium text-base-content/85"
-                  >
-                    {focus}
-                  </span>
-                ))}
-              </div>
-
-              {interviewMode === "video" && (
-                <button
-                  type="button"
-                  onClick={() => avatarRef.current?.start()}
-                  disabled={sessionState !== "idle" || !hydrated}
-                  className={cn(
-                    "mt-3 flex items-center gap-2 rounded-none px-6 py-3 text-sm font-medium transition",
-                    sessionState === "idle" && hydrated
-                      ? "bg-primary text-primary-content shadow-lg shadow-primary/25 hover:bg-primary/90"
-                      : "bg-base-300 text-base-content/50",
-                  )}
-                >
-                  <Phone className="size-4" />
-                  {sessionState === "connecting"
-                    ? "Connecting..."
-                    : hydrated
-                      ? "Start Interview"
-                      : "Restoring..."}
-                </button>
-              )}
             </div>
 
           </section>
@@ -1593,6 +1574,34 @@ export function PracticeSession({
             </div>
           )}
           {activeVideoControls}
+          {(sessionState === "idle" || sessionState === "connecting") && (
+            <div className="flex justify-center px-6 pb-2 pt-2">
+              <button
+                type="button"
+                onClick={() =>
+                  interviewMode === "video"
+                    ? avatarRef.current?.start()
+                    : voiceCallRef.current?.start()
+                }
+                disabled={sessionState !== "idle" || !hydrated}
+                className={cn(
+                  "flex min-w-48 items-center justify-center gap-2 rounded-none px-6 py-3 text-sm font-medium transition",
+                  sessionState === "idle" && hydrated
+                    ? "bg-primary text-primary-content shadow-lg shadow-primary/25 hover:bg-primary/90"
+                    : "bg-base-300 text-base-content/50",
+                )}
+              >
+                <Phone className="size-4" />
+                {sessionState === "connecting"
+                  ? "Connecting..."
+                  : hydrated
+                    ? interviewMode === "video"
+                      ? "Start Interview"
+                      : "Start Call"
+                    : "Restoring..."}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Active session layout — only once connected */}
@@ -1615,11 +1624,6 @@ export function PracticeSession({
                           {codingProblem.sourceDifficulty}
                         </span>
                       )}
-                      {codingProblem.topicTags?.slice(0, 3).map((tag) => (
-                        <span key={tag} className="rounded-none border border-border bg-base-200/60 px-1.5 py-0.5 text-[10px] text-base-content/50">
-                          {tag}
-                        </span>
-                      ))}
                       {codingProblem.sourceUrl && (
                         <a href={codingProblem.sourceUrl} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-0.5 text-[10px] text-base-content/40 transition hover:text-base-content/60"
@@ -1645,6 +1649,15 @@ export function PracticeSession({
                     {!isProblemCollapsed && (
                       <>
                         <p className="text-sm leading-6 text-base-content/70">{codingProblem.description}</p>
+                        {codingProblem.topicTags && codingProblem.topicTags.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {codingProblem.topicTags.slice(0, 3).map((tag) => (
+                              <span key={tag} className="rounded-none border border-border bg-base-200/60 px-1.5 py-0.5 text-[10px] text-base-content/50">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         {codingProblem.examples.length > 0 && (
                           <div className="mt-2 space-y-1.5">
                             {codingProblem.examples.map((ex, i) => (
@@ -1746,47 +1759,49 @@ export function PracticeSession({
 
         <aside
           className={cn(
-            "flex min-h-0 flex-col overflow-hidden border-t border-border bg-base-100/85 backdrop-blur transition-[width] duration-300 ease-in-out lg:border-l lg:border-t-0",
-            panelOpen ? "lg:w-[24rem] lg:overflow-y-auto" : "lg:w-10",
+            "flex min-h-0 flex-col overflow-hidden border-t border-border bg-base-100/85 backdrop-blur transition-[width,flex-basis] duration-300 ease-in-out lg:shrink-0 lg:border-l lg:border-t-0",
+            panelOpen ? "lg:w-[20rem] lg:basis-[20rem]" : "lg:w-10 lg:basis-10",
           )}
         >
           {panelOpen && (
             <>
-              <div className="flex border-b border-base-300">
-                <div className="grid min-w-0 flex-1 grid-cols-3">
-                  {[
-                    { id: "rubric", label: "Rubric", icon: MessageSquareText },
-                    { id: "hints", label: "Hints", icon: Lightbulb },
-                    { id: "transcript", label: "Transcript", icon: FileText },
-                  ].map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setPanel(item.id as PracticePanel)}
-                      className={cn(
-                        "flex items-center justify-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition",
-                        panel === item.id
-                          ? "border-primary text-primary"
-                          : "border-transparent text-base-content/60 hover:text-base-content",
-                      )}
-                    >
-                      <item.icon className="size-4" />
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex items-center justify-end border-b border-base-300 px-2 py-2">
                 <button
                   type="button"
                   onClick={() => setPanelOpen(false)}
-                  className="hidden w-11 shrink-0 items-center justify-center border-l border-base-300 text-base-content/50 transition hover:bg-base-200/60 hover:text-base-content lg:flex"
+                  className="hidden size-9 shrink-0 items-center justify-center text-base-content/50 transition hover:bg-base-200/60 hover:text-base-content lg:flex"
                   title="Collapse panel"
                 >
                   <PanelRightClose className="size-4" />
                 </button>
               </div>
+              <div className="flex flex-col border-b border-base-300">
+                {[
+                  { id: "rubric", label: "Rubric", icon: MessageSquareText },
+                  { id: "hints", label: "Hints", icon: Lightbulb },
+                  { id: "transcript", label: "Transcript", icon: FileText },
+                ].map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setPanel(item.id as PracticePanel)}
+                    className={cn(
+                      "flex items-center gap-2 border-l-2 px-4 py-3 text-sm font-medium text-left transition",
+                      index > 0 && "border-t border-base-300",
+                      panel === item.id
+                        ? "border-l-primary bg-base-200/70 text-primary"
+                        : "border-l-transparent text-base-content/60 hover:bg-base-200/50 hover:text-base-content",
+                    )}
+                  >
+                    <item.icon className="size-4 shrink-0" />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              <div className="flex min-h-0 flex-1 flex-col p-5">
             {panel === "rubric" ? (
+              <div className="min-h-0 flex-1 overflow-y-auto pr-3">
               <div className="space-y-4">
                 <p className="text-sm leading-6 text-base-content/60">
                   This round is scored against the visible rubric below.
@@ -1803,9 +1818,11 @@ export function PracticeSession({
                   </div>
                 ))}
               </div>
+              </div>
             ) : null}
 
             {panel === "hints" ? (
+              <div className="min-h-0 flex-1 overflow-y-auto pr-3">
               <div className="space-y-4">
                 <p className="text-sm leading-6 text-base-content/60">
                   Keep these anchors visible while you answer.
@@ -1814,11 +1831,11 @@ export function PracticeSession({
                   <div className="space-y-3">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-600">Algorithm hints</p>
                     {codingProblem.sourceHints.map((hint, index) => (
-                      <div key={hint} className="flex gap-3">
+                      <div key={hint} className="flex min-w-0 gap-3">
                         <div className="flex size-7 shrink-0 items-center justify-center rounded-none bg-amber-100 text-xs font-semibold text-amber-700">
                           {index + 1}
                         </div>
-                        <p className="text-sm leading-6">{hint}</p>
+                        <p className="min-w-0 break-words text-sm leading-6">{hint}</p>
                       </div>
                     ))}
                   </div>
@@ -1829,15 +1846,16 @@ export function PracticeSession({
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Interview coaching</p>
                     )}
                     {scenario.hints.map((hint, index) => (
-                      <div key={hint} className="flex gap-3">
+                      <div key={hint} className="flex min-w-0 gap-3">
                         <div className="flex size-7 shrink-0 items-center justify-center rounded-none bg-amber-100 text-xs font-semibold text-amber-700">
                           {index + 1}
                         </div>
-                        <p className="text-sm leading-6">{hint}</p>
+                        <p className="min-w-0 break-words text-sm leading-6">{hint}</p>
                       </div>
                     ))}
                   </div>
                 )}
+              </div>
               </div>
             ) : null}
 
@@ -1845,7 +1863,7 @@ export function PracticeSession({
               <div
                 ref={transcriptContainerRef}
                 onScroll={handleTranscriptScroll}
-                className="max-h-[70vh] space-y-4 overflow-y-auto pr-1"
+                className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-3"
               >
                 {transcript.length === 0 && (
                   <p className="text-sm text-base-content/60">

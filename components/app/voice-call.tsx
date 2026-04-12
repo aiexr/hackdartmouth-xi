@@ -33,11 +33,13 @@ const TONE_PROMPTS: Record<string, string> = {
 type TranscriptRole = TranscriptEntry["role"];
 
 export type VoiceCallHandle = {
+  start: () => Promise<void>;
   stop: () => Promise<void>;
 };
 
 type VoiceCallProps = {
   tone?: string;
+  showStartButton?: boolean;
   promptRequest?: { id: string; text: string } | null;
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
@@ -47,6 +49,7 @@ type VoiceCallProps = {
 
 export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function VoiceCall({
   tone = "neutral",
+  showStartButton = true,
   promptRequest,
   onTranscriptUpdate,
   onSessionEnd,
@@ -250,8 +253,9 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
   }, [isMuted]);
 
   useImperativeHandle(ref, () => ({
+    start: startCall,
     stop: endCall,
-  }), [endCall]);
+  }), [endCall, startCall]);
 
   useEffect(() => {
     onInterviewerSpeakingChange?.(agentSpeaking);
@@ -356,7 +360,7 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
 
       {/* Controls */}
       <div className="flex items-center gap-3">
-        {status === "idle" && (
+        {status === "idle" && showStartButton && (
           <button
             onClick={startCall}
             className="flex items-center gap-2 rounded-none bg-primary px-6 py-3 text-sm font-medium text-primary-content shadow-lg shadow-primary/25 transition hover:bg-primary/90"
@@ -391,7 +395,7 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
           </>
         )}
 
-        {status === "connecting" && (
+        {status === "connecting" && showStartButton && (
           <button
             disabled
             className="flex items-center gap-2 rounded-none bg-base-200 px-6 py-3 text-sm font-medium text-base-content/60"

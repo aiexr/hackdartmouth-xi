@@ -4,7 +4,6 @@ import type { CSSProperties, RefObject } from "react";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
-  Bot,
   Braces,
   Calendar,
   Flame,
@@ -40,7 +39,6 @@ const navigation = [
   { label: "Practice", icon: Play, active: false },
   { label: "Profile", icon: User, active: false },
   { label: "LeetCoach", icon: WhistleIcon, active: false },
-  { label: "LLM", icon: Bot, active: false },
   { label: "Settings", icon: Settings, active: false },
 ];
 
