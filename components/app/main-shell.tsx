@@ -48,7 +48,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-transparent">
-      <aside className="hidden w-64 shrink-0 border-r border-base-300 bg-base-100 px-4 py-7 md:flex md:flex-col">
+      <aside className="hidden w-64 shrink-0 border-r border-border bg-base-100 px-4 py-7 md:flex md:flex-col">
         <Link href="/" className="flex items-center gap-3 px-3">
           <img src="/logo.svg" alt="LeetSpeak logo" className="h-10 w-auto" />
           <span className="text-base font-semibold tracking-tight">LeetSpeak</span>
@@ -70,7 +70,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-primary text-primary-content"
+                    ? "bg-primary text-white"
                     : "text-base-content/60 hover:bg-base-200 hover:text-base-content",
                 )}
               >
@@ -87,7 +87,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-base-300 px-6 py-3">
+        <header className="flex items-center justify-between border-b border-border px-6 py-3">
           <Link href="/" className="flex items-center gap-3 md:hidden">
             <img src="/logo.svg" alt="LeetSpeak logo" className="h-9 w-auto" />
             <span className="text-sm font-semibold tracking-tight">LeetSpeak</span>
@@ -106,7 +106,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                     src={session.user.image}
                     alt=""
                     referrerPolicy="no-referrer"
-                    className="size-9 rounded-none ring-2 ring-border"
+                    className="size-9 rounded-none ring-2 ring-base-300"
                   />
                 ) : (
                   <div className="flex size-9 items-center justify-center rounded-none bg-primary text-primary-content ring-2 ring-primary/20">
@@ -137,7 +137,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
         </main>
 
         {/* Mobile bottom nav */}
-        <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-2xl border border-base-300 bg-base-100/95 p-2 backdrop-blur md:hidden">
+        <nav className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-around rounded-2xl border border-border bg-base-100/95 p-2 backdrop-blur md:hidden">
           {navigation.map((item) => {
             const isActive =
               item.href === "/"
@@ -153,7 +153,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "flex min-w-14 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[0.7rem] font-medium transition-colors",
                   isActive
-                    ? "bg-primary text-primary-content"
+                    ? "bg-primary text-white"
                     : "text-base-content/60",
                 )}
               >

@@ -78,7 +78,7 @@ export function CoachConversation() {
   return (
     <div className="space-y-6">
       <div
-        className="cursor-pointer rounded-none border border-base-300 bg-base-100/80 p-5 transition hover:ring-2 hover:ring-primary/20"
+        className="cursor-pointer rounded-none border border-border bg-base-100/80 p-5 transition hover:ring-2 hover:ring-primary/20"
         onClick={() => !loading && sendToCoach("", "resume-review")}
       >
         <div className="flex items-center gap-4">
@@ -95,7 +95,7 @@ export function CoachConversation() {
       </div>
 
       <Card className="overflow-hidden bg-base-100/85">
-        <div className="flex items-center gap-2 border-b border-base-300 px-5 py-4 text-sm font-semibold">
+        <div className="flex items-center gap-2 border-b border-border px-5 py-4 text-sm font-semibold">
           <MessageCircleMore className="size-4 text-primary" />
           Coaching Chat
         </div>
@@ -143,7 +143,7 @@ export function CoachConversation() {
           </CardContent>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex gap-3 border-t border-base-300 px-5 py-4">
+        <form onSubmit={handleSubmit} className="flex gap-3 border-t border-border px-5 py-4">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -155,7 +155,7 @@ export function CoachConversation() {
           </Button>
         </form>
 
-        <div className="border-t border-base-300/70 bg-linear-to-r from-violet-50 to-indigo-50 px-5 py-3 text-sm text-violet-900/80">
+        <div className="border-t border-border/70 bg-linear-to-r from-violet-50 to-indigo-50 px-5 py-3 text-sm text-violet-900/80">
           <span className="inline-flex items-center gap-2 font-medium">
             <Sparkles className="size-4 text-violet-500" />
             Tip

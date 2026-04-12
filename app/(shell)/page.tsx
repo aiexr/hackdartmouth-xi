@@ -131,7 +131,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
               <div className="text-xs text-base-content/60">Current streak</div>
             </div>
           </div>
-          <div className="h-px bg-border" />
+          <div className="h-px bg-base-300" />
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-lg bg-amber-50">
               <Trophy className="size-5 text-amber-500" />
@@ -141,7 +141,7 @@ async function DashboardMetrics({ email }: { email?: string | null }) {
               <div className="text-xs text-base-content/60">Longest streak</div>
             </div>
           </div>
-          <div className="h-px bg-border" />
+          <div className="h-px bg-base-300" />
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-50">
               <Calendar className="size-5 text-emerald-500" />

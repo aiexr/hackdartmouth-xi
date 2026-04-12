@@ -175,7 +175,7 @@ export function PracticeSession({
   const isSystemDesign = scenario.category === "system-design";
   const hasSplitView = isTechnical || isSystemDesign;
 
-  const [panel, setPanel] = useState<PracticePanel>("rubric");
+  const [panel, setPanel] = useState<PracticePanel>(isTechnical ? "hints" : "rubric");
   const [panelOpen, setPanelOpen] = useState(true);
   const [seconds, setSeconds] = useState(0);
   const [interviewMode, setInterviewMode] = useState<InterviewMode>(
@@ -515,6 +515,41 @@ export function PracticeSession({
               <p className="text-base leading-7 text-base-content/60">
                 {scenario.prompt}
               </p>
+              {isTechnical && codingProblem && (
+                <div className="mt-4 max-h-60 w-full overflow-y-auto rounded-none border border-base-300 bg-base-100/60 p-4 text-left">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold">{codingProblem.sourceTitle}</span>
+                    {codingProblem.sourceDifficulty && (
+                      <span className={cn(
+                        "text-[10px] font-medium",
+                        codingProblem.sourceDifficulty === "Easy" ? "text-emerald-500" :
+                        codingProblem.sourceDifficulty === "Medium" ? "text-amber-500" : "text-red-500",
+                      )}>
+                        {codingProblem.sourceDifficulty}
+                      </span>
+                    )}
+                    {codingProblem.sourceUrl && (
+                      <a href={codingProblem.sourceUrl} target="_blank" rel="noopener noreferrer"
+                        className="ml-auto flex items-center gap-1 text-[10px] text-base-content/40 transition hover:text-base-content/60"
+                      >
+                        <Braces className="size-3" />
+                        LeetCode
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-xs leading-5 text-base-content/70">{codingProblem.description}</p>
+                  {codingProblem.examples.length > 0 && (
+                    <div className="mt-3 space-y-1.5">
+                      {codingProblem.examples.map((ex, i) => (
+                        <div key={i} className="rounded-none bg-base-200/70 px-3 py-2 font-mono text-[10px] leading-5">
+                          <div><span className="font-semibold text-base-content/60">Input:</span> {ex.input}</div>
+                          <div><span className="font-semibold text-base-content/60">Output:</span> {ex.output}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {resumed && (
                 <div className="inline-flex items-center gap-2 rounded-none border border-primary/30 bg-primary/5 px-4 py-1.5 text-xs font-medium text-primary">
                   Resuming your previous session · {transcript.length} saved turn
@@ -651,17 +686,66 @@ export function PracticeSession({
             {/* Technical: problem + editor fills the space, avatar is PiP */}
             {isTechnical && codingProblem && (
               <div className="flex min-h-0 flex-1 flex-col gap-4 pl-0 xl:pl-60">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold">{scenario.title}</h2>
-                    <p className="mt-1 text-sm text-base-content/60">{codingProblem.description}</p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-semibold">{codingProblem.sourceTitle ?? scenario.title}</h2>
+                      {codingProblem.sourceDifficulty && (
+                        <span className={cn(
+                          "text-xs font-medium",
+                          codingProblem.sourceDifficulty === "Easy" ? "text-emerald-500" :
+                          codingProblem.sourceDifficulty === "Medium" ? "text-amber-500" : "text-red-500",
+                        )}>
+                          {codingProblem.sourceDifficulty}
+                        </span>
+                      )}
+                      {codingProblem.topicTags?.slice(0, 3).map((tag) => (
+                        <span key={tag} className="rounded-none border border-base-300 bg-base-200/60 px-1.5 py-0.5 text-[10px] text-base-content/50">
+                          {tag}
+                        </span>
+                      ))}
+                      {codingProblem.sourceUrl && (
+                        <a href={codingProblem.sourceUrl} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-0.5 text-[10px] text-base-content/40 transition hover:text-base-content/60"
+                        >
+                          <Braces className="size-3" />
+                          LeetCode
+                        </a>
+                      )}
+                    </div>
+                    <p className="text-sm leading-6 text-base-content/70">{codingProblem.description}</p>
+                    {codingProblem.examples.length > 0 && (
+                      <div className="mt-2 space-y-1.5">
+                        {codingProblem.examples.map((ex, i) => (
+                          <div key={i} className="rounded-none bg-base-200/60 px-3 py-2 font-mono text-xs leading-5">
+                            <div><span className="font-semibold text-base-content/60">Input:</span> {ex.input}</div>
+                            <div><span className="font-semibold text-base-content/60">Output:</span> {ex.output}</div>
+                            {ex.explanation && (
+                              <div className="mt-0.5 text-base-content/50"><span className="font-semibold">Explanation:</span> {ex.explanation}</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {codingProblem.constraints.length > 0 && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-[10px] font-medium uppercase tracking-wider text-base-content/40 hover:text-base-content/60">
+                          Constraints
+                        </summary>
+                        <ul className="mt-1 space-y-0.5 pl-3">
+                          {codingProblem.constraints.map((c) => (
+                            <li key={c} className="text-[10px] text-base-content/50 before:mr-1 before:content-['·']">{c}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
                   </div>
                   <button
                     type="button"
                     onClick={syncCodeWithInterviewer}
                     disabled={sessionState !== "connected"}
                     className={cn(
-                      "inline-flex items-center gap-2 rounded-none border px-3 py-1.5 text-xs font-medium transition",
+                      "inline-flex shrink-0 items-center gap-2 rounded-none border px-3 py-1.5 text-xs font-medium transition",
                       sessionState === "connected"
                         ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:border-emerald-400"
                         : "border-base-300 bg-base-200/40 text-base-content/60",
@@ -793,14 +877,34 @@ export function PracticeSession({
                 <p className="text-sm leading-6 text-base-content/60">
                   Keep these anchors visible while you answer.
                 </p>
-                {scenario.hints.map((hint, index) => (
-                  <div key={hint} className="flex gap-3">
-                    <div className="flex size-7 shrink-0 items-center justify-center rounded-none bg-amber-100 text-xs font-semibold text-amber-700">
-                      {index + 1}
-                    </div>
-                    <p className="text-sm leading-6">{hint}</p>
+                {isTechnical && codingProblem?.sourceHints && codingProblem.sourceHints.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-600">Algorithm hints</p>
+                    {codingProblem.sourceHints.map((hint, index) => (
+                      <div key={hint} className="flex gap-3">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-none bg-amber-100 text-xs font-semibold text-amber-700">
+                          {index + 1}
+                        </div>
+                        <p className="text-sm leading-6">{hint}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+                {scenario.hints.length > 0 && (
+                  <div className="space-y-3">
+                    {isTechnical && codingProblem?.sourceHints && codingProblem.sourceHints.length > 0 && (
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">Interview coaching</p>
+                    )}
+                    {scenario.hints.map((hint, index) => (
+                      <div key={hint} className="flex gap-3">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-none bg-amber-100 text-xs font-semibold text-amber-700">
+                          {index + 1}
+                        </div>
+                        <p className="text-sm leading-6">{hint}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : null}
 

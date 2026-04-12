@@ -126,7 +126,9 @@ export default function PracticePage() {
                 onClick={() => setActiveRound(round)}
                 className={cn(
                   "btn btn-sm gap-2",
-                  active ? "btn-primary" : "btn-outline",
+                  active
+                    ? "btn-primary"
+                    : "border border-base-300 bg-transparent text-base-content/60 hover:bg-base-200 hover:text-base-content",
                 )}
               >
                 <meta.icon className="size-4" />
