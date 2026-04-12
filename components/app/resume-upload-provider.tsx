@@ -92,19 +92,32 @@ export function ResumeUploadProvider({ children }: { children: React.ReactNode }
           signal: controller.signal,
         });
 
+        const raw = await res.text();
+        let parsed: unknown = null;
+
+        try {
+          parsed = raw ? JSON.parse(raw) : null;
+        } catch {
+          parsed = raw;
+        }
+
         if (!res.ok) {
-          const payload = await res.json().catch(() => null);
-          const msg = asRecord(payload);
+          const msg = asRecord(parsed);
           const details =
-            typeof msg.details === "string" && msg.details.trim() ? ` ${msg.details}` : "";
+            typeof msg.details === "string" && msg.details.trim()
+              ? ` ${msg.details}`
+              : typeof parsed === "string" && parsed.trim()
+                ? ` ${parsed.trim()}`
+                : "";
           throw new Error(
             typeof msg.error === "string" && msg.error.trim()
               ? `${msg.error}${details}`
-              : "Failed to upload resume"
+              : details.trim() || "Failed to upload resume"
           );
         }
 
-        const payload = asRecord(await res.json());
+        const payload = asRecord(parsed);
+
         setHasResumeContext(payload.hasResumeContext === true);
         setLastProcessedFileName(file.name);
         setResumeFile(null);

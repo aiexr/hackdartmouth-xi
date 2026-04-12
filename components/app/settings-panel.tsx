@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 import { Moon, Trash2, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -10,6 +11,8 @@ export function SettingsPanel() {
   const [darkMode, setDarkMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showAbout, setShowAbout] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
@@ -36,13 +39,38 @@ export function SettingsPanel() {
     }
   }
 
-  function handleDeleteData() {
-    localStorage.clear();
-    setDeleted(true);
-    setConfirmDelete(false);
-    // Re-apply theme to corporate since we just cleared localStorage
-    document.documentElement.setAttribute("data-theme", "corporate");
-    setDarkMode(false);
+  async function handleDeleteData() {
+    setDeleteError(null);
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "DELETE",
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to delete account data.");
+      }
+
+      localStorage.clear();
+      setDeleted(true);
+      setConfirmDelete(false);
+      // Re-apply theme to corporate since we just cleared localStorage.
+      document.documentElement.setAttribute("data-theme", "corporate");
+      setDarkMode(false);
+
+      await signOut({ callbackUrl: "/" });
+    } catch (error) {
+      console.error("Failed to delete account data:", error);
+      setDeleteError(
+        error instanceof Error ? error.message : "Failed to delete account data.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   return (
@@ -83,21 +111,37 @@ export function SettingsPanel() {
                   <Trash2 className="size-5" />
                 </div>
                 <div>
-                  <h3 className="text-base">Delete user data</h3>
+                  <h3 className="text-base">Delete account data</h3>
                   <p className="text-sm leading-6 text-base-content/60">
-                    Clear all locally stored preferences and session data.
+                    Permanently deletes your profile, interviews, resume context,
+                    metrics, and saved preferences from our servers, then clears
+                    this browser.
                   </p>
+                  {confirmDelete ? (
+                    <p className="mt-2 text-sm leading-6 text-destructive">
+                      This is not a local-only reset. It permanently removes your
+                      stored HackDartmouth XI account data and signs you out.
+                    </p>
+                  ) : null}
+                  {deleteError ? (
+                    <p className="mt-2 text-sm leading-6 text-destructive">
+                      {deleteError}
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
               <div className="ml-auto flex shrink-0 items-center justify-end gap-2 self-start">
-                {deleted ? (
-                  <span className="text-sm text-base-content/50">Cleared</span>
+                {deleted || isDeleting ? (
+                  <span className="text-sm text-base-content/50">
+                    {isDeleting ? "Deleting..." : "Deleted"}
+                  </span>
                 ) : confirmDelete ? (
                   <>
                     <Button
                       variant="outline"
                       size="sm"
+                      disabled={isDeleting}
                       onClick={() => setConfirmDelete(false)}
                     >
                       Cancel
@@ -105,19 +149,24 @@ export function SettingsPanel() {
                     <Button
                       variant="destructive"
                       size="sm"
+                      disabled={isDeleting}
                       onClick={handleDeleteData}
                     >
-                      Confirm delete
+                      Delete permanently
                     </Button>
                   </>
                 ) : (
                   <Button
                     variant="outline"
                     size="sm"
+                    disabled={isDeleting}
                     className="border-destructive/40 text-destructive hover:bg-destructive/5"
-                    onClick={() => setConfirmDelete(true)}
+                    onClick={() => {
+                      setDeleteError(null);
+                      setConfirmDelete(true);
+                    }}
                   >
-                    Delete
+                    Delete account
                   </Button>
                 )}
               </div>
@@ -181,7 +230,7 @@ export function SettingsPanel() {
                 This application collects your name and email address through Google Sign-In solely to identify your account and associate your interview sessions with your profile. Practice session transcripts, AI-generated feedback, and any resume text you upload are stored securely in our database and are used exclusively to personalize your coaching experience — they are never sold or shared with third parties.
               </p>
               <p>
-                Resume content is processed at upload time to extract plain text; the original file is discarded immediately and only the extracted text is retained. Interview audio and video are processed in real time through our AI provider integrations and are not stored after a session ends. You may delete all locally stored preferences and session data at any time using the "Delete user data" option above.
+                Resume content is processed at upload time to extract plain text; the original file is discarded immediately and only the extracted text is retained. Interview audio and video are processed in real time through our AI provider integrations and are not stored after a session ends. You may permanently delete your stored account data from our servers and clear this browser at any time using the "Delete account data" option above.
               </p>
             </div>
           </div>

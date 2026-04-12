@@ -1,4 +1,5 @@
 import { getOptionalServerSession } from "@/lib/auth";
+import { getOptionalMongoDb } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models";
 
 function sanitizeUserForClient(user: Awaited<ReturnType<typeof UserModel.getUserByEmail>>) {
@@ -52,13 +53,14 @@ export async function PATCH(request: Request) {
       rawBody && typeof rawBody === "object"
         ? (rawBody as Record<string, unknown>)
         : {};
-    const { name, bio, focusTrack, preferences, weeklyGoal } = body;
+    const { name, bio, focusTrack, preferences, weeklyGoal, resumeExtractedText } = body;
 
     const updates: Record<string, unknown> = {};
 
     if (name !== undefined) updates.name = name;
     if (bio !== undefined) updates.bio = bio;
     if (focusTrack !== undefined) updates.focusTrack = focusTrack;
+    if (resumeExtractedText !== undefined) updates.resumeExtractedText = resumeExtractedText;
     let parsedWeeklyGoal: number | undefined;
     if (typeof weeklyGoal === "number" && Number.isFinite(weeklyGoal)) {
       parsedWeeklyGoal = Math.min(30, Math.max(1, Math.round(weeklyGoal)));
@@ -110,5 +112,52 @@ export async function PATCH(request: Request) {
     console.error("Failed to update user profile:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return Response.json({ error: `Failed to update profile: ${errorMessage}` }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  const session = await getOptionalServerSession();
+
+  if (!session?.user?.email) {
+    return Response.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const db = await getOptionalMongoDb();
+  if (!db) {
+    return Response.json({ error: "Database not configured" }, { status: 503 });
+  }
+
+  try {
+    const email = session.user.email;
+
+    const [
+      userResult,
+      metricsResult,
+      resumeResult,
+      interviewsResult,
+      profileContextResult,
+    ] = await Promise.all([
+      db.collection("users").deleteOne({ email }),
+      db.collection("userMetrics").deleteOne({ email }),
+      db.collection("user_resumes").deleteOne({ email }),
+      db.collection("interviews").deleteMany({
+        $or: [{ email }, { userId: email }],
+      }),
+      db.collection("user_profiles").deleteMany({ userId: email }),
+    ]);
+
+    return Response.json({
+      ok: true,
+      deleted: {
+        users: userResult.deletedCount,
+        userMetrics: metricsResult.deletedCount,
+        userResumes: resumeResult.deletedCount,
+        interviews: interviewsResult.deletedCount,
+        userProfiles: profileContextResult.deletedCount,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to delete account data:", error);
+    return Response.json({ error: "Failed to delete account data" }, { status: 500 });
   }
 }

@@ -1,6 +1,12 @@
 import "server-only";
 
+import { writeFile, unlink } from "fs/promises";
+import { join } from "path";
+import { tmpdir } from "os";
+
 import mammoth from "mammoth";
+// @ts-ignore - pdf-text-extract doesn't have @types package
+import extract from "pdf-text-extract";
 
 const SUPPORTED_EXTENSIONS = [".pdf", ".docx"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -12,44 +18,61 @@ export type ExtractedDocument = {
   extracted_length: number;
 };
 
-async function extractPdf(buffer: Buffer): Promise<string> {
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const loadingTask = pdfjs.getDocument({
-    data: new Uint8Array(buffer),
-    disableFontFace: true,
-    useSystemFonts: true,
-    useWorkerFetch: false,
-    isEvalSupported: false,
-    stopAtErrors: false,
-  });
-
-  const document = await loadingTask.promise;
+async function extractPdfWithPdfToText(buffer: Buffer): Promise<string> {
+  // pdf-text-extract requires a file path, not a Buffer
+  // Write buffer to temporary file, extract, then clean up
+  const tempPath = join(tmpdir(), `pdf-extract-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`);
 
   try {
-    const pages: string[] = [];
+    await writeFile(tempPath, buffer);
 
-    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-      const page = await document.getPage(pageNumber);
-      const textContent = await page.getTextContent();
-
-      const chunks: string[] = [];
-      for (const item of textContent.items) {
-        if ("str" in item && typeof item.str === "string" && item.str.trim()) {
-          chunks.push(item.str);
+    const text = await new Promise<string>((resolve, reject) => {
+      extract(tempPath, { splitPages: false }, (err: Error | null, pages: string[]) => {
+        if (err) {
+          reject(new Error(`PDF extraction error: ${err.message}`));
+          return;
         }
 
-        if ("hasEOL" in item && item.hasEOL) {
-          chunks.push("\n");
-        }
-      }
+        resolve((pages || []).join("\n"));
+      });
+    });
 
-      pages.push(chunks.join(" "));
-      await page.cleanup();
+    return text;
+  } finally {
+    try {
+      await unlink(tempPath);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+}
+
+async function extractPdfWithPdfParse(buffer: Buffer): Promise<string> {
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: buffer });
+
+  try {
+    const result = await parser.getText();
+    return result.text || "";
+  } finally {
+    await parser.destroy();
+  }
+}
+
+function shouldFallbackToPdfParse(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /spawn\s+pdftotext\s+enoent|pdftotext.*not found|enoent/i.test(message);
+}
+
+async function extractPdf(buffer: Buffer): Promise<string> {
+  try {
+    return await extractPdfWithPdfToText(buffer);
+  } catch (error) {
+    if (!shouldFallbackToPdfParse(error)) {
+      throw error;
     }
 
-    return pages.join("\n");
-  } finally {
-    await document.destroy();
+    return extractPdfWithPdfParse(buffer);
   }
 }
 
@@ -86,7 +109,7 @@ export async function extractDocumentText(
     let text = "";
 
     if (ext === ".pdf") {
-      // Extract PDF directly from the uploaded bytes to avoid external binaries.
+      // Extract PDF using pdf-text-extract (via temp file path)
       text = await extractPdf(buffer);
     } else if (ext === ".docx") {
       // Extract Word doc using mammoth

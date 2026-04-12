@@ -159,7 +159,9 @@ export function ResumeUploaderCard({ initialHasResumeContext }: ResumeUploaderCa
               ) : (
                 <CheckCircle2 className="size-4 mt-0.5 shrink-0" />
               )}
-              <p>{resumeError || "Resume processed successfully."}</p>
+              <p className="whitespace-pre-wrap break-words">
+                {resumeError || "Resume processed successfully."}
+              </p>
             </div>
           )}
 

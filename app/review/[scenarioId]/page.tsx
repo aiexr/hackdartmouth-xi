@@ -205,6 +205,11 @@ export default async function ReviewPage({
 
   const interview = persistedReview?.interview ?? null;
   const hasPersistedReview = Boolean(interview);
+  const persistedReviewLoadFailed = Boolean(
+    interviewId && persistedReview?.notice && !persistedReview?.interview,
+  );
+  const showStaticReview = !hasPersistedReview && !persistedReviewLoadFailed;
+  const showReviewContent = hasPersistedReview || showStaticReview;
   const overallScore =
     hasPersistedReview && typeof interview?.overallScore === "number"
       ? interview.overallScore
@@ -233,15 +238,21 @@ export default async function ReviewPage({
   const strengths =
     hasPersistedReview && Array.isArray(interview?.gradingResult?.strengths)
       ? interview.gradingResult.strengths.filter(isNonEmptyString)
-      : staticReview.strengths;
+      : showStaticReview
+        ? staticReview.strengths
+        : [];
   const improvements =
     hasPersistedReview && Array.isArray(interview?.gradingResult?.improvements)
       ? interview.gradingResult.improvements.filter(isNonEmptyString)
-      : staticReview.improvements;
+      : showStaticReview
+        ? staticReview.improvements
+        : [];
   const tips =
     hasPersistedReview && improvements.length
       ? improvements.slice(0, 3)
-      : staticReview.tips;
+      : showStaticReview
+        ? staticReview.tips
+        : [];
   const transcript =
     hasPersistedReview
       ? normalizeTranscript(
@@ -249,25 +260,34 @@ export default async function ReviewPage({
           scenario.interviewer,
           interview?.gradingResult?.key_moments,
         )
-      : staticReview.transcript.map((line) => ({
-          time: line.time,
-          speaker: scenario.interviewer,
-          text: line.text,
-          note: null,
-          highlight: line.highlight,
-        }));
-  const scoreDisplay = hasPersistedReview ? (overallScore ?? "--") : staticReview.overallScore;
-  const fallbackScoreDelta = staticReview.overallScore - staticReview.previousScore;
+      : showStaticReview
+        ? staticReview.transcript.map((line) => ({
+            time: line.time,
+            speaker: scenario.interviewer,
+            text: line.text,
+            note: null,
+            highlight: line.highlight,
+          }))
+        : [];
+  const scoreDisplay = hasPersistedReview
+    ? (overallScore ?? "--")
+    : showStaticReview
+      ? staticReview.overallScore
+      : "--";
+  const fallbackScoreDelta = showStaticReview
+    ? staticReview.overallScore - staticReview.previousScore
+    : null;
   const visibleScoreDelta = hasPersistedReview ? scoreDelta : fallbackScoreDelta;
   const isNegativeScoreDelta = visibleScoreDelta !== null && visibleScoreDelta < 0;
 
   const reviewNotice =
-    persistedReview?.notice ??
-    (gradingPending
-      ? "Interview completed, but AI scoring was unavailable for this attempt."
-      : gradingFailed
-        ? "Interview ended, but review generation did not complete. No fallback score is shown for this attempt."
-      : null);
+    persistedReviewLoadFailed
+      ? "We hit an error loading this saved interview review. No score is shown for this attempt."
+      : gradingPending
+        ? "Interview completed, but AI scoring was unavailable for this attempt."
+        : gradingFailed
+          ? "Interview ended, but review generation did not complete. No fallback score is shown for this attempt."
+          : null;
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -368,17 +388,29 @@ export default async function ReviewPage({
               <div>
                 <div className="text-5xl font-semibold">{scoreDisplay}</div>
                 <div className="text-xs font-medium text-base-content/60">
-                  {overallScore !== null || !hasPersistedReview ? "out of 100" : "score pending"}
+                  {overallScore !== null
+                    ? "out of 100"
+                    : hasPersistedReview
+                      ? "score pending"
+                      : showStaticReview
+                        ? "out of 100"
+                        : "score unavailable"}
                 </div>
               </div>
             </div>
 
             <div
               className={`mt-5 inline-flex items-center gap-2 text-sm font-semibold ${
-                isNegativeScoreDelta ? "text-red-600" : "text-emerald-600"
+                visibleScoreDelta === null
+                  ? "text-base-content/70"
+                  : isNegativeScoreDelta
+                    ? "text-red-600"
+                    : "text-emerald-600"
               }`}
             >
-              {isNegativeScoreDelta ? (
+              {visibleScoreDelta === null ? (
+                <AlertCircle className="size-4" />
+              ) : isNegativeScoreDelta ? (
                 <TrendingDown className="size-4" />
               ) : (
                 <TrendingUp className="size-4" />
@@ -399,10 +431,14 @@ export default async function ReviewPage({
                   </>
                 )
               ) : (
-                <>
-                  {fallbackScoreDelta >= 0 ? "+" : ""}
-                  {fallbackScoreDelta} points from the last attempt
-                </>
+                showStaticReview ? (
+                  <>
+                    {fallbackScoreDelta !== null && fallbackScoreDelta >= 0 ? "+" : ""}
+                    {fallbackScoreDelta} points from the last attempt
+                  </>
+                ) : (
+                  <>Score unavailable for this saved attempt</>
+                )
               )}
             </div>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-base-content/60">
@@ -418,9 +454,13 @@ export default async function ReviewPage({
                       : "This attempt saved the transcript, but the grading model did not return a score."}
                   </>
                 )
-              ) : (
+              ) : showStaticReview ? (
                 <>
                   The scorecard is static for the MVP, but the layout is already prepared for Gemini-generated rubric feedback and transcript annotations.
+                </>
+              ) : (
+                <>
+                  This saved review could not be loaded, so the UI is withholding any placeholder scoring.
                 </>
               )}
             </p>
@@ -433,7 +473,11 @@ export default async function ReviewPage({
               <Star className="size-5 text-primary" />
               Score breakdown
             </h2>
-            {hasPersistedReview && !dimensions.length ? (
+            {!showReviewContent ? (
+              <p className="mt-5 text-sm leading-6 text-base-content/60">
+                Score breakdown is unavailable because this saved interview review could not be loaded.
+              </p>
+            ) : hasPersistedReview && !dimensions.length ? (
               <p className="mt-5 text-sm leading-6 text-base-content/60">
                 Dimension-level feedback is unavailable for this attempt because the scoring model did not return a rubric breakdown.
               </p>
@@ -482,72 +526,76 @@ export default async function ReviewPage({
           </CardContent>
         </Card>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card className="bg-base-100/80">
-            <CardContent className="p-6">
-              <h2 className="flex items-center gap-2 text-emerald-700">
-                <CheckCircle2 className="size-5 text-emerald-500" />
-                What worked
-              </h2>
-              <div className="mt-4 space-y-3">
-                {strengths.length ? (
-                  strengths.map((item) => (
-                    <p key={item} className="flex gap-3 text-sm leading-6">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-none bg-emerald-400" />
-                      <span>{item}</span>
-                    </p>
-                  ))
-                ) : (
-                  <p className="text-sm leading-6 text-base-content/60">
-                    No strengths were returned for this attempt.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+        {showReviewContent ? (
+          <>
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="bg-base-100/80">
+                <CardContent className="p-6">
+                  <h2 className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="size-5 text-emerald-500" />
+                    What worked
+                  </h2>
+                  <div className="mt-4 space-y-3">
+                    {strengths.length ? (
+                      strengths.map((item) => (
+                        <p key={item} className="flex gap-3 text-sm leading-6">
+                          <span className="mt-2 size-1.5 shrink-0 rounded-none bg-emerald-400" />
+                          <span>{item}</span>
+                        </p>
+                      ))
+                    ) : (
+                      <p className="text-sm leading-6 text-base-content/60">
+                        No strengths were returned for this attempt.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-base-100/80">
-            <CardContent className="p-6">
-              <h2 className="flex items-center gap-2 text-amber-700">
-                <AlertCircle className="size-5 text-amber-500" />
-                What to improve
-              </h2>
-              <div className="mt-4 space-y-3">
-                {improvements.length ? (
-                  improvements.map((item) => (
-                    <p key={item} className="flex gap-3 text-sm leading-6">
-                      <span className="mt-2 size-1.5 shrink-0 rounded-none bg-amber-400" />
-                      <span>{item}</span>
-                    </p>
-                  ))
-                ) : (
-                  <p className="text-sm leading-6 text-base-content/60">
-                    No improvement areas were returned for this attempt.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="border border-primary/20 bg-base-100/85">
-          <CardContent className="p-6">
-            <h2 className="flex items-center gap-2 text-base-content">
-              <Lightbulb className="size-5 text-primary" />
-              Actionable tips
-            </h2>
-            <div className="mt-4 space-y-3">
-              {tips.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-none border border-border/70 bg-base-200/55 px-4 py-3 text-sm leading-6 text-base-content"
-                >
-                  {item}
-                </div>
-              ))}
+              <Card className="bg-base-100/80">
+                <CardContent className="p-6">
+                  <h2 className="flex items-center gap-2 text-amber-700">
+                    <AlertCircle className="size-5 text-amber-500" />
+                    What to improve
+                  </h2>
+                  <div className="mt-4 space-y-3">
+                    {improvements.length ? (
+                      improvements.map((item) => (
+                        <p key={item} className="flex gap-3 text-sm leading-6">
+                          <span className="mt-2 size-1.5 shrink-0 rounded-none bg-amber-400" />
+                          <span>{item}</span>
+                        </p>
+                      ))
+                    ) : (
+                      <p className="text-sm leading-6 text-base-content/60">
+                        No improvement areas were returned for this attempt.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+
+            <Card className="border border-primary/20 bg-base-100/85">
+              <CardContent className="p-6">
+                <h2 className="flex items-center gap-2 text-base-content">
+                  <Lightbulb className="size-5 text-primary" />
+                  Actionable tips
+                </h2>
+                <div className="mt-4 space-y-3">
+                  {tips.map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-none border border-border/70 bg-base-200/55 px-4 py-3 text-sm leading-6 text-base-content"
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : null}
 
         {hasPersistedReview && interview?.codeSnapshot ? (
           <Card className="bg-base-100/85">
@@ -585,43 +633,45 @@ export default async function ReviewPage({
           </Card>
         ) : null}
 
-        <Card className="bg-base-100/85">
-          <CardContent className="p-6">
-            <h2>Annotated transcript</h2>
-            <div className="mt-5 space-y-3">
-              {transcript.length ? (
-                transcript.map((line) => (
-                  <div
-                    key={`${line.time}-${line.speaker}-${line.text}`}
-                    className={`rounded-none border px-4 py-3 ${
-                      line.highlight === "strength"
-                        ? "border-emerald-500/35 bg-emerald-500/10"
-                        : line.highlight === "improve"
-                          ? "border-amber-500/35 bg-amber-500/10"
-                          : "border-border bg-base-200/45"
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <div className="mb-1 text-xs font-medium text-base-content/60">
-                        {line.speaker}
+        {showReviewContent ? (
+          <Card className="bg-base-100/85">
+            <CardContent className="p-6">
+              <h2>Annotated transcript</h2>
+              <div className="mt-5 space-y-3">
+                {transcript.length ? (
+                  transcript.map((line) => (
+                    <div
+                      key={`${line.time}-${line.speaker}-${line.text}`}
+                      className={`rounded-none border px-4 py-3 ${
+                        line.highlight === "strength"
+                          ? "border-emerald-500/35 bg-emerald-500/10"
+                          : line.highlight === "improve"
+                            ? "border-amber-500/35 bg-amber-500/10"
+                            : "border-border bg-base-200/45"
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="mb-1 text-xs font-medium text-base-content/60">
+                          {line.speaker}
+                        </div>
+                        <p className="text-sm leading-6">{line.text}</p>
+                        {line.note ? (
+                          <p className="mt-2 text-sm leading-6 text-base-content/60">
+                            {line.note}
+                          </p>
+                        ) : null}
                       </div>
-                      <p className="text-sm leading-6">{line.text}</p>
-                      {line.note ? (
-                        <p className="mt-2 text-sm leading-6 text-base-content/60">
-                          {line.note}
-                        </p>
-                      ) : null}
                     </div>
+                  ))
+                ) : (
+                  <div className="rounded-none border border-dashed border-border px-4 py-6 text-sm leading-6 text-base-content/60">
+                    This attempt did not save any transcript lines.
                   </div>
-                ))
-              ) : (
-                <div className="rounded-none border border-dashed border-border px-4 py-6 text-sm leading-6 text-base-content/60">
-                  This attempt did not save any transcript lines.
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button asChild variant="secondary" size="lg">
