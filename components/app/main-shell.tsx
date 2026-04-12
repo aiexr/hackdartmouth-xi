@@ -12,6 +12,10 @@ import {
   Settings,
   User,
 } from "lucide-react";
+import {
+  AUTH_PREVIEW_STORAGE_KEY,
+  DashboardPreview,
+} from "@/components/app/dashboard-preview";
 import { ThemeLogo } from "@/components/app/theme-logo";
 import { cn } from "@/lib/utils";
 
@@ -53,10 +57,50 @@ export function MainShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [isPending, startTransition] = useTransition();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [authIntroStage, setAuthIntroStage] = useState<"hidden" | "compact" | "expanded" | "fade">("hidden");
 
   useEffect(() => {
     setPendingHref(null);
   }, [pathname]);
+
+  useEffect(() => {
+    if (pathname !== "/" || !session?.user || typeof window === "undefined") {
+      return;
+    }
+
+    const previewState = window.sessionStorage.getItem(AUTH_PREVIEW_STORAGE_KEY);
+
+    if (!previewState) {
+      return;
+    }
+
+    window.sessionStorage.removeItem(AUTH_PREVIEW_STORAGE_KEY);
+    setAuthIntroStage("compact");
+
+    let expandFrame = 0;
+    let fadeTimeout = 0;
+    let clearTimeout = 0;
+
+    expandFrame = window.requestAnimationFrame(() => {
+      expandFrame = window.requestAnimationFrame(() => {
+        setAuthIntroStage("expanded");
+      });
+    });
+
+    fadeTimeout = window.setTimeout(() => {
+      setAuthIntroStage("fade");
+    }, 760);
+
+    clearTimeout = window.setTimeout(() => {
+      setAuthIntroStage("hidden");
+    }, 1180);
+
+    return () => {
+      window.cancelAnimationFrame(expandFrame);
+      window.clearTimeout(fadeTimeout);
+      window.clearTimeout(clearTimeout);
+    };
+  }, [pathname, session?.user]);
 
   const navigateTo = (href: string) => {
     if (href === pathname) return;
@@ -68,9 +112,35 @@ export function MainShell({ children }: { children: React.ReactNode }) {
 
   // The "active" tab is either confirmed (pathname) or optimistically set (pendingHref)
   const activeHref = pendingHref ?? pathname;
+  const showAuthIntro = authIntroStage !== "hidden";
+  const authIntroStyle = getAuthIntroStyle(authIntroStage);
 
   return (
     <div className="flex min-h-screen bg-transparent">
+      {showAuthIntro ? (
+        <div className="pointer-events-none fixed inset-0 z-[120]">
+          <div
+            className={cn(
+              "absolute inset-0 bg-background transition-opacity duration-500",
+              authIntroStage === "fade" ? "opacity-0" : "opacity-100",
+            )}
+          />
+          <div
+            className="absolute overflow-hidden border border-border bg-background transition-[top,right,bottom,left,opacity,transform] duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+            style={authIntroStyle}
+          >
+            <DashboardPreview
+              fullscreen
+              avatarUrl={session?.user?.image}
+              className={cn(
+                "h-full w-full transition-opacity duration-300",
+                authIntroStage === "fade" ? "opacity-0" : "opacity-100",
+              )}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <aside className="hidden w-64 shrink-0 border-r border-border bg-base-100 px-4 py-7 md:flex md:flex-col">
         <Link href="/" className="flex items-center gap-3 px-3">
           <ThemeLogo alt="LeetSpeak logo" className="h-10 w-auto" />
@@ -193,4 +263,61 @@ export function MainShell({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
+}
+
+function getAuthIntroStyle(stage: "hidden" | "compact" | "expanded" | "fade") {
+  if (stage === "hidden") {
+    return undefined;
+  }
+
+  if (stage === "expanded" || stage === "fade") {
+    return {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      opacity: stage === "fade" ? 0 : 1,
+      transform: "scale(1)",
+    };
+  }
+
+  if (typeof window === "undefined") {
+    return {
+      top: "12vh",
+      right: "4vw",
+      bottom: "12vh",
+      left: "52vw",
+      opacity: 1,
+      transform: "scale(1)",
+    };
+  }
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+
+  if (viewportWidth < 1024) {
+    return {
+      top: Math.max(24, viewportHeight * 0.22),
+      right: 24,
+      bottom: Math.max(24, viewportHeight * 0.24),
+      left: 24,
+      opacity: 1,
+      transform: "scale(0.98)",
+    };
+  }
+
+  const containerWidth = Math.min(viewportWidth - 64, 1280);
+  const previewWidth = Math.min(720, containerWidth * 0.56);
+  const previewHeight = Math.min(620, viewportHeight - 140);
+  const left = (viewportWidth - containerWidth) / 2 + containerWidth - previewWidth;
+  const top = Math.max(40, (viewportHeight - previewHeight) / 2);
+
+  return {
+    top,
+    right: Math.max(32, viewportWidth - left - previewWidth),
+    bottom: Math.max(40, viewportHeight - top - previewHeight),
+    left,
+    opacity: 1,
+    transform: "scale(1)",
+  };
 }

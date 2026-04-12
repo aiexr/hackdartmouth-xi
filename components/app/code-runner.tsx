@@ -142,7 +142,7 @@ export function CodeRunner({
             "btn btn-sm gap-2",
             allPassed
               ? "btn-success"
-              : "btn-primary",
+              : "border-0 bg-indigo-600 text-white hover:bg-indigo-700",
           )}
         >
           {running ? (
