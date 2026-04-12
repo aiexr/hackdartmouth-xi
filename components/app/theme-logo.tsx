@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 type ThemeLogoProps = Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src"> & {
   lightSrc?: string;
   darkSrc?: string;
@@ -12,23 +10,40 @@ export function ThemeLogo({
   darkSrc = "/logo-dark.svg",
   ...imgProps
 }: ThemeLogoProps) {
-  const [src, setSrc] = useState(lightSrc);
+  const {
+    className,
+    alt = "",
+    id,
+    onLoad,
+    onError,
+    ...sharedImgProps
+  } = imgProps;
 
-  useEffect(() => {
-    const root = document.documentElement;
+  const lightClassName = className
+    ? `theme-logo-light ${className}`
+    : "theme-logo-light";
+  const darkClassName = className
+    ? `theme-logo-dark ${className}`
+    : "theme-logo-dark";
 
-    const syncSrc = () => {
-      const theme = root.getAttribute("data-theme");
-      setSrc(theme === "dark" ? darkSrc : lightSrc);
-    };
-
-    syncSrc();
-
-    const observer = new MutationObserver(syncSrc);
-    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
-
-    return () => observer.disconnect();
-  }, [darkSrc, lightSrc]);
-
-  return <img src={src} {...imgProps} />;
+  return (
+    <>
+      <img
+        src={lightSrc}
+        alt={alt}
+        className={lightClassName}
+        id={id}
+        onLoad={onLoad}
+        onError={onError}
+        {...sharedImgProps}
+      />
+      <img
+        src={darkSrc}
+        alt=""
+        aria-hidden="true"
+        className={darkClassName}
+        {...sharedImgProps}
+      />
+    </>
+  );
 }
