@@ -181,9 +181,7 @@ export function PracticeSession({
   const [panel, setPanel] = useState<PracticePanel>(isTechnical ? "hints" : "rubric");
   const [panelOpen, setPanelOpen] = useState(true);
   const [seconds, setSeconds] = useState(0);
-  const [interviewMode, setInterviewMode] = useState<InterviewMode>(
-    isTechnical ? "video" : "video",
-  );
+  const [interviewMode, setInterviewMode] = useState<InterviewMode>("video");
   const [interviewTone, setInterviewTone] = useState<InterviewTone>("neutral");
   const [sessionState, setSessionState] = useState<
     "idle" | "connecting" | "connected" | "ended"
@@ -208,14 +206,6 @@ export function PracticeSession({
 
   const sessionStartRef = useRef<number | null>(null);
   const initialPromptSentRef = useRef(false);
-
-  useEffect(() => {
-    if (!isTechnical) {
-      return;
-    }
-
-    setInterviewMode("video");
-  }, [isTechnical]);
 
   useEffect(() => {
     setIsPortalReady(true);
@@ -249,7 +239,7 @@ export function PracticeSession({
 
         if (fresh) {
           if (typeof saved.seconds === "number") setSeconds(saved.seconds);
-          if (!isTechnical && saved.interviewMode) setInterviewMode(saved.interviewMode);
+          if (saved.interviewMode) setInterviewMode(saved.interviewMode);
           if (saved.interviewTone) setInterviewTone(saved.interviewTone);
           if (typeof saved.editorContent === "string" && isTechnical) {
             setEditorContent(saved.editorContent);
@@ -287,7 +277,7 @@ export function PracticeSession({
       const persistableTranscript = transcript.filter((entry) => !entry.partial);
       const payload: PersistedPracticeState = {
         seconds,
-        interviewMode: isTechnical ? "video" : interviewMode,
+        interviewMode,
         interviewTone,
         transcript: persistableTranscript,
         editorContent: isTechnical ? editorContent : undefined,
@@ -504,7 +494,7 @@ export function PracticeSession({
             </div>
           </div>
 
-          {hasSplitView && sessionState === "connected" && (
+          {hasSplitView && sessionState === "connected" && interviewMode === "video" && (
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -607,36 +597,34 @@ export function PracticeSession({
             </div>
 
             <div className="mt-6 flex flex-col items-center gap-3 text-center">
-              {!isTechnical && (
-                <div className="flex items-center justify-center gap-2 rounded-none border border-border bg-base-100 p-1">
-                  <button
-                    type="button"
-                    onClick={() => setInterviewMode("video")}
-                    className={cn(
-                      "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
-                      interviewMode === "video"
-                        ? "bg-primary text-primary-content"
-                        : "text-base-content/60 hover:text-base-content",
-                    )}
-                  >
-                    <Video className="size-4" />
-                    Video
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInterviewMode("call")}
-                    className={cn(
-                      "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
-                      interviewMode === "call"
-                        ? "bg-primary text-primary-content"
-                        : "text-base-content/60 hover:text-base-content",
-                    )}
-                  >
-                    <Phone className="size-4" />
-                    Voice
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center justify-center gap-2 rounded-none border border-border bg-base-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setInterviewMode("video")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
+                    interviewMode === "video"
+                      ? "bg-primary text-primary-content"
+                      : "text-base-content/60 hover:text-base-content",
+                  )}
+                >
+                  <Video className="size-4" />
+                  Video
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInterviewMode("call")}
+                  className={cn(
+                    "flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition",
+                    interviewMode === "call"
+                      ? "bg-primary text-primary-content"
+                      : "text-base-content/60 hover:text-base-content",
+                  )}
+                >
+                  <Phone className="size-4" />
+                  Voice
+                </button>
+              </div>
 
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="text-xs text-base-content/60">Tone:</span>
