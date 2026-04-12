@@ -1,12 +1,28 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
   AUTH_PREVIEW_GEOMETRY_KEY,
-  ScaledDashboardPreview,
 } from "@/components/app/dashboard-preview";
 import { cn } from "@/lib/utils";
+
+const ScaledDashboardPreview = dynamic(
+  () =>
+    import("@/components/app/dashboard-preview").then(
+      (module) => module.ScaledDashboardPreview,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="relative ml-auto w-full max-w-[70rem] overflow-hidden border border-border bg-base-100/70"
+        style={{ aspectRatio: "1460 / 920" }}
+      />
+    ),
+  },
+);
 
 export function LandingPage() {
   const [isSigningIn, setIsSigningIn] = useState(false);

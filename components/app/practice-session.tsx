@@ -96,6 +96,7 @@ const EDITOR_CONTEXT_MAX_LINES = 80;
 const EDITOR_CONTEXT_MAX_CHARS = 3200;
 const INTERVIEWER_CAROUSEL_SLOT_COUNT = 5;
 const INTERNAL_PROMPT_MARKER = "[[internal-interviewer-context]]";
+const PRE_END_QUESTION = "Do you have any questions?";
 const GRACEFUL_END_MESSAGE = "Thank you for your time today. I'm going to end the interview here now.";
 const INTERVIEWER_CLOSING_DELAY_MIN_MS = 3200;
 const INTERVIEWER_CLOSING_DELAY_MAX_MS = 5000;
@@ -291,6 +292,9 @@ function buildInitialInterviewerPrompt(
     candidateName
       ? `The candidate's name is ${candidateName}. If you greet or address them by name, use exactly "${candidateName}". Never use placeholder text like [Candidate Name] or [Name].`
       : "Do not use placeholder text like [Candidate Name] or [Name]. If you do not know the candidate's name, greet them without using a name.",
+    `When you decide the interview is ready to end on its own, first ask exactly: "${PRE_END_QUESTION}"`,
+    `After the candidate answers that question, respond briefly if needed and then say exactly: "${GRACEFUL_END_MESSAGE}"`,
+    "Do not skip that final question, and do not combine it with the closing sentence in the same turn.",
   ];
 
   if (scenario.category === "behavioral") {
@@ -336,19 +340,16 @@ function buildInitialInterviewerPrompt(
     sharedContext.push(
       "The candidate may share scratchpad or code editor snapshots from the app. Treat those snapshots as the current source of truth.",
       "Never claim you cannot access the candidate's scratchpad or code editor.",
-      `If you decide to end the interview, say exactly: '${GRACEFUL_END_MESSAGE}'`,
     );
   } else if (scenario.category === "system-design") {
     sharedContext.push(
       "Guide the candidate through requirements, components, data flow, scaling bottlenecks, and tradeoffs.",
       "Open with the design prompt and ask for the first set of clarifying requirements.",
-      `If you decide to end the interview, say exactly: '${GRACEFUL_END_MESSAGE}'`,
     );
   } else {
     sharedContext.push(
       "Run this as a behavioral or situational interview. Push for specifics, structured thinking, and measurable outcomes.",
       "Open with a brief greeting and then ask the opening question.",
-      `If you decide to end the interview, say exactly: '${GRACEFUL_END_MESSAGE}'`,
     );
   }
 
