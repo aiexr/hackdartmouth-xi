@@ -14,9 +14,12 @@ export function SettingsPanel() {
   // Sync with persisted preference on mount
   useEffect(() => {
     const saved = localStorage.getItem("theme");
-    if (saved === "dark") {
+    const activeTheme = saved ?? document.documentElement.getAttribute("data-theme");
+    if (activeTheme === "dark") {
       setDarkMode(true);
       document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      setDarkMode(false);
     }
   }, []);
 
@@ -46,19 +49,23 @@ export function SettingsPanel() {
       <div>
         <h2 className="mb-4 text-lg font-semibold">Appearance</h2>
         <Card className="bg-base-100/80">
-          <CardContent className="flex items-center justify-between gap-4 p-5">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex size-11 items-center justify-center rounded-none bg-neutral/10 text-base-content">
-                <Moon className="size-5" />
+          <CardContent className="py-5 pr-5 pl-8">
+            <div className="flex w-full items-start gap-4">
+              <div className="flex min-w-0 flex-1 items-start gap-4 text-left">
+                <div className="flex size-11 items-center justify-center rounded-none bg-neutral/10 text-base-content">
+                  <Moon className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-base">Dark mode</h3>
+                  <p className="text-sm leading-6 text-base-content/60">
+                    Switch to a dark color scheme.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base">Dark mode</h3>
-                <p className="text-sm leading-6 text-base-content/60">
-                  Switch to a dark color scheme.
-                </p>
+              <div className="ml-auto shrink-0 self-start">
+                <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
               </div>
             </div>
-            <Switch checked={darkMode} onCheckedChange={toggleDarkMode} />
           </CardContent>
         </Card>
       </div>
@@ -67,49 +74,51 @@ export function SettingsPanel() {
       <div>
         <h2 className="mb-4 text-lg font-semibold">Account</h2>
         <Card className="bg-base-100/80">
-          <CardContent className="flex items-center justify-between gap-4 p-5">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex size-11 items-center justify-center rounded-none bg-destructive/10 text-destructive">
-                <Trash2 className="size-5" />
+          <CardContent className="py-5 pr-5 pl-8">
+            <div className="flex w-full items-start gap-4">
+              <div className="flex min-w-0 flex-1 items-start gap-4 text-left">
+                <div className="flex size-11 items-center justify-center rounded-none bg-destructive/10 text-destructive">
+                  <Trash2 className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-base">Delete user data</h3>
+                  <p className="text-sm leading-6 text-base-content/60">
+                    Clear all locally stored preferences and session data.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base">Delete user data</h3>
-                <p className="text-sm leading-6 text-base-content/60">
-                  Clear all locally stored preferences and session data.
-                </p>
-              </div>
-            </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              {deleted ? (
-                <span className="text-sm text-base-content/50">Cleared</span>
-              ) : confirmDelete ? (
-                <>
+              <div className="ml-auto flex shrink-0 items-center justify-end gap-2 self-start">
+                {deleted ? (
+                  <span className="text-sm text-base-content/50">Cleared</span>
+                ) : confirmDelete ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteData}
+                    >
+                      Confirm delete
+                    </Button>
+                  </>
+                ) : (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setConfirmDelete(false)}
+                    className="border-destructive/40 text-destructive hover:bg-destructive/5"
+                    onClick={() => setConfirmDelete(true)}
                   >
-                    Cancel
+                    Delete
                   </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteData}
-                  >
-                    Confirm delete
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-destructive/40 text-destructive hover:bg-destructive/5"
-                  onClick={() => setConfirmDelete(true)}
-                >
-                  Delete
-                </Button>
-              )}
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

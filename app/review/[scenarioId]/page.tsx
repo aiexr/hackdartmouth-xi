@@ -503,15 +503,18 @@ export default async function ReviewPage({
           </Card>
         </div>
 
-        <Card className="border-violet-200/70 bg-linear-to-br from-violet-50 to-indigo-50">
+        <Card className="border border-primary/20 bg-base-100/85">
           <CardContent className="p-6">
-            <h2 className="flex items-center gap-2">
-              <Lightbulb className="size-5 text-violet-500" />
+            <h2 className="flex items-center gap-2 text-base-content">
+              <Lightbulb className="size-5 text-primary" />
               Actionable tips
             </h2>
             <div className="mt-4 space-y-3">
               {tips.map((item) => (
-                <div key={item} className="rounded-none bg-base-100/70 px-4 py-3 text-sm leading-6">
+                <div
+                  key={item}
+                  className="rounded-none border border-border/70 bg-base-200/55 px-4 py-3 text-sm leading-6 text-base-content"
+                >
                   {item}
                 </div>
               ))}
