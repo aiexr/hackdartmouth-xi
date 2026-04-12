@@ -32,7 +32,22 @@ async function readApiError(response: Response, fallback: string) {
   const trimmed = raw.trim();
 
   if (!trimmed) {
-    return fallback;
+    return response.status >= 500
+      ? "Interview settings are temporarily unavailable. Please try again in a moment."
+      : fallback;
+  }
+
+  const lower = trimmed.toLowerCase();
+  const looksLikeHtml =
+    trimmed.startsWith("<!DOCTYPE html") ||
+    trimmed.startsWith("<html") ||
+    lower.includes("<body") ||
+    lower.includes("<head");
+
+  if (looksLikeHtml) {
+    return response.status >= 500
+      ? "Interview settings are temporarily unavailable. Please try again in a moment."
+      : fallback;
   }
 
   try {
@@ -45,7 +60,9 @@ async function readApiError(response: Response, fallback: string) {
     // Ignore JSON parsing failures and fall back to raw text below.
   }
 
-  return trimmed.slice(0, 240) || fallback;
+  return response.status >= 500
+    ? "Interview settings are temporarily unavailable. Please try again in a moment."
+    : trimmed.slice(0, 240) || fallback;
 }
 
 function normalizeInterviewWrapUpMinutes(value: unknown) {
