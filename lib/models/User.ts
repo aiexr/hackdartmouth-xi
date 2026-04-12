@@ -1,6 +1,15 @@
 import { ObjectId } from "mongodb";
 import type { FavoriteItem } from "@/lib/favorites";
-import { getMongoDb } from "@/lib/mongodb";
+import { getMongoDb, clearMongoClient } from "@/lib/mongodb";
+
+function isConnectionError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return msg.includes("timed out") ||
+    msg.includes("topology was destroyed") ||
+    msg.includes("connection closed") ||
+    msg.includes("not connected");
+}
 
 export interface User {
   _id?: ObjectId;
@@ -32,47 +41,57 @@ export class UserModel {
     const db = await getMongoDb();
     if (!db) throw new Error("MongoDB not connected");
 
-    const usersCollection = db.collection<User>("users");
-    const now = new Date();
-    const user = await usersCollection.findOneAndUpdate(
-      { email },
-      {
-        $setOnInsert: {
-          email,
-          name,
-          image,
-          provider,
-          focusTrack: null,
-          bio: null,
-          resumeExtractedText: null,
-          preferences: {
-            voiceId: null,
-            feedbackStyle: "structured",
-            practiceReminders: true,
-            weeklyGoal: 4,
-            interviewWrapUpMinutes: null,
+    try {
+      const usersCollection = db.collection<User>("users");
+      const now = new Date();
+      const user = await usersCollection.findOneAndUpdate(
+        { email },
+        {
+          $setOnInsert: {
+            email,
+            name,
+            image,
+            provider,
+            focusTrack: null,
+            bio: null,
+            resumeExtractedText: null,
+            preferences: {
+              voiceId: null,
+              feedbackStyle: "structured",
+              practiceReminders: true,
+              weeklyGoal: 4,
+              interviewWrapUpMinutes: null,
+            },
+            favorites: [],
+            createdAt: now,
+            updatedAt: now,
           },
-          favorites: [],
-          createdAt: now,
-          updatedAt: now,
         },
-      },
-      { upsert: true, returnDocument: "after" },
-    );
+        { upsert: true, returnDocument: "after" },
+      );
 
-    if (!user) {
-      throw new Error(`Failed to upsert user for ${email}`);
+      if (!user) {
+        throw new Error(`Failed to upsert user for ${email}`);
+      }
+
+      return user;
+    } catch (error) {
+      if (isConnectionError(error)) clearMongoClient();
+      throw error;
     }
-
-    return user;
   }
 
   static async getUserByEmail(email: string): Promise<User | null> {
     const db = await getMongoDb();
     if (!db) return null;
 
-    const usersCollection = db.collection<User>("users");
-    return await usersCollection.findOne({ email });
+    try {
+      const usersCollection = db.collection<User>("users");
+      return await usersCollection.findOne({ email });
+    } catch (error) {
+      if (isConnectionError(error)) clearMongoClient();
+      throw error;
+    }
   }
 
   static async updateUserProfile(
@@ -82,44 +101,49 @@ export class UserModel {
     const db = await getMongoDb();
     if (!db) return null;
 
-    const usersCollection = db.collection<User>("users");
-    const now = new Date();
-    const setOnInsert: Record<string, unknown> = {
-      email,
-      name: "",
-      image: "",
-      provider: "google",
-      focusTrack: null,
-      bio: null,
-      resumeExtractedText: null,
-      preferences: {
-        voiceId: null,
-        feedbackStyle: "structured",
-        practiceReminders: true,
-        weeklyGoal: 4,
-        interviewWrapUpMinutes: null,
-      },
-      favorites: [],
-      createdAt: now,
-    };
-
-    for (const key of Object.keys(updates)) {
-      delete setOnInsert[key];
-    }
-
-    const result = await usersCollection.findOneAndUpdate(
-      { email },
-      {
-        $setOnInsert: setOnInsert,
-        $set: {
-          ...updates,
-          updatedAt: now,
+    try {
+      const usersCollection = db.collection<User>("users");
+      const now = new Date();
+      const setOnInsert: Record<string, unknown> = {
+        email,
+        name: "",
+        image: "",
+        provider: "google",
+        focusTrack: null,
+        bio: null,
+        resumeExtractedText: null,
+        preferences: {
+          voiceId: null,
+          feedbackStyle: "structured",
+          practiceReminders: true,
+          weeklyGoal: 4,
+          interviewWrapUpMinutes: null,
         },
-      },
-      { upsert: true, returnDocument: "after" }
-    );
+        favorites: [],
+        createdAt: now,
+      };
 
-    return result ?? null;
+      for (const key of Object.keys(updates)) {
+        delete setOnInsert[key];
+      }
+
+      const result = await usersCollection.findOneAndUpdate(
+        { email },
+        {
+          $setOnInsert: setOnInsert,
+          $set: {
+            ...updates,
+            updatedAt: now,
+          },
+        },
+        { upsert: true, returnDocument: "after" }
+      );
+
+      return result ?? null;
+    } catch (error) {
+      if (isConnectionError(error)) clearMongoClient();
+      throw error;
+    }
   }
 
   static async ensureIndexes(): Promise<void> {

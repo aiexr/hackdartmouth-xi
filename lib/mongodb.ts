@@ -19,7 +19,7 @@ declare global {
   var __mongoClientPromise__: Promise<MongoClient> | undefined;
 }
 
-const MONGO_CONNECT_TIMEOUT_MS = 5000;
+const MONGO_CONNECT_TIMEOUT_MS = 10_000;
 
 async function withTimeout<T>(
   promise: Promise<T>,
@@ -52,7 +52,7 @@ export function getMongoClient() {
     const client = new MongoClient(env.mongodbUri, {
       connectTimeoutMS: MONGO_CONNECT_TIMEOUT_MS,
       serverSelectionTimeoutMS: MONGO_CONNECT_TIMEOUT_MS,
-      socketTimeoutMS: MONGO_CONNECT_TIMEOUT_MS,
+      socketTimeoutMS: 30_000,
       maxPoolSize: 5,
       minPoolSize: 0,
     });
@@ -79,6 +79,10 @@ export async function getMongoDb() {
     global.__mongoClientPromise__ = undefined;
     throw error;
   }
+}
+
+export function clearMongoClient() {
+  global.__mongoClientPromise__ = undefined;
 }
 
 export async function getOptionalMongoDb() {
