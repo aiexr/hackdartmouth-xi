@@ -41,8 +41,8 @@ export function SettingsPanel() {
         <Card key={setting.title} className="bg-white/80">
           <CardContent className="flex items-center justify-between gap-4 p-5">
             <div className="flex min-w-0 items-center gap-4">
-              <div className="flex size-11 items-center justify-center rounded-none bg-secondary text-secondary-foreground">
-                <setting.icon className="size-5" />
+              <div className="flex w-11 h-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                <setting.icon className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-base">{setting.title}</h3>

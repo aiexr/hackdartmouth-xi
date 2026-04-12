@@ -25,7 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+<<<<<<< HEAD
     <html lang="en">
+=======
+    <html lang="en" data-theme="business">
+>>>>>>> 5db4b3c (UI change)
       <body
         className={`${bodyFont.variable} ${displayFont.variable} min-h-screen font-(--font-body) text-foreground`}
       >

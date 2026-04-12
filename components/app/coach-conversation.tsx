@@ -43,8 +43,13 @@ export function CoachConversation() {
             onClick={item.href ? () => router.push(item.href) : undefined}
           >
             <CardContent className="p-5">
+<<<<<<< HEAD
               <div className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">
                 <item.icon className="size-5" />
+=======
+              <div className="flex w-11 h-11 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                <item.icon className="w-5 h-5" />
+>>>>>>> 5db4b3c (UI change)
               </div>
               <h3 className="mt-4 text-base">{item.title}</h3>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
@@ -71,7 +76,11 @@ export function CoachConversation() {
                 className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}
               >
                 <div
+<<<<<<< HEAD
                   className={`flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+=======
+                  className={`flex w-9 h-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+>>>>>>> 5db4b3c (UI change)
                     isUser
                       ? "bg-primary text-primary-foreground"
                       : "bg-linear-to-br from-violet-500 to-indigo-500 text-white"
@@ -80,7 +89,11 @@ export function CoachConversation() {
                   {isUser ? "A" : "C"}
                 </div>
                 <div
+<<<<<<< HEAD
                   className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
+=======
+                  className={`max-w-[85%] rounded-lg px-4 py-3 text-sm leading-6 ${
+>>>>>>> 5db4b3c (UI change)
                     isUser ? "bg-primary text-primary-foreground" : "bg-muted/75"
                   }`}
                 >

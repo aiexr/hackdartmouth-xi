@@ -90,14 +90,14 @@ export default async function DashboardPage() {
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button asChild size="lg">
                     <Link href="/practice">
-                      <Play className="size-4" />
+                      <Play className="w-4 h-4" />
                       Start quick practice
                     </Link>
                   </Button>
                   <Button asChild size="lg" variant="outline">
                     <Link href="/auth/sign-in">
                       Open auth shell
-                      <ArrowRight className="size-4" />
+                      <ArrowRight className="w-4 h-4" />
                     </Link>
                   </Button>
                 </div>
@@ -108,12 +108,12 @@ export default async function DashboardPage() {
           <div className="grid gap-4">
             <div className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                <Target className="size-4" />
+                <Target className="w-4 h-4" />
                 Weekly progress
               </div>
               <div className="mt-5 flex items-center gap-4">
-                <div className="relative flex size-28 items-center justify-center">
-                  <svg className="size-full -rotate-90" viewBox="0 0 120 120">
+                <div className="relative flex w-28 h-28 items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
                     <circle
                       cx="60"
                       cy="60"
@@ -144,17 +144,28 @@ export default async function DashboardPage() {
                   <p className="text-sm leading-6 text-muted-foreground">
                     {weeklyCopy}
                   </p>
+<<<<<<< HEAD
                   <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-foreground">
                     <Zap className="size-4" />
+=======
+                  <div className="inline-flex items-center gap-2 rounded-none bg-accent px-3 py-1 text-sm font-semibold text-accent-content">
+                    <Zap className="w-4 h-4" />
+>>>>>>> 5db4b3c (UI change)
                     {streakLabel}
                   </div>
                 </div>
               </div>
             </div>
 
+<<<<<<< HEAD
             <div className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-center gap-2 text-sm font-semibold text-secondary-foreground">
                 <TrendingUp className="size-4" />
+=======
+              <div className="rounded-none border border-base-300 bg-base-100 p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-secondary-content">
+                <TrendingUp className="w-4 h-4" />
+>>>>>>> 5db4b3c (UI change)
                 Current goals
               </div>
               <div className="mt-4 space-y-4">
@@ -183,8 +194,13 @@ export default async function DashboardPage() {
           </div>
           <div className="flex flex-col justify-around rounded-xl border border-border bg-card p-5">
             <div className="flex items-center gap-3">
+<<<<<<< HEAD
               <div className="flex size-9 items-center justify-center rounded-lg bg-orange-50">
                 <Flame className="size-5 text-orange-500" />
+=======
+              <div className="flex w-9 h-9 items-center justify-center rounded-none bg-orange-50">
+                <Flame className="w-5 h-5 text-orange-500" />
+>>>>>>> 5db4b3c (UI change)
               </div>
               <div>
                 <div className="text-2xl font-semibold leading-tight">{metrics.streakDays}</div>
