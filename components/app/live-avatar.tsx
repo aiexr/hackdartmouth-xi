@@ -33,6 +33,7 @@ type LiveAvatarProps = {
   tone?: string;
   interviewerId?: string;
   interviewerName?: string;
+  interviewCategory?: "behavioral" | "technical" | "system-design";
   compact?: boolean;
   showStartButton?: boolean;
   keepLargeLayout?: boolean;
@@ -58,14 +59,25 @@ function wrapInternalPrompt(text: string) {
   ].join("\n\n");
 }
 
-function buildSessionProfileContext(candidateName: string, resumeContext: string) {
+function buildSessionProfileContext(
+  candidateName: string,
+  resumeContext: string,
+  interviewCategory: "behavioral" | "technical" | "system-design",
+) {
   const sections = [
     candidateName
       ? `The candidate's name is ${candidateName}. If you greet or address the candidate by name, use exactly "${candidateName}". Never use placeholder tokens like [Candidate Name], [Name], or candidate name.`
       : "Do not use placeholder tokens like [Candidate Name] or [Name]. If you do not know the candidate's name, greet them without using a name.",
   ];
 
-  if (resumeContext) {
+  if (interviewCategory === "technical") {
+    sections.push(
+      "This is a technical interview. Keep the conversation tightly focused on the live problem, the candidate's code, debugging, test cases, and complexity tradeoffs.",
+      "Do not ask about the candidate's background, resume, projects, career history, or prior experience unless the candidate explicitly asks to pivot there.",
+    );
+  }
+
+  if (resumeContext && interviewCategory !== "technical") {
     sections.push(`Candidate resume context:\n${resumeContext}`);
   }
 
@@ -76,8 +88,13 @@ function augmentInternalPromptWithSessionProfile(
   promptText: string,
   candidateName: string,
   resumeContext: string,
+  interviewCategory: "behavioral" | "technical" | "system-design",
 ) {
-  const sessionProfileContext = buildSessionProfileContext(candidateName, resumeContext).trim();
+  const sessionProfileContext = buildSessionProfileContext(
+    candidateName,
+    resumeContext,
+    interviewCategory,
+  ).trim();
   if (!sessionProfileContext || !promptText.includes(INTERNAL_PROMPT_MARKER)) {
     return promptText;
   }
@@ -95,6 +112,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
   tone = "neutral",
   interviewerId,
   interviewerName,
+  interviewCategory = "behavioral",
   compact = false,
   showStartButton = true,
   keepLargeLayout = false,
@@ -272,6 +290,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       promptRequest.text,
       sessionProfileRef.current.candidateName,
       sessionProfileRef.current.resumeContext,
+      interviewCategory,
     );
 
     console.log("[LiveAvatar] Session profile context", {
@@ -286,7 +305,7 @@ export const LiveAvatar = forwardRef<LiveAvatarHandle, LiveAvatarProps>(function
       deliveredPromptTextsRef.current.delete(promptRequest.text);
       // Ignore prompt delivery issues and keep the session running.
     }
-  }, [promptRequest, status]);
+  }, [interviewCategory, promptRequest, status]);
 
   const startSession = useCallback(async () => {
     if (status !== "idle" || sessionRef.current) {

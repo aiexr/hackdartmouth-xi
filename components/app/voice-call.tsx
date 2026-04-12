@@ -38,6 +38,7 @@ export type VoiceCallHandle = {
 
 type VoiceCallProps = {
   tone?: string;
+  interviewCategory?: "behavioral" | "technical" | "system-design";
   promptRequest?: { id: string; text: string } | null;
   onTranscriptUpdate?: (transcript: TranscriptEntry[]) => void;
   onSessionEnd?: (transcript: TranscriptEntry[]) => void;
@@ -47,6 +48,7 @@ type VoiceCallProps = {
 
 export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function VoiceCall({
   tone = "neutral",
+  interviewCategory = "behavioral",
   promptRequest,
   onTranscriptUpdate,
   onSessionEnd,
@@ -221,7 +223,13 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
           ? `The candidate's name is ${candidateName}. If you address them by name, use exactly "${candidateName}". Never use placeholders like [Candidate Name] or [Name].`
           : "Do not use placeholders like [Candidate Name] or [Name]. If you do not know the candidate's name, greet them without using a name.",
       );
-      if (resumeContext) {
+      if (interviewCategory === "technical") {
+        contextualSections.push(
+          "This is a technical interview. Keep the conversation tightly focused on the live problem, the candidate's code, debugging, test cases, and complexity tradeoffs.",
+          "Do not ask about the candidate's background, resume, projects, career history, or prior experience unless the candidate explicitly asks to pivot there.",
+        );
+      }
+      if (resumeContext && interviewCategory !== "technical") {
         contextualSections.push(`Candidate resume context:\n${resumeContext}`);
       }
       const contextualUpdate = contextualSections.join("\n\n");
@@ -231,7 +239,7 @@ export const VoiceCall = forwardRef<VoiceCallHandle, VoiceCallProps>(function Vo
       setError(message);
       updateStatus("idle");
     }
-  }, [emitSessionEnd, updateStatus, updateTranscript, tone]);
+  }, [emitSessionEnd, interviewCategory, updateStatus, updateTranscript, tone]);
 
   const endCall = useCallback(async () => {
     if (conversationRef.current) {

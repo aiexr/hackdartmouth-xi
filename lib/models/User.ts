@@ -84,27 +84,33 @@ export class UserModel {
 
     const usersCollection = db.collection<User>("users");
     const now = new Date();
+    const setOnInsert: Record<string, unknown> = {
+      email,
+      name: "",
+      image: "",
+      provider: "google",
+      focusTrack: null,
+      bio: null,
+      resumeExtractedText: null,
+      preferences: {
+        voiceId: null,
+        feedbackStyle: "structured",
+        practiceReminders: true,
+        weeklyGoal: 4,
+        interviewWrapUpMinutes: null,
+      },
+      favorites: [],
+      createdAt: now,
+    };
+
+    for (const key of Object.keys(updates)) {
+      delete setOnInsert[key];
+    }
+
     const result = await usersCollection.findOneAndUpdate(
       { email },
       {
-        $setOnInsert: {
-          email,
-          name: "",
-          image: "",
-          provider: "google",
-          focusTrack: null,
-          bio: null,
-          resumeExtractedText: null,
-          preferences: {
-            voiceId: null,
-            feedbackStyle: "structured",
-            practiceReminders: true,
-            weeklyGoal: 4,
-            interviewWrapUpMinutes: null,
-          },
-          favorites: [],
-          createdAt: now,
-        },
+        $setOnInsert: setOnInsert,
         $set: {
           ...updates,
           updatedAt: now,

@@ -384,7 +384,8 @@ function buildInitialInterviewerPrompt(
     }
     sharedContext.push(
       "Keep this round focused on the candidate's live problem solving, code, testing instinct, debugging, and complexity tradeoffs.",
-      "Treat any resume or background context as secondary. Do not spend time asking about the candidate's background unless they explicitly bring it up or it is directly relevant to the code discussion.",
+      "Never open with, pivot to, or spend time on the candidate's background, resume, projects, career history, or prior experience.",
+      "Treat any resume or background context as off-topic for this round unless the candidate explicitly asks to connect it back to the code discussion.",
       "The candidate may share scratchpad or code editor snapshots from the app. Treat those snapshots as the current source of truth.",
       "Never claim you cannot access the candidate's scratchpad or code editor.",
     );
@@ -1325,6 +1326,7 @@ export function PracticeSession({
         ref={avatarRef}
         interviewerId={selectedInterviewer.id}
         interviewerName={selectedInterviewer.name}
+        interviewCategory={scenario.category}
         compact={hasSplitView && (sessionState === "connected" || sessionState === "ended")}
         showStartButton={false}
         keepLargeLayout={isBehavioral}
@@ -1340,6 +1342,7 @@ export function PracticeSession({
       <VoiceCall
         ref={voiceCallRef}
         tone={interviewTone}
+        interviewCategory={scenario.category}
         promptRequest={interviewerPrompt}
         onTranscriptUpdate={setTranscript}
         onSessionEnd={handleSessionEnd}
