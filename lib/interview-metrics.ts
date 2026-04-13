@@ -2,6 +2,7 @@ import "server-only";
 
 import { scenarios } from "@/data/scenarios";
 import { env } from "@/lib/env";
+import { sanitizeFeedbackItems } from "@/lib/grading-feedback";
 import { UserModel } from "@/lib/models/User";
 import { getMongoDb } from "@/lib/mongodb";
 
@@ -211,15 +212,8 @@ function buildImprovements(interviews: InterviewRecord[]) {
   const items: ImprovementMetric[] = [];
 
   for (const interview of interviews) {
-    const feedback = interview.gradingResult?.improvements;
-    if (!Array.isArray(feedback)) {
-      continue;
-    }
-
+    const feedback = sanitizeFeedbackItems(interview.gradingResult?.improvements);
     for (const value of feedback) {
-      if (typeof value !== "string" || !value.trim()) {
-        continue;
-      }
 
       const scenario = interview.scenarioId ? scenarioById.get(interview.scenarioId) : null;
       const title = value.length > 54 ? `${value.slice(0, 51).trimEnd()}...` : value;

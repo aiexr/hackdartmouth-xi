@@ -14,6 +14,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { getOptionalServerSession } from "@/lib/auth";
+import { sanitizeFeedbackItems } from "@/lib/grading-feedback";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 import { getReviewByScenarioId, getScenarioById } from "@/data/scenarios";
 import { Button } from "@/components/ui/button";
@@ -283,13 +284,13 @@ export default async function ReviewPage({
       : [];
   const strengths =
     hasPersistedReview && Array.isArray(interview?.gradingResult?.strengths)
-      ? interview.gradingResult.strengths.filter(isNonEmptyString)
+      ? sanitizeFeedbackItems(interview.gradingResult.strengths)
       : showStaticReview
         ? staticReview.strengths
         : [];
   const improvements =
     hasPersistedReview && Array.isArray(interview?.gradingResult?.improvements)
-      ? interview.gradingResult.improvements.filter(isNonEmptyString)
+      ? sanitizeFeedbackItems(interview.gradingResult.improvements)
       : showStaticReview
         ? staticReview.improvements
         : [];

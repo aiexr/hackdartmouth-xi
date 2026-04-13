@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getOptionalServerSession } from "@/lib/auth";
+import { sanitizeFeedbackItems } from "@/lib/grading-feedback";
 import { getOptionalMongoDb } from "@/lib/mongodb";
 import { UserModel } from "@/lib/models";
 import { ll } from "@/lib/integrations/llm";
@@ -188,13 +189,9 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
         )
     : [];
 
-  const strengths = Array.isArray(payload.strengths)
-    ? payload.strengths.filter((item): item is string => typeof item === "string")
-    : [];
+  const strengths = sanitizeFeedbackItems(payload.strengths);
 
-  const improvements = Array.isArray(payload.improvements)
-    ? payload.improvements.filter((item): item is string => typeof item === "string")
-    : [];
+  const improvements = sanitizeFeedbackItems(payload.improvements);
 
   const keyMoments = Array.isArray(payload.key_moments)
     ? payload.key_moments
@@ -234,12 +231,8 @@ function normalizeGradingResult(raw: unknown): NormalizedGradingResult {
       ? ((): { description: string; strengths: string[]; improvements: string[]; key_points: string[] } => {
           const d = diagramAnalysisRaw as Record<string, unknown>;
           const description = typeof d.description === "string" ? d.description : "";
-          const strengthsArr = Array.isArray(d.strengths)
-            ? d.strengths.filter((it): it is string => typeof it === "string")
-            : [];
-          const improvementsArr = Array.isArray(d.improvements)
-            ? d.improvements.filter((it): it is string => typeof it === "string")
-            : [];
+          const strengthsArr = sanitizeFeedbackItems(d.strengths);
+          const improvementsArr = sanitizeFeedbackItems(d.improvements);
           const keyPointsArr = Array.isArray(d.key_points)
             ? d.key_points.filter((it): it is string => typeof it === "string")
             : [];

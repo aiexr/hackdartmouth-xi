@@ -1,9 +1,8 @@
 "use client";
 
-import type { MouseEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useTransition, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
   Home,
@@ -47,7 +46,6 @@ export function MainShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [isPending, startTransition] = useTransition();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   useEffect(() => {
@@ -72,32 +70,17 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     }
   }, [router, status]);
 
-  const navigateTo = (href: string) => {
-    if (href === pathname) return;
-    setPendingHref(href);
-    startTransition(() => {
-      router.push(href);
-    });
-  };
-
   const prefetchRoute = (href: string) => {
     router.prefetch(href);
   };
 
-  const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey
-    ) {
+  const handleNavClick = (href: string) => {
+    if (href === pathname) {
+      setPendingHref(null);
       return;
     }
 
-    event.preventDefault();
-    navigateTo(href);
+    setPendingHref(href);
   };
 
   const activeHref = pendingHref ?? pathname;
@@ -118,13 +101,13 @@ export function MainShell({ children }: { children: React.ReactNode }) {
               item.href === "/"
                 ? activeHref === "/"
                 : activeHref.startsWith(item.href);
-            const isSpinning = pendingHref === item.href && isPending;
+            const isSpinning = pendingHref === item.href;
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={(event) => handleNavClick(event, item.href)}
+                onClick={() => handleNavClick(item.href)}
                 onMouseEnter={() => prefetchRoute(item.href)}
                 onFocus={() => prefetchRoute(item.href)}
                 className={cn(
@@ -193,7 +176,7 @@ export function MainShell({ children }: { children: React.ReactNode }) {
           className={cn(
             "flex-1 transition-opacity duration-150",
             !hideLandingChrome && "pb-20 md:pb-0",
-            isPending && "opacity-50",
+            pendingHref && "opacity-50",
           )}
         >
           {children}
@@ -206,13 +189,13 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                 item.href === "/"
                   ? activeHref === "/"
                   : activeHref.startsWith(item.href);
-              const isSpinning = pendingHref === item.href && isPending;
+              const isSpinning = pendingHref === item.href;
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={(event) => handleNavClick(event, item.href)}
+                  onClick={() => handleNavClick(item.href)}
                   onMouseEnter={() => prefetchRoute(item.href)}
                   onFocus={() => prefetchRoute(item.href)}
                   className={cn(
