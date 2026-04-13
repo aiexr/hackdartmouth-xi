@@ -23,6 +23,28 @@ Rules:
 - Use Markdown formatting (headings, lists, tables) when it improves readability.
 - Always respond in plain conversational text, never JSON.`;
 
+const COACH_DAILY_MESSAGE_LIMIT = 10;
+const COACH_QUOTA_TIME_ZONE = "America/New_York";
+
+function getCoachQuotaDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: COACH_QUOTA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    return date.toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
 function parseCoachHistory(rawHistory: unknown) {
   if (!Array.isArray(rawHistory)) {
     return [] as CoachHistoryTurn[];
@@ -178,7 +200,28 @@ export async function POST(request: Request) {
     return Response.json({ error: "Message or action required" }, { status: 400 });
   }
 
+  const quotaDateKey = getCoachQuotaDateKey(new Date());
+  let reservedCoachQuota = false;
+
   try {
+    const quota = await UserModel.consumeCoachMessage(
+      session.user.email,
+      quotaDateKey,
+      COACH_DAILY_MESSAGE_LIMIT,
+    );
+
+    if (!quota.allowed) {
+      return Response.json(
+        {
+          error: `Daily LeetCoach limit reached. You can send ${COACH_DAILY_MESSAGE_LIMIT} messages per day.`,
+          remainingMessagesToday: quota.remaining,
+        },
+        { status: 429 },
+      );
+    }
+
+    reservedCoachQuota = true;
+
     const user = await UserModel.getUserByEmail(session.user.email);
     const resumeText = user?.resumeExtractedText?.trim() || null;
 
@@ -191,10 +234,13 @@ export async function POST(request: Request) {
 
     if (body.action === "resume-review") {
       if (!resumeText) {
-        return Response.json({
-          reply:
-            "I don't see a resume on your profile yet. Head to your Profile page and upload a PDF or DOCX first, then come back and I'll review it.",
-        });
+        return Response.json(
+          {
+            reply:
+              "I don't see a resume on your profile yet. Head to your Profile page and upload a PDF or DOCX first, then come back and I'll review it.",
+            remainingMessagesToday: quota.remaining,
+          },
+        );
       }
 
       prompt = [
@@ -224,8 +270,16 @@ export async function POST(request: Request) {
       maxTokens: 2000,
     });
 
-    return Response.json({ reply: normalizeCoachReply(result.content) });
+    return Response.json({
+      reply: normalizeCoachReply(result.content),
+      remainingMessagesToday: quota.remaining,
+    });
   } catch (error) {
+    if (reservedCoachQuota) {
+      await UserModel.releaseCoachMessage(session.user.email, quotaDateKey).catch((releaseError) => {
+        console.error("Failed to release LeetCoach quota after error:", releaseError);
+      });
+    }
     console.error("Coach API error:", error);
     const message = error instanceof Error ? error.message : "Coach request failed";
     return Response.json({ error: message }, { status: 500 });

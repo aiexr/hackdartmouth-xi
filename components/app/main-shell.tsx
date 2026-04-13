@@ -60,8 +60,17 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     }
 
     router.replace("/");
-    router.refresh();
   }, [pathname, router, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated") {
+      return;
+    }
+
+    for (const item of navigation) {
+      router.prefetch(item.href);
+    }
+  }, [router, status]);
 
   const navigateTo = (href: string) => {
     if (href === pathname) return;
@@ -69,6 +78,10 @@ export function MainShell({ children }: { children: React.ReactNode }) {
     startTransition(() => {
       router.push(href);
     });
+  };
+
+  const prefetchRoute = (href: string) => {
+    router.prefetch(href);
   };
 
   const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -111,8 +124,9 @@ export function MainShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                prefetch={false}
                 onClick={(event) => handleNavClick(event, item.href)}
+                onMouseEnter={() => prefetchRoute(item.href)}
+                onFocus={() => prefetchRoute(item.href)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
@@ -198,8 +212,9 @@ export function MainShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  prefetch={false}
                   onClick={(event) => handleNavClick(event, item.href)}
+                  onMouseEnter={() => prefetchRoute(item.href)}
+                  onFocus={() => prefetchRoute(item.href)}
                   className={cn(
                     "flex min-w-14 flex-col items-center gap-1 rounded-xl px-3 py-2 text-[0.7rem] font-medium transition-colors",
                     isActive

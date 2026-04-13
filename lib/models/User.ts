@@ -11,6 +11,14 @@ function isConnectionError(error: unknown): boolean {
     msg.includes("not connected");
 }
 
+function isDuplicateKeyError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return error.message.toLowerCase().includes("e11000");
+}
+
 export interface User {
   _id?: ObjectId;
   email: string;
@@ -34,6 +42,15 @@ export interface User {
 
 export type UserProfileRecord = Omit<User, "resumeExtractedText"> & {
   hasResumeContext: boolean;
+};
+
+type CoachUsageState = {
+  date: string;
+  count: number;
+};
+
+type UserWithCoachUsage = User & {
+  coachUsage?: CoachUsageState;
 };
 
 export class UserModel {
@@ -189,6 +206,154 @@ export class UserModel {
       );
 
       return result ?? null;
+    } catch (error) {
+      if (isConnectionError(error)) clearMongoClient();
+      throw error;
+    }
+  }
+
+  static async consumeCoachMessage(
+    email: string,
+    dateKey: string,
+    dailyLimit: number,
+  ): Promise<{ allowed: boolean; remaining: number; count: number }> {
+    await this.ensureIndexes();
+
+    const db = await getMongoDb();
+    if (!db) {
+      throw new Error("MongoDB not connected");
+    }
+
+    try {
+      const usersCollection = db.collection<UserWithCoachUsage>("users");
+      const now = new Date();
+
+      const incrementExisting = async () =>
+        usersCollection.findOneAndUpdate(
+          {
+            email,
+            "coachUsage.date": dateKey,
+            "coachUsage.count": { $lt: dailyLimit },
+          },
+          {
+            $inc: { "coachUsage.count": 1 },
+            $set: { updatedAt: now },
+          },
+          { returnDocument: "after" },
+        );
+
+      const startNewDay = async () =>
+        usersCollection.findOneAndUpdate(
+          {
+            email,
+            $or: [
+              { "coachUsage.date": { $exists: false } },
+              { "coachUsage.date": { $ne: dateKey } },
+            ],
+          },
+          {
+            $setOnInsert: {
+              email,
+              name: "",
+              image: "",
+              provider: "google",
+              focusTrack: null,
+              bio: null,
+              resumeExtractedText: null,
+              preferences: {
+                voiceId: null,
+                feedbackStyle: "structured",
+                practiceReminders: true,
+                weeklyGoal: 4,
+                interviewWrapUpMinutes: null,
+              },
+              favorites: [],
+              createdAt: now,
+            },
+            $set: {
+              coachUsage: {
+                date: dateKey,
+                count: 1,
+              },
+              updatedAt: now,
+            },
+          },
+          { upsert: true, returnDocument: "after" },
+        );
+
+      const firstIncrement = await incrementExisting();
+      if (firstIncrement?.coachUsage) {
+        return {
+          allowed: true,
+          count: firstIncrement.coachUsage.count,
+          remaining: Math.max(0, dailyLimit - firstIncrement.coachUsage.count),
+        };
+      }
+
+      const firstDayUsage = await startNewDay().catch((error) => {
+        if (isDuplicateKeyError(error)) {
+          return null;
+        }
+
+        throw error;
+      });
+      if (firstDayUsage?.coachUsage) {
+        return {
+          allowed: true,
+          count: firstDayUsage.coachUsage.count,
+          remaining: Math.max(0, dailyLimit - firstDayUsage.coachUsage.count),
+        };
+      }
+
+      const retryIncrement = await incrementExisting();
+      if (retryIncrement?.coachUsage) {
+        return {
+          allowed: true,
+          count: retryIncrement.coachUsage.count,
+          remaining: Math.max(0, dailyLimit - retryIncrement.coachUsage.count),
+        };
+      }
+
+      const currentUser = await usersCollection.findOne(
+        { email },
+        { projection: { coachUsage: 1 } },
+      );
+
+      const currentCount =
+        currentUser?.coachUsage?.date === dateKey
+          ? currentUser.coachUsage.count
+          : 0;
+
+      return {
+        allowed: false,
+        count: currentCount,
+        remaining: Math.max(0, dailyLimit - currentCount),
+      };
+    } catch (error) {
+      if (isConnectionError(error)) clearMongoClient();
+      throw error;
+    }
+  }
+
+  static async releaseCoachMessage(email: string, dateKey: string): Promise<void> {
+    const db = await getMongoDb();
+    if (!db) {
+      return;
+    }
+
+    try {
+      const usersCollection = db.collection<UserWithCoachUsage>("users");
+      await usersCollection.updateOne(
+        {
+          email,
+          "coachUsage.date": dateKey,
+          "coachUsage.count": { $gt: 0 },
+        },
+        {
+          $inc: { "coachUsage.count": -1 },
+          $set: { updatedAt: new Date() },
+        },
+      );
     } catch (error) {
       if (isConnectionError(error)) clearMongoClient();
       throw error;

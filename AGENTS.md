@@ -277,7 +277,7 @@ This repo is a Next.js 16 App Router app with routes rooted at `app/` (not `src/
 - `/coach` — AI coach chat
 - `/review/[scenarioId]` — post-interview feedback and rubric breakdown
 - `/settings` — user preferences
-- `/llm` — internal LLM sandbox
+- `/llm` — internal LLM sandbox (localhost/dev only; blocked in prod)
 
 ### API routes
 - `POST /api/interview/start` — create a new interview
@@ -285,7 +285,7 @@ This repo is a Next.js 16 App Router app with routes rooted at `app/` (not `src/
 - `GET /api/interview/[id]` — get single interview
 - `GET/POST /api/interview/[id]/transcript` — read/append transcript
 - `GET /api/interviews` — list user's interviews
-- `POST /api/coach` — AI coach chat endpoint
+- `POST /api/coach` — AI coach chat endpoint (limited to 10 messages/day per logged-in user)
 - `GET /api/leetcode/problems` — browse LeetCode problems
 - `GET /api/leetcode/problem/[slug]` — single LeetCode problem detail
 - `POST /api/leetcode/scenario` — generate a scenario from a LeetCode problem

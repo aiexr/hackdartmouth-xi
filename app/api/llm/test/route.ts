@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isLocalOrDevAccessAllowed } from "@/lib/dev-access";
 import { getLlmProvider, ll, type LlmProviderName } from "@/lib/integrations/llm";
 
 const DEFAULT_DARTMOUTH_VISION_MODEL = "qwen.qwen3-vl-32b-instruct-fp8";
@@ -39,6 +40,15 @@ function parseImagePayload(body: Record<string, unknown>): ImagePayload | undefi
 }
 
 export async function POST(req: NextRequest) {
+  const requestHost =
+    req.headers.get("x-forwarded-host") ??
+    req.headers.get("host") ??
+    req.nextUrl.host;
+
+  if (!isLocalOrDevAccessAllowed(requestHost)) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
   try {
     const rawBody: unknown = await req.json();
     const body =
