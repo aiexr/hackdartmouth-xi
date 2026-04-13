@@ -1,13 +1,6 @@
 import "server-only";
 
-import mammoth from "mammoth";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
-
-type PdfJsWorkerGlobal = typeof globalThis & {
-  pdfjsWorker?: {
-    WorkerMessageHandler: unknown;
-  };
-};
 
 type PdfJsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
 
@@ -103,19 +96,7 @@ async function loadPdfJs() {
   if (!pdfJsModulePromise) {
     pdfJsModulePromise = (async () => {
       ensurePdfJsGlobals();
-
-      const [pdfModule, workerModule] = await Promise.all([
-        import("pdfjs-dist/legacy/build/pdf.mjs"),
-        import("pdfjs-dist/legacy/build/pdf.worker.mjs"),
-      ]);
-
-      // Force pdf.js to stay in-process so it doesn't spin up a separate
-      // worker bundle with a mismatched version in worker runtimes.
-      (globalThis as PdfJsWorkerGlobal).pdfjsWorker ??= {
-        WorkerMessageHandler: workerModule.WorkerMessageHandler,
-      };
-
-      return pdfModule;
+      return import("pdfjs-dist/legacy/build/pdf.mjs");
     })();
   }
 
@@ -124,7 +105,7 @@ async function loadPdfJs() {
 
 async function extractPdf(buffer: Buffer): Promise<string> {
   const { getDocument } = await loadPdfJs();
-  const doc = await getDocument({
+  const document = await getDocument({
     data: new Uint8Array(buffer),
     useSystemFonts: true,
     isEvalSupported: false,
@@ -133,19 +114,20 @@ async function extractPdf(buffer: Buffer): Promise<string> {
 
   const parts: string[] = [];
   try {
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
+    for (let index = 1; index <= document.numPages; index++) {
+      const page = await document.getPage(index);
       const content = await page.getTextContent();
       const pageText = content.items
         .filter((item): item is TextItem => "str" in item)
         .map((item) => item.str)
         .join(" ");
+
       if (pageText.trim()) {
         parts.push(pageText);
       }
     }
   } finally {
-    await doc.destroy().catch(() => undefined);
+    await document.destroy().catch(() => undefined);
   }
 
   return parts.join("\n");
